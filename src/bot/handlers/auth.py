@@ -18,6 +18,7 @@ class AuthStates(StatesGroup):
 
 @router.message(Command("start"))
 async def cmd_start(message: Message, state: FSMContext):
+    logger.info(f"Received /start from user {message.from_user.id}")
     if not async_session:
         await message.answer("⚠️ Bot is not properly configured. Please contact an administrator.")
         return
