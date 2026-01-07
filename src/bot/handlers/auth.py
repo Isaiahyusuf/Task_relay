@@ -91,6 +91,26 @@ async def cmd_help(message: Message):
 async def btn_help(message: Message):
     await show_help(message)
 
+@router.message(F.text == "📘 About")
+async def btn_about(message: Message):
+    about_text = (
+        "🤖 *About TaskRelay Bot*\n\n"
+        "TaskRelay is a workflow automation system designed to streamline job dispatch "
+        "and management between Supervisors and Subcontractors.\n\n"
+        "🌟 *Key Features:*\n"
+        "• *Real-time Dispatch:* Instant job notifications for subcontractors.\n"
+        "• *Quote System:* Subcontractors can bid on jobs; supervisors select the best offer.\n"
+        "• *Availability Tracking:* Toggle your status (Available/Busy/Away) to control job flow.\n"
+        "• *Automated Reminders:* Never miss a deadline with automated status pings.\n"
+        "• *Full History:* Track jobs from creation to completion with detailed timestamps.\n\n"
+        "🚀 *Role-Based Access:*\n"
+        "• *Supervisors:* Create jobs, manage quotes, and track team progress.\n"
+        "• *Subcontractors:* Accept jobs, submit quotes, and update work status.\n"
+        "• *Admins:* Manage access codes and system archives.\n\n"
+        "_Version 1.0.0 - Streamlining your workflow._"
+    )
+    await message.answer(about_text, parse_mode="Markdown")
+
 async def show_help(message: Message):
     if not async_session:
         await message.answer("Bot is not properly configured.")

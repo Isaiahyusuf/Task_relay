@@ -6,19 +6,19 @@ def get_main_menu_keyboard(role: UserRole) -> ReplyKeyboardMarkup:
         buttons = [
             [KeyboardButton(text="📊 Job History"), KeyboardButton(text="📦 Archive Jobs")],
             [KeyboardButton(text="🔑 Create Access Code"), KeyboardButton(text="📋 View Archived")],
-            [KeyboardButton(text="ℹ️ Help")]
+            [KeyboardButton(text="ℹ️ Help"), KeyboardButton(text="📘 About")]
         ]
     elif role == UserRole.SUPERVISOR:
         buttons = [
             [KeyboardButton(text="➕ New Job"), KeyboardButton(text="📋 My Jobs")],
             [KeyboardButton(text="⏳ Pending Jobs"), KeyboardButton(text="🔄 Active Jobs")],
-            [KeyboardButton(text="ℹ️ Help")]
+            [KeyboardButton(text="ℹ️ Help"), KeyboardButton(text="📘 About")]
         ]
     else:
         buttons = [
             [KeyboardButton(text="📋 Available Jobs"), KeyboardButton(text="🔄 My Active Jobs")],
             [KeyboardButton(text="🟢 Available"), KeyboardButton(text="🟡 Busy"), KeyboardButton(text="🔴 Away")],
-            [KeyboardButton(text="ℹ️ Help")]
+            [KeyboardButton(text="ℹ️ Help"), KeyboardButton(text="📘 About")]
         ]
     
     return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
