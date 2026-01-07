@@ -13,6 +13,7 @@ from src.bot.config import config
 from src.bot.database import init_db
 from src.bot.database.session import engine
 from src.bot.services.access_codes import AccessCodeService
+from src.bot.services.scheduler import SchedulerService
 from src.bot.handlers import auth_router, supervisor_router, subcontractor_router, admin_router
 from src.bot.middleware.error_handler import setup_error_handlers
 
@@ -25,12 +26,22 @@ logger = logging.getLogger(__name__)
 
 bot: Bot | None = None
 dp: Dispatcher | None = None
+scheduler_task: asyncio.Task | None = None
 
 async def shutdown(sig=None):
+    global scheduler_task
+    
     if sig:
         logger.info(f"Received signal {sig.name}, shutting down...")
     else:
         logger.info("Shutting down...")
+    
+    if scheduler_task:
+        scheduler_task.cancel()
+        try:
+            await scheduler_task
+        except asyncio.CancelledError:
+            pass
     
     if dp:
         await dp.stop_polling()
@@ -47,7 +58,7 @@ def handle_signal(sig):
     asyncio.create_task(shutdown(sig))
 
 async def main():
-    global bot, dp
+    global bot, dp, scheduler_task
     
     config.setup_logging()
     
@@ -80,6 +91,8 @@ async def main():
     )
     dp = Dispatcher()
     
+    SchedulerService.set_bot(bot)
+    
     setup_error_handlers(dp)
     
     dp.include_router(auth_router)
@@ -94,8 +107,12 @@ async def main():
         except NotImplementedError:
             pass
     
+    scheduler_task = asyncio.create_task(SchedulerService.run_scheduler())
+    
     logger.info("Starting bot polling...")
     logger.info(f"Environment: {config.ENVIRONMENT}")
+    logger.info(f"Reminder hours: {config.RESPONSE_REMINDER_HOURS}")
+    logger.info(f"Auto-close hours: {config.JOB_AUTO_CLOSE_HOURS}")
     
     try:
         await dp.start_polling(bot, allowed_updates=["message", "callback_query"])

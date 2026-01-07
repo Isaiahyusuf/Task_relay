@@ -18,9 +18,8 @@ class AuthStates(StatesGroup):
 
 @router.message(Command("start"))
 async def cmd_start(message: Message, state: FSMContext):
-    logger.info(f"Received /start from user {message.from_user.id}")
     if not async_session:
-        await message.answer("⚠️ Bot is not properly configured. Please contact an administrator.")
+        await message.answer("Bot is not properly configured. Please contact an administrator.")
         return
     
     async with async_session() as session:
@@ -33,7 +32,7 @@ async def cmd_start(message: Message, state: FSMContext):
             role_name = user.role.value.capitalize()
             keyboard = get_main_menu_keyboard(user.role)
             await message.answer(
-                f"👋 Welcome back, {message.from_user.first_name or 'there'}!\n\n"
+                f"Welcome back, {message.from_user.first_name or 'there'}!\n\n"
                 f"You are logged in as: *{role_name}*\n\n"
                 "Use the menu below to navigate:",
                 reply_markup=keyboard,
@@ -43,9 +42,9 @@ async def cmd_start(message: Message, state: FSMContext):
             return
     
     await message.answer(
-        "🤖 *Welcome to TaskRelay Bot!*\n\n"
+        "*Welcome to TaskRelay Bot!*\n\n"
         "This is a workflow automation and job dispatch system.\n\n"
-        "📝 Please enter your access code to begin:",
+        "Please enter your access code to begin:",
         parse_mode="Markdown"
     )
     await state.set_state(AuthStates.waiting_for_code)
@@ -71,16 +70,16 @@ async def process_access_code(message: Message, state: FSMContext):
         if user:
             keyboard = get_main_menu_keyboard(user.role)
             await message.answer(
-                f"✅ {response}\n\n"
+                f"{response}\n\n"
                 "Use the menu below to get started:",
                 reply_markup=keyboard
             )
         else:
-            await message.answer(f"✅ {response}")
+            await message.answer(response)
         await state.clear()
     else:
         await message.answer(
-            f"❌ {response}\n\n"
+            f"{response}\n\n"
             "Please try again with a valid access code:"
         )
 
@@ -94,7 +93,7 @@ async def btn_help(message: Message):
 
 async def show_help(message: Message):
     if not async_session:
-        await message.answer("⚠️ Bot is not properly configured.")
+        await message.answer("Bot is not properly configured.")
         return
     
     async with async_session() as session:
@@ -105,42 +104,47 @@ async def show_help(message: Message):
         
         if not user:
             await message.answer(
-                "❌ You are not registered.\n\n"
+                "You are not registered.\n\n"
                 "Please use /start to register with your access code."
             )
             return
         
         if user.role == UserRole.ADMIN:
             help_text = (
-                "👑 *Admin Commands*\n\n"
-                "📊 *Job History* - View all job records\n"
-                "📦 *Archive Jobs* - Archive old completed jobs\n"
-                "🔑 *Create Access Code* - Generate new access codes\n"
-                "📋 *View Archived* - Browse archived jobs\n\n"
-                "You can also use these text commands:\n"
-                "`/history` - View job history\n"
-                "`/archive` - Archive old jobs\n"
-                "`/createcode <code> <role>` - Create access code"
+                "*Admin Commands*\n\n"
+                "*Job History* - View all job records\n"
+                "*Archive Jobs* - Archive old completed jobs\n"
+                "*Create Access Code* - Generate new access codes\n"
+                "*View Archived* - Browse archived jobs"
             )
         elif user.role == UserRole.SUPERVISOR:
             help_text = (
-                "👔 *Supervisor Commands*\n\n"
-                "➕ *New Job* - Create and dispatch a new job\n"
-                "📋 *My Jobs* - View jobs you've created\n\n"
-                "You can also use these text commands:\n"
-                "`/newjob` - Create a new job\n"
-                "`/myjobs` - View your jobs"
+                "*Supervisor Commands*\n\n"
+                "*New Job* - Create and send a new job\n"
+                "*My Jobs* - View all your jobs\n"
+                "*Pending Jobs* - View created/sent jobs\n"
+                "*Active Jobs* - View accepted/in-progress jobs\n\n"
+                "*Job Actions:*\n"
+                "- View Details\n"
+                "- View Quotes (for quote jobs)\n"
+                "- Cancel Job\n"
+                "- Mark Complete"
             )
         else:
             help_text = (
-                "🔧 *Subcontractor Commands*\n\n"
-                "📋 *My Assigned Jobs* - View jobs assigned to you\n\n"
-                "For each job, you can:\n"
-                "• ✅ Accept the job\n"
-                "• ❌ Decline with a reason\n"
-                "• 💬 Submit a quote (for quote jobs)\n\n"
-                "You can also use:\n"
-                "`/jobs` - View your assigned jobs"
+                "*Subcontractor Commands*\n\n"
+                "*Available Jobs* - View jobs waiting for response\n"
+                "*My Active Jobs* - View accepted/in-progress jobs\n\n"
+                "*Availability Status:*\n"
+                "- Available - Receive new jobs\n"
+                "- Busy - Temporarily unavailable\n"
+                "- Away - Not accepting jobs\n\n"
+                "*Job Actions:*\n"
+                "- Accept job\n"
+                "- Decline with reason\n"
+                "- Submit quote (for quote jobs)\n"
+                "- Start job\n"
+                "- Mark complete"
             )
         
         await message.answer(help_text, parse_mode="Markdown")

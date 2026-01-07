@@ -34,7 +34,7 @@ async def btn_history(message: Message):
 
 async def check_admin(message: Message) -> bool:
     if not async_session:
-        await message.answer("⚠️ Database not available.")
+        await message.answer("Database not available.")
         return False
     
     async with async_session() as session:
@@ -43,7 +43,7 @@ async def check_admin(message: Message) -> bool:
         )
         user = result.scalar_one_or_none()
         if not user or user.role != UserRole.ADMIN:
-            await message.answer("❌ You don't have admin permissions.")
+            await message.answer("You don't have admin permissions.")
             return False
     return True
 
@@ -58,7 +58,7 @@ async def show_history(message: Message):
     
     if not jobs:
         await message.answer(
-            "📊 *Job History*\n\n"
+            "*Job History*\n\n"
             "No job records found.",
             parse_mode="Markdown"
         )
@@ -69,10 +69,10 @@ async def show_history(message: Message):
         status = job.status.value
         status_counts[status] = status_counts.get(status, 0) + 1
     
-    summary = "\n".join([f"• {status.title()}: {count}" for status, count in status_counts.items()])
+    summary = "\n".join([f"  {status.replace('_', ' ').title()}: {count}" for status, count in status_counts.items()])
     
     await message.answer(
-        f"📊 *Job History*\n\n"
+        f"*Job History*\n\n"
         f"*Summary ({len(jobs)} jobs):*\n{summary}\n\n"
         "Select a job to view details:",
         reply_markup=get_job_list_keyboard(jobs, context="history"),
@@ -95,14 +95,14 @@ async def archive_jobs(message: Message):
     
     if count > 0:
         await message.answer(
-            f"📦 *Archive Complete*\n\n"
+            f"*Archive Complete*\n\n"
             f"Archived *{count}* old jobs.\n\n"
             "Archived jobs can be viewed in 'View Archived'.",
             parse_mode="Markdown"
         )
     else:
         await message.answer(
-            "📦 *Archive Jobs*\n\n"
+            "*Archive Jobs*\n\n"
             "No jobs eligible for archiving at this time.\n\n"
             "Jobs are automatically archived after 90 days.",
             parse_mode="Markdown"
@@ -130,14 +130,14 @@ async def show_archived(message: Message):
     
     if not jobs:
         await message.answer(
-            "📦 *Archived Jobs*\n\n"
+            "*Archived Jobs*\n\n"
             "No archived jobs found.",
             parse_mode="Markdown"
         )
         return
     
     await message.answer(
-        f"📦 *Archived Jobs* ({len(jobs)} total)\n\n"
+        f"*Archived Jobs* ({len(jobs)} total)\n\n"
         "Select a job to view details:",
         reply_markup=get_job_list_keyboard(jobs, context="archived"),
         parse_mode="Markdown"
@@ -160,7 +160,7 @@ async def cmd_create_code(message: Message, state: FSMContext):
         
         if role_str not in role_map:
             await message.answer(
-                "❌ Invalid role. Use: admin, supervisor, or subcontractor"
+                "Invalid role. Use: admin, supervisor, or subcontractor"
             )
             return
         
@@ -178,14 +178,14 @@ async def cmd_create_code(message: Message, state: FSMContext):
         
         if success:
             await message.answer(
-                f"✅ *Access Code Created*\n\n"
-                f"🔑 Code: `{code}`\n"
-                f"👤 Role: {role_str.title()}\n\n"
+                f"*Access Code Created*\n\n"
+                f"Code: `{code}`\n"
+                f"Role: {role_str.title()}\n\n"
                 "Share this code privately with the intended user.",
                 parse_mode="Markdown"
             )
         else:
-            await message.answer("❌ Failed to create code. It may already exist.")
+            await message.answer("Failed to create code. It may already exist.")
         return
     
     await start_code_creation(message, state)
@@ -198,7 +198,7 @@ async def btn_create_code(message: Message, state: FSMContext):
 
 async def start_code_creation(message: Message, state: FSMContext):
     await message.answer(
-        "🔑 *Create Access Code*\n\n"
+        "*Create Access Code*\n\n"
         "Step 1/2: Enter the access code\n"
         "(letters and numbers only):",
         parse_mode="Markdown"
@@ -210,16 +210,16 @@ async def process_code_input(message: Message, state: FSMContext):
     code = message.text.strip()
     
     if not code.isalnum():
-        await message.answer("❌ Code must contain only letters and numbers. Try again:")
+        await message.answer("Code must contain only letters and numbers. Try again:")
         return
     
     if len(code) < 4:
-        await message.answer("❌ Code must be at least 4 characters. Try again:")
+        await message.answer("Code must be at least 4 characters. Try again:")
         return
     
     await state.update_data(code=code)
     await message.answer(
-        "🔑 *Create Access Code*\n\n"
+        "*Create Access Code*\n\n"
         f"Code: `{code}`\n\n"
         "Step 2/2: Select the role for this code:",
         reply_markup=get_role_selection_keyboard(),
@@ -252,18 +252,17 @@ async def process_role_selection(callback: CallbackQuery, state: FSMContext):
     )
     
     if success:
-        role_emoji = {"admin": "👑", "supervisor": "👔", "subcontractor": "🔧"}.get(role_str, "👤")
         await callback.message.edit_text(
-            f"✅ *Access Code Created!*\n\n"
-            f"🔑 Code: `{code}`\n"
-            f"{role_emoji} Role: {role_str.title()}\n\n"
-            "📤 Share this code privately with the intended user.\n"
+            f"*Access Code Created!*\n\n"
+            f"Code: `{code}`\n"
+            f"Role: {role_str.title()}\n\n"
+            "Share this code privately with the intended user.\n"
             "They can use it with /start to register.",
             parse_mode="Markdown"
         )
     else:
         await callback.message.edit_text(
-            f"❌ Failed to create code.\n\n"
+            f"Failed to create code.\n\n"
             "The code may already exist."
         )
     
@@ -273,7 +272,7 @@ async def process_role_selection(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "code_cancel")
 async def cancel_code_creation(callback: CallbackQuery, state: FSMContext):
     await state.clear()
-    await callback.message.edit_text("❌ Access code creation cancelled.")
+    await callback.message.edit_text("Access code creation cancelled.")
     await callback.answer()
 
 @router.callback_query(F.data.startswith("page:history:"))
@@ -333,22 +332,23 @@ async def show_job_details(callback: CallbackQuery, job_id: int, context: str):
         await callback.answer("Job not found", show_alert=True)
         return
     
-    status_emoji = {
-        JobStatus.PENDING: "⏳ Pending",
-        JobStatus.DISPATCHED: "📤 Dispatched",
-        JobStatus.ACCEPTED: "✅ Accepted",
-        JobStatus.DECLINED: "❌ Declined",
-        JobStatus.COMPLETED: "✔️ Completed",
-        JobStatus.ARCHIVED: "📦 Archived"
+    status_text = {
+        JobStatus.CREATED: "Created",
+        JobStatus.SENT: "Sent",
+        JobStatus.ACCEPTED: "Accepted",
+        JobStatus.IN_PROGRESS: "In Progress",
+        JobStatus.COMPLETED: "Completed",
+        JobStatus.CANCELLED: "Cancelled",
+        JobStatus.ARCHIVED: "Archived"
     }.get(job.status, "Unknown")
     
-    type_emoji = "💰 Quote" if job.job_type == JobType.QUOTE else "🏷️ Preset Price"
+    type_text = "Quote" if job.job_type == JobType.QUOTE else "Preset Price"
     
     details = (
-        f"📋 *Job #{job.id}*\n\n"
+        f"*Job #{job.id}*\n\n"
         f"*Title:* {job.title}\n"
-        f"*Type:* {type_emoji}\n"
-        f"*Status:* {status_emoji}\n"
+        f"*Type:* {type_text}\n"
+        f"*Status:* {status_text}\n"
     )
     
     if job.description:
@@ -357,8 +357,6 @@ async def show_job_details(callback: CallbackQuery, job_id: int, context: str):
         details += f"*Address:* {job.address}\n"
     if job.preset_price:
         details += f"*Price:* {job.preset_price}\n"
-    if job.quoted_price:
-        details += f"*Quoted:* {job.quoted_price}\n"
     if job.decline_reason:
         details += f"*Decline Reason:* {job.decline_reason}\n"
     
@@ -386,10 +384,10 @@ async def back_to_history(callback: CallbackQuery):
         status = job.status.value
         status_counts[status] = status_counts.get(status, 0) + 1
     
-    summary = "\n".join([f"• {status.title()}: {count}" for status, count in status_counts.items()])
+    summary = "\n".join([f"  {status.replace('_', ' ').title()}: {count}" for status, count in status_counts.items()])
     
     await callback.message.edit_text(
-        f"📊 *Job History*\n\n"
+        f"*Job History*\n\n"
         f"*Summary ({len(jobs)} jobs):*\n{summary}\n\n"
         "Select a job to view details:",
         reply_markup=get_job_list_keyboard(jobs, context="history"),
@@ -408,7 +406,7 @@ async def back_to_archived(callback: CallbackQuery):
     jobs = await ArchiveService.get_archived_jobs(team_id=user.team_id if user else None)
     
     await callback.message.edit_text(
-        f"📦 *Archived Jobs* ({len(jobs)} total)\n\n"
+        f"*Archived Jobs* ({len(jobs)} total)\n\n"
         "Select a job to view details:",
         reply_markup=get_job_list_keyboard(jobs, context="archived"),
         parse_mode="Markdown"

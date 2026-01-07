@@ -7,10 +7,13 @@ from sqlalchemy import select
 from src.bot.database import async_session, User, Job
 from src.bot.database.models import UserRole, JobType, JobStatus
 from src.bot.services.jobs import JobService
+from src.bot.services.quotes import QuoteService
 from src.bot.utils.permissions import require_role
 from src.bot.utils.keyboards import (
     get_job_type_keyboard, get_skip_keyboard, get_subcontractor_selection_keyboard,
-    get_confirmation_keyboard, get_job_list_keyboard, get_main_menu_keyboard, get_back_keyboard
+    get_confirmation_keyboard, get_job_list_keyboard, get_main_menu_keyboard, 
+    get_back_keyboard, get_supervisor_job_actions_keyboard, get_quotes_keyboard,
+    get_quote_detail_keyboard
 )
 import logging
 
@@ -34,7 +37,7 @@ async def cmd_new_job(message: Message, state: FSMContext):
 @router.message(F.text == "➕ New Job")
 async def btn_new_job(message: Message, state: FSMContext):
     if not async_session:
-        await message.answer("⚠️ Database not available.")
+        await message.answer("Database not available.")
         return
     
     async with async_session() as session:
@@ -43,7 +46,7 @@ async def btn_new_job(message: Message, state: FSMContext):
         )
         user = result.scalar_one_or_none()
         if not user or user.role != UserRole.SUPERVISOR:
-            await message.answer("❌ You don't have permission to create jobs.")
+            await message.answer("You don't have permission to create jobs.")
             return
     
     await start_new_job(message, state)
@@ -51,7 +54,7 @@ async def btn_new_job(message: Message, state: FSMContext):
 async def start_new_job(message: Message, state: FSMContext):
     await state.clear()
     await message.answer(
-        "📝 *Creating a New Job*\n\n"
+        "*Creating a New Job*\n\n"
         "Step 1/5: Please enter the job title:",
         parse_mode="Markdown"
     )
@@ -60,14 +63,14 @@ async def start_new_job(message: Message, state: FSMContext):
 @router.message(StateFilter(NewJobStates.waiting_for_title))
 async def process_job_title(message: Message, state: FSMContext):
     if message.text.startswith("/"):
-        await message.answer("❌ Job creation cancelled.")
+        await message.answer("Job creation cancelled.")
         await state.clear()
         return
     
     await state.update_data(title=message.text.strip())
     
     await message.answer(
-        "📝 *Creating a New Job*\n\n"
+        "*Creating a New Job*\n\n"
         "Step 2/5: Select the job type:",
         reply_markup=get_job_type_keyboard(),
         parse_mode="Markdown"
@@ -77,7 +80,7 @@ async def process_job_title(message: Message, state: FSMContext):
 @router.callback_query(F.data == "job_cancel")
 async def cancel_job_creation(callback: CallbackQuery, state: FSMContext):
     await state.clear()
-    await callback.message.edit_text("❌ Job creation cancelled.")
+    await callback.message.edit_text("Job creation cancelled.")
     await callback.answer()
 
 @router.callback_query(F.data.startswith("job_type:"), StateFilter(NewJobStates.waiting_for_type))
@@ -86,10 +89,10 @@ async def process_job_type(callback: CallbackQuery, state: FSMContext):
     job_type = JobType.QUOTE if job_type_str == "quote" else JobType.PRESET_PRICE
     await state.update_data(job_type=job_type)
     
-    type_name = "Quote Job 💰" if job_type == JobType.QUOTE else "Preset Price Job 🏷️"
+    type_name = "Quote Job" if job_type == JobType.QUOTE else "Preset Price Job"
     
     await callback.message.edit_text(
-        f"📝 *Creating a New Job*\n\n"
+        f"*Creating a New Job*\n\n"
         f"Type: {type_name}\n\n"
         "Step 3/5: Enter job description\n"
         "(or tap Skip to continue without):",
@@ -112,7 +115,7 @@ async def process_job_description(message: Message, state: FSMContext):
 
 async def ask_for_address(message: Message, state: FSMContext, edit: bool = False):
     text = (
-        "📝 *Creating a New Job*\n\n"
+        "*Creating a New Job*\n\n"
         "Step 4/5: Enter the job address/location\n"
         "(or tap Skip to continue without):"
     )
@@ -148,7 +151,7 @@ async def process_job_address(message: Message, state: FSMContext):
 
 async def ask_for_price(message: Message, state: FSMContext, edit: bool = False):
     text = (
-        "📝 *Creating a New Job*\n\n"
+        "*Creating a New Job*\n\n"
         "Step 5/5: Enter the preset price\n"
         "(e.g., $500, $1,200):"
     )
@@ -167,7 +170,7 @@ async def process_job_price(message: Message, state: FSMContext):
 
 async def show_subcontractor_selection(message: Message, state: FSMContext, telegram_id: int, edit: bool = False):
     if not async_session:
-        await message.answer("⚠️ Database error. Please try again.")
+        await message.answer("Database error. Please try again.")
         await state.clear()
         return
     
@@ -177,28 +180,21 @@ async def show_subcontractor_selection(message: Message, state: FSMContext, tele
         )
         supervisor = result.scalar_one_or_none()
         
-        subcontractors_result = await session.execute(
-            select(User).where(
-                User.role == UserRole.SUBCONTRACTOR,
-                User.team_id == supervisor.team_id,
-                User.is_active == True
-            )
-        )
-        subcontractors = list(subcontractors_result.scalars().all())
+        subcontractors = await JobService.get_available_subcontractors(supervisor.team_id)
     
     await state.update_data(supervisor_id=supervisor.id, team_id=supervisor.team_id)
     
     if not subcontractors:
         text = (
-            "📝 *Creating a New Job*\n\n"
-            "⚠️ No subcontractors available in your team.\n\n"
-            "Would you like to save the job as pending?"
+            "*Creating a New Job*\n\n"
+            "No available subcontractors in your team.\n\n"
+            "Would you like to save the job as a draft?"
         )
         keyboard = get_confirmation_keyboard("save_pending")
     else:
         text = (
-            "📝 *Creating a New Job*\n\n"
-            "Final step: Select a subcontractor to dispatch the job to:"
+            "*Creating a New Job*\n\n"
+            "Final step: Select a subcontractor to send the job to:"
         )
         keyboard = get_subcontractor_selection_keyboard(subcontractors)
     
@@ -224,7 +220,7 @@ async def process_subcontractor_selection(callback: CallbackQuery, state: FSMCon
     )
     
     if not job:
-        await callback.message.edit_text("❌ Failed to create job. Please try again.")
+        await callback.message.edit_text("Failed to create job. Please try again.")
         await state.clear()
         await callback.answer()
         return
@@ -233,32 +229,33 @@ async def process_subcontractor_selection(callback: CallbackQuery, state: FSMCon
     
     if subcontractor_part == "none":
         await callback.message.edit_text(
-            f"✅ *Job Created Successfully!*\n\n"
-            f"📋 Job #{job.id}: {job.title}\n"
-            f"📌 Status: Pending (not dispatched)\n\n"
-            "You can dispatch it later from 'My Jobs'.",
+            f"*Job Created Successfully!*\n\n"
+            f"Job #{job.id}: {job.title}\n"
+            f"Status: Created (not sent)\n\n"
+            "You can send it later from 'My Jobs'.",
             parse_mode="Markdown"
         )
     else:
         subcontractor_id = int(subcontractor_part)
-        success = await JobService.dispatch_job(job.id, subcontractor_id)
+        success, msg = await JobService.send_job(job.id, subcontractor_id)
         
         if success:
             await callback.message.edit_text(
-                f"✅ *Job Created & Dispatched!*\n\n"
-                f"📋 Job #{job.id}: {job.title}\n"
-                f"📌 Status: Dispatched to subcontractor\n\n"
+                f"*Job Created & Sent!*\n\n"
+                f"Job #{job.id}: {job.title}\n"
+                f"Status: Sent to subcontractor\n\n"
                 "The subcontractor will be notified.",
                 parse_mode="Markdown"
             )
         else:
             await callback.message.edit_text(
-                f"⚠️ Job #{job.id} created but dispatch failed.\n"
-                "Please try dispatching again from 'My Jobs'."
+                f"Job #{job.id} created but sending failed.\n"
+                f"Reason: {msg}\n"
+                "Please try sending again from 'My Jobs'."
             )
     
     await state.clear()
-    await callback.answer("Job created! ✅")
+    await callback.answer("Job created!")
 
 @router.callback_query(F.data.startswith("confirm:save_pending"))
 async def confirm_save_pending(callback: CallbackQuery, state: FSMContext):
@@ -276,14 +273,14 @@ async def confirm_save_pending(callback: CallbackQuery, state: FSMContext):
     
     if job:
         await callback.message.edit_text(
-            f"✅ *Job Saved!*\n\n"
-            f"📋 Job #{job.id}: {job.title}\n"
-            f"📌 Status: Pending\n\n"
-            "You can dispatch it later when subcontractors are available.",
+            f"*Job Saved!*\n\n"
+            f"Job #{job.id}: {job.title}\n"
+            f"Status: Created\n\n"
+            "You can send it later when subcontractors are available.",
             parse_mode="Markdown"
         )
     else:
-        await callback.message.edit_text("❌ Failed to create job.")
+        await callback.message.edit_text("Failed to create job.")
     
     await state.clear()
     await callback.answer()
@@ -291,7 +288,7 @@ async def confirm_save_pending(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("cancel:save_pending"))
 async def cancel_save_pending(callback: CallbackQuery, state: FSMContext):
     await state.clear()
-    await callback.message.edit_text("❌ Job creation cancelled.")
+    await callback.message.edit_text("Job creation cancelled.")
     await callback.answer()
 
 @router.message(Command("myjobs"))
@@ -301,9 +298,26 @@ async def cmd_my_jobs(message: Message):
 
 @router.message(F.text == "📋 My Jobs")
 async def btn_my_jobs(message: Message):
-    if not async_session:
-        await message.answer("⚠️ Database not available.")
+    if not await check_supervisor(message):
         return
+    await show_my_jobs(message)
+
+@router.message(F.text == "⏳ Pending Jobs")
+async def btn_pending_jobs(message: Message):
+    if not await check_supervisor(message):
+        return
+    await show_filtered_jobs(message, [JobStatus.CREATED, JobStatus.SENT], "Pending Jobs")
+
+@router.message(F.text == "🔄 Active Jobs")
+async def btn_active_jobs(message: Message):
+    if not await check_supervisor(message):
+        return
+    await show_filtered_jobs(message, [JobStatus.ACCEPTED, JobStatus.IN_PROGRESS], "Active Jobs")
+
+async def check_supervisor(message: Message) -> bool:
+    if not async_session:
+        await message.answer("Database not available.")
+        return False
     
     async with async_session() as session:
         result = await session.execute(
@@ -311,42 +325,43 @@ async def btn_my_jobs(message: Message):
         )
         user = result.scalar_one_or_none()
         if not user or user.role != UserRole.SUPERVISOR:
-            await message.answer("❌ You don't have permission to view jobs.")
-            return
-    
-    await show_my_jobs(message)
+            await message.answer("You don't have permission to view jobs.")
+            return False
+    return True
 
 async def show_my_jobs(message: Message):
-    if not async_session:
-        await message.answer("⚠️ Database error.")
-        return
-    
-    async with async_session() as session:
-        user_result = await session.execute(
-            select(User).where(User.telegram_id == message.from_user.id)
-        )
-        user = user_result.scalar_one_or_none()
-        
-        jobs_result = await session.execute(
-            select(Job).where(
-                Job.supervisor_id == user.id,
-                Job.status != JobStatus.ARCHIVED
-            ).order_by(Job.created_at.desc()).limit(20)
-        )
-        jobs = list(jobs_result.scalars().all())
+    jobs = await JobService.get_supervisor_jobs(message.from_user.id)
     
     if not jobs:
         await message.answer(
-            "📋 *My Jobs*\n\n"
+            "*My Jobs*\n\n"
             "You haven't created any jobs yet.\n\n"
-            "Tap '➕ New Job' to create one!",
+            "Tap '+New Job' to create one!",
             parse_mode="Markdown"
         )
         return
     
     await message.answer(
-        "📋 *My Jobs*\n\n"
+        "*My Jobs*\n\n"
         "Select a job to view details:",
+        reply_markup=get_job_list_keyboard(jobs, context="sup"),
+        parse_mode="Markdown"
+    )
+
+async def show_filtered_jobs(message: Message, status_filter: list[JobStatus], title: str):
+    jobs = await JobService.get_supervisor_jobs(message.from_user.id, status_filter)
+    
+    if not jobs:
+        await message.answer(
+            f"*{title}*\n\n"
+            f"No jobs found with this status.",
+            parse_mode="Markdown"
+        )
+        return
+    
+    await message.answer(
+        f"*{title}*\n\n"
+        f"Found {len(jobs)} job(s):",
         reply_markup=get_job_list_keyboard(jobs, context="sup"),
         parse_mode="Markdown"
     )
@@ -355,33 +370,28 @@ async def show_my_jobs(message: Message):
 async def view_job_details_supervisor(callback: CallbackQuery):
     job_id = int(callback.data.split(":")[2])
     
-    if not async_session:
-        await callback.answer("Database error", show_alert=True)
-        return
-    
-    async with async_session() as session:
-        result = await session.execute(select(Job).where(Job.id == job_id))
-        job = result.scalar_one_or_none()
+    job = await JobService.get_job_by_id(job_id)
     
     if not job:
         await callback.answer("Job not found", show_alert=True)
         return
     
     status_emoji = {
-        JobStatus.PENDING: "⏳ Pending",
-        JobStatus.DISPATCHED: "📤 Dispatched",
-        JobStatus.ACCEPTED: "✅ Accepted",
-        JobStatus.DECLINED: "❌ Declined",
-        JobStatus.COMPLETED: "✔️ Completed",
-        JobStatus.ARCHIVED: "📦 Archived"
+        JobStatus.CREATED: "Created",
+        JobStatus.SENT: "Sent",
+        JobStatus.ACCEPTED: "Accepted",
+        JobStatus.IN_PROGRESS: "In Progress",
+        JobStatus.COMPLETED: "Completed",
+        JobStatus.CANCELLED: "Cancelled",
+        JobStatus.ARCHIVED: "Archived"
     }.get(job.status, "Unknown")
     
-    type_emoji = "💰 Quote" if job.job_type == JobType.QUOTE else "🏷️ Preset Price"
+    type_text = "Quote" if job.job_type == JobType.QUOTE else "Preset Price"
     
     details = (
-        f"📋 *Job #{job.id}*\n\n"
+        f"*Job #{job.id}*\n\n"
         f"*Title:* {job.title}\n"
-        f"*Type:* {type_emoji}\n"
+        f"*Type:* {type_text}\n"
         f"*Status:* {status_emoji}\n"
     )
     
@@ -391,42 +401,125 @@ async def view_job_details_supervisor(callback: CallbackQuery):
         details += f"*Address:* {job.address}\n"
     if job.preset_price:
         details += f"*Price:* {job.preset_price}\n"
-    if job.quoted_price:
-        details += f"*Quoted:* {job.quoted_price}\n"
-    if job.decline_reason:
-        details += f"*Decline Reason:* {job.decline_reason}\n"
     
     details += f"\n*Created:* {job.created_at.strftime('%Y-%m-%d %H:%M')}"
     
+    keyboard = get_supervisor_job_actions_keyboard(job.id, job.status.value, job.job_type.value)
+    
     await callback.message.edit_text(
         details,
-        reply_markup=get_back_keyboard("back:sup"),
+        reply_markup=keyboard,
         parse_mode="Markdown"
     )
     await callback.answer()
 
-@router.callback_query(F.data == "back:sup")
-async def back_to_my_jobs(callback: CallbackQuery):
+@router.callback_query(F.data.startswith("view_quotes:"))
+async def view_quotes(callback: CallbackQuery):
+    job_id = int(callback.data.split(":")[1])
+    
+    quotes = await QuoteService.get_quotes_for_job(job_id)
+    
+    if not quotes:
+        await callback.answer("No quotes submitted yet", show_alert=True)
+        return
+    
+    await callback.message.edit_text(
+        f"*Quotes for Job #{job_id}*\n\n"
+        f"{len(quotes)} quote(s) received.\n"
+        "Select a quote to view details:",
+        reply_markup=get_quotes_keyboard(quotes, job_id),
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("quote_detail:"))
+async def view_quote_detail(callback: CallbackQuery):
+    quote_id = int(callback.data.split(":")[1])
+    
     if not async_session:
         await callback.answer("Database error", show_alert=True)
         return
     
+    from src.bot.database import Quote
     async with async_session() as session:
-        user_result = await session.execute(
-            select(User).where(User.telegram_id == callback.from_user.id)
+        result = await session.execute(
+            select(Quote, User).join(User, Quote.subcontractor_id == User.id).where(Quote.id == quote_id)
         )
-        user = user_result.scalar_one_or_none()
-        
-        jobs_result = await session.execute(
-            select(Job).where(
-                Job.supervisor_id == user.id,
-                Job.status != JobStatus.ARCHIVED
-            ).order_by(Job.created_at.desc()).limit(20)
-        )
-        jobs = list(jobs_result.scalars().all())
+        row = result.one_or_none()
+    
+    if not row:
+        await callback.answer("Quote not found", show_alert=True)
+        return
+    
+    quote, user = row
+    name = user.first_name or user.username or f"User {user.telegram_id}"
     
     await callback.message.edit_text(
-        "📋 *My Jobs*\n\n"
+        f"*Quote Details*\n\n"
+        f"*Subcontractor:* {name}\n"
+        f"*Amount:* {quote.amount}\n"
+        f"*Submitted:* {quote.submitted_at.strftime('%Y-%m-%d %H:%M')}\n"
+        + (f"*Notes:* {quote.notes}\n" if quote.notes else ""),
+        reply_markup=get_quote_detail_keyboard(quote.id, quote.job_id),
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("accept_quote:"))
+async def accept_quote(callback: CallbackQuery):
+    quote_id = int(callback.data.split(":")[1])
+    
+    success, msg, sub_id = await QuoteService.accept_quote(quote_id, callback.from_user.id)
+    
+    if success:
+        await callback.message.edit_text(
+            f"*Quote Accepted!*\n\n"
+            f"{msg}\n\n"
+            "The winning subcontractor has been notified.",
+            parse_mode="Markdown"
+        )
+        await callback.answer("Quote accepted!")
+    else:
+        await callback.answer(msg, show_alert=True)
+
+@router.callback_query(F.data.startswith("sup_cancel:"))
+async def supervisor_cancel_job(callback: CallbackQuery):
+    job_id = int(callback.data.split(":")[1])
+    
+    success, msg = await JobService.cancel_job(job_id, callback.from_user.id)
+    
+    if success:
+        await callback.message.edit_text(
+            f"*Job Cancelled*\n\n"
+            f"Job #{job_id} has been cancelled.",
+            parse_mode="Markdown"
+        )
+        await callback.answer("Job cancelled")
+    else:
+        await callback.answer(msg, show_alert=True)
+
+@router.callback_query(F.data.startswith("sup_complete:"))
+async def supervisor_complete_job(callback: CallbackQuery):
+    job_id = int(callback.data.split(":")[1])
+    
+    success, msg = await JobService.complete_job(job_id, callback.from_user.id, is_supervisor=True)
+    
+    if success:
+        await callback.message.edit_text(
+            f"*Job Completed*\n\n"
+            f"Job #{job_id} has been marked as complete.",
+            parse_mode="Markdown"
+        )
+        await callback.answer("Job completed!")
+    else:
+        await callback.answer(msg, show_alert=True)
+
+@router.callback_query(F.data == "back:sup")
+async def back_to_my_jobs(callback: CallbackQuery):
+    jobs = await JobService.get_supervisor_jobs(callback.from_user.id)
+    
+    await callback.message.edit_text(
+        "*My Jobs*\n\n"
         "Select a job to view details:",
         reply_markup=get_job_list_keyboard(jobs, context="sup"),
         parse_mode="Markdown"
@@ -437,23 +530,7 @@ async def back_to_my_jobs(callback: CallbackQuery):
 async def handle_supervisor_pagination(callback: CallbackQuery):
     page = int(callback.data.split(":")[2])
     
-    if not async_session:
-        await callback.answer("Database error", show_alert=True)
-        return
-    
-    async with async_session() as session:
-        user_result = await session.execute(
-            select(User).where(User.telegram_id == callback.from_user.id)
-        )
-        user = user_result.scalar_one_or_none()
-        
-        jobs_result = await session.execute(
-            select(Job).where(
-                Job.supervisor_id == user.id,
-                Job.status != JobStatus.ARCHIVED
-            ).order_by(Job.created_at.desc()).limit(50)
-        )
-        jobs = list(jobs_result.scalars().all())
+    jobs = await JobService.get_supervisor_jobs(callback.from_user.id)
     
     await callback.message.edit_reply_markup(
         reply_markup=get_job_list_keyboard(jobs, page=page, context="sup")

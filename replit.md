@@ -1,28 +1,31 @@
 # TaskRelay Bot
 
 ## Overview
-TaskRelay Bot is a Telegram-based workflow automation system for managing job assignments between Supervisors, Subcontractors, and Admins. Features a user-friendly button-based interface and is ready for Railway deployment.
+TaskRelay Bot is a Telegram-based workflow automation system for managing job assignments between Supervisors, Subcontractors, and Admins. Features a complete button-based interface, job lifecycle management, quote system, and automated reminders.
 
 ## Project Structure
 ```
 src/bot/
-├── main.py              # Entry point with graceful shutdown
+├── main.py              # Entry point with scheduler and graceful shutdown
 ├── config.py            # Environment configuration & validation
 ├── database/
 │   ├── __init__.py
-│   ├── models.py        # SQLAlchemy models (User, Job, AccessCode, Team)
+│   ├── models.py        # SQLAlchemy models (User, Job, AccessCode, Team, Quote)
 │   └── session.py       # Database session with Railway SSL support
 ├── handlers/
 │   ├── __init__.py
 │   ├── auth.py          # Authentication with role-based menus
-│   ├── supervisor.py    # Job creation with inline buttons
-│   ├── subcontractor.py # Job accept/decline with buttons
+│   ├── supervisor.py    # Job creation, quote management, job actions
+│   ├── subcontractor.py # Job accept/decline, start/complete, availability
 │   └── admin.py         # History, archiving, code management
 ├── services/
 │   ├── __init__.py
 │   ├── access_codes.py  # Access code validation and registration
 │   ├── jobs.py          # Job CRUD operations
-│   └── archive.py       # Job archiving (90-day auto-archive)
+│   ├── quotes.py        # Quote submission and acceptance
+│   ├── availability.py  # Subcontractor availability management
+│   ├── archive.py       # Job archiving (90-day auto-archive)
+│   └── scheduler.py     # Background reminders and auto-close
 ├── middleware/
 │   ├── __init__.py
 │   └── error_handler.py # Global error handling
@@ -37,21 +40,53 @@ src/bot/
 - `DATABASE_URL` - PostgreSQL connection string
 - `ADMIN_BOOTSTRAP_CODES` - Comma-separated admin access codes for initial setup
 - `ARCHIVE_AFTER_DAYS` - Days before auto-archiving (default: 90)
+- `RESPONSE_REMINDER_HOURS` - Hours before sending job reminder (default: 24)
+- `JOB_AUTO_CLOSE_HOURS` - Hours before auto-cancelling unanswered jobs (default: 72)
 - `LOG_LEVEL` - INFO/DEBUG/ERROR (default: INFO)
 - `ENVIRONMENT` - development/production
 
 ## User Roles
 - **Admin**: Manages the system, views history, creates access codes
-- **Supervisor**: Creates and dispatches jobs
-- **Subcontractor**: Receives and responds to jobs
+- **Supervisor**: Creates jobs, manages quotes, tracks job progress
+- **Subcontractor**: Receives jobs, submits quotes, marks jobs complete
+
+## Job Status Lifecycle
+1. **CREATED** - Job created but not sent
+2. **SENT** - Job sent to subcontractor(s)
+3. **ACCEPTED** - Subcontractor accepted the job
+4. **IN_PROGRESS** - Work has started
+5. **COMPLETED** - Job marked as complete
+6. **CANCELLED** - Job cancelled by supervisor or auto-closed
+7. **ARCHIVED** - Old job archived for records
 
 ## Features
-- **Button-based UI**: Reply keyboards for main menu, inline keyboards for all actions
-- **Role-based menus**: Different menu options based on user role
-- **Job workflow**: Create → Dispatch → Accept/Decline with quote support
-- **Pagination**: Paginated job lists for history viewing
-- **Error handling**: Global error handler with user-friendly messages
-- **Graceful shutdown**: Proper cleanup on SIGTERM/SIGINT
+
+### Supervisor Dashboard
+- **My Jobs** - View all jobs
+- **Pending Jobs** - Jobs awaiting response (CREATED, SENT)
+- **Active Jobs** - Jobs in progress (ACCEPTED, IN_PROGRESS)
+- **View Quotes** - Compare quotes for quote jobs
+- **Accept Quote** - Select winning quote
+- **Cancel Job** - Cancel unstarted jobs
+- **Mark Complete** - Close completed jobs
+
+### Subcontractor Features
+- **Available Jobs** - View jobs waiting for response
+- **My Active Jobs** - View accepted/in-progress jobs
+- **Start Job** - Begin work on accepted job
+- **Mark Complete** - Finish job
+- **Availability Toggle** - Set status (Available/Busy/Away)
+
+### Quote System
+- Subcontractors submit quotes for quote-type jobs
+- Supervisors view all quotes with amounts and timestamps
+- Accept quote assigns job to winning subcontractor
+- Other subcontractors notified when job closes
+
+### Automated Features
+- **Reminders** - Notify subcontractors after RESPONSE_REMINDER_HOURS
+- **Auto-Close** - Cancel unanswered jobs after JOB_AUTO_CLOSE_HOURS
+- **Auto-Archive** - Archive completed jobs after ARCHIVE_AFTER_DAYS
 
 ## Railway Deployment
 1. Connect your GitHub repository to Railway
@@ -62,35 +97,22 @@ src/bot/
    - `ENVIRONMENT=production`
 4. Railway will use `railway.toml` configuration automatically
 
-## Commands by Role
-
-### All Users
-- `/start` - Start bot and authenticate
-- `/help` - Show available commands
-
-### Admin (Button Menu)
-- 📊 Job History - View all job records
-- 📦 Archive Jobs - Archive old completed jobs
-- 🔑 Create Access Code - Generate new access codes
-- 📋 View Archived - Browse archived jobs
-
-### Supervisor (Button Menu)
-- ➕ New Job - Create and dispatch a new job
-- 📋 My Jobs - View jobs you've created
-
-### Subcontractor (Button Menu)
-- 📋 My Assigned Jobs - View jobs assigned to you
-- ✅ Accept / ❌ Decline buttons on each job
-
 ## Database
 Uses PostgreSQL with SQLAlchemy async ORM. Supports Railway PostgreSQL with SSL.
 
+### Tables
+- `users` - User accounts with roles and availability
+- `jobs` - Job records with full lifecycle tracking
+- `quotes` - Quote submissions for quote-type jobs
+- `access_codes` - Registration codes by role
+- `teams` - Team groupings for users and jobs
+
 ## Recent Changes
-- 2026-01-07: Fixed context-aware pagination (page:sup, page:history, page:archived) to prevent cross-role data contamination
-- 2026-01-07: Added view_job handlers with context tokens for all roles
-- 2026-01-07: Added back navigation for all list views (back:sup, back:history, back:archived)
-- 2026-01-07: Added user-friendly button interface throughout
+- 2026-01-07: Added complete job lifecycle (CREATED → SENT → ACCEPTED → IN_PROGRESS → COMPLETED)
+- 2026-01-07: Added Quote model and quote comparison view for supervisors
+- 2026-01-07: Added subcontractor availability toggle (Available/Busy/Away)
+- 2026-01-07: Added background scheduler for reminders and auto-close
+- 2026-01-07: Added supervisor job dashboard with Pending/Active filters
+- 2026-01-07: Added Start Job and Mark Complete buttons for subcontractors
+- 2026-01-07: Fixed context-aware pagination for all list views
 - 2026-01-07: Added Railway deployment configuration
-- 2026-01-07: Added production error handling and graceful shutdown
-- 2026-01-07: Added pagination for job lists
-- 2026-01-07: Full project structure created with all modules

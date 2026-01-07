@@ -1,5 +1,4 @@
 import os
-import sys
 import logging
 
 logger = logging.getLogger(__name__)
@@ -11,6 +10,8 @@ class Config:
     ARCHIVE_AFTER_DAYS: int
     LOG_LEVEL: str
     ENVIRONMENT: str
+    RESPONSE_REMINDER_HOURS: int
+    JOB_AUTO_CLOSE_HOURS: int
 
     def __init__(self):
         self.BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
@@ -22,6 +23,8 @@ class Config:
         self.ARCHIVE_AFTER_DAYS = int(os.getenv("ARCHIVE_AFTER_DAYS", "90"))
         self.LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
         self.ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+        self.RESPONSE_REMINDER_HOURS = int(os.getenv("RESPONSE_REMINDER_HOURS", "24"))
+        self.JOB_AUTO_CLOSE_HOURS = int(os.getenv("JOB_AUTO_CLOSE_HOURS", "72"))
 
     def validate(self) -> bool:
         errors = []

@@ -19,7 +19,7 @@ class ArchiveService:
             result = await session.execute(
                 select(Job).where(
                     and_(
-                        Job.status.in_([JobStatus.ACCEPTED, JobStatus.DECLINED, JobStatus.COMPLETED]),
+                        Job.status.in_([JobStatus.COMPLETED, JobStatus.CANCELLED]),
                         Job.created_at < cutoff_date,
                         Job.archived_at == None
                     )

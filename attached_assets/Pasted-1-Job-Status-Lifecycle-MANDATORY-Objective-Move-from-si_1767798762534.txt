@@ -1,0 +1,188 @@
+1. Job Status Lifecycle (MANDATORY)
+
+Objective
+Move from simple accept/decline to a real job lifecycle.
+
+New Job Statuses
+Add the following statuses:
+• CREATED
+• SENT
+• ACCEPTED
+• IN_PROGRESS
+• COMPLETED
+• CANCELLED
+• ARCHIVED
+
+Implementation Steps
+	1.	Update jobs table
+• Add status column (string or enum)
+• Default status = CREATED
+	2.	When supervisor finishes job creation
+• Change status → SENT
+	3.	When subcontractor accepts
+• Change status → ACCEPTED
+	4.	Add command or button:
+• “Start Job” → IN_PROGRESS
+• “Mark Complete” → COMPLETED
+	5.	Archiving process:
+• Jobs older than ARCHIVE_AFTER_DAYS
+• Status → ARCHIVED
+• Lock all edits
+	6.	Enforce status rules:
+• ARCHIVED jobs cannot change
+• COMPLETED jobs cannot revert
+
+⸻
+
+2. Supervisor Job Dashboard (MANDATORY)
+
+Objective
+Allow supervisors to view and manage their jobs inside Telegram.
+
+Commands to Add
+• /myjobs
+• /pending
+• /active
+
+Implementation Steps
+	1.	/myjobs
+• Fetch all jobs where supervisor_id = current user
+• Display summary:
+– Job ID
+– Address
+– Status
+– Created date
+	2.	/pending
+• Filter jobs with status SENT or CREATED
+	3.	/active
+• Filter jobs with status ACCEPTED or IN_PROGRESS
+	4.	Each job entry should include:
+• Inline buttons:
+– View Details
+– Cancel Job (if not started)
+– Mark Complete (if in progress)
+	5.	Permission check:
+• Only supervisors can use these commands
+
+⸻
+
+3. Quote Comparison View (MANDATORY FOR QUOTE JOBS)
+
+Objective
+Let supervisors see all submitted quotes clearly and select one.
+
+Database Changes
+	1.	Quotes table must include:
+• job_id
+• subcontractor_id
+• amount
+• submitted_at
+
+Implementation Steps
+	1.	When a quote is submitted:
+• Save it in quotes table
+• Notify supervisor
+	2.	Add supervisor action:
+• “View Quotes” button on quote jobs
+	3.	Display:
+• List of quotes
+• Subcontractor name/ID
+• Quote amount
+• Submission time
+	4.	Add button:
+• “Accept Quote”
+	5.	When a quote is accepted:
+• Job status → ACCEPTED
+• Winning subcontractor notified
+• Other subcontractors receive “Job Closed” message
+• Prevent further quotes
+
+⸻
+
+4. Subcontractor Availability Toggle (IMPORTANT)
+
+Objective
+Stop sending jobs to unavailable subcontractors.
+
+Database Changes
+Add to users table:
+• availability_status (AVAILABLE / BUSY / AWAY)
+
+Default = AVAILABLE
+
+Commands to Add
+• /available
+• /busy
+• /away
+
+Implementation Steps
+	1.	Update user availability on command
+	2.	When sending jobs:
+• Only send to AVAILABLE subcontractors
+	3.	Supervisors should be notified if:
+• No subcontractors are available
+
+⸻
+
+5. Soft Reminders & Auto-Timeouts (IMPORTANT)
+
+Objective
+Prevent jobs from stalling.
+
+Environment Variables
+• RESPONSE_REMINDER_HOURS
+• JOB_AUTO_CLOSE_HOURS
+
+Implementation Steps
+	1.	Background task (cron or async loop):
+• Runs every 30–60 minutes
+	2.	Reminder logic:
+• If job is SENT
+• No response after RESPONSE_REMINDER_HOURS
+• Send reminder to subcontractor
+	3.	Auto-close logic:
+• If job still unanswered after JOB_AUTO_CLOSE_HOURS
+• Mark job as CANCELLED
+• Notify supervisor
+	4.	Log all automated actions
+
+⸻
+
+SAFETY & ENFORCEMENT RULES (DO NOT SKIP)
+
+• Every command must check user role
+• Every job action must validate job status
+• No subcontractor can:
+– See other subcontractors’ quotes
+– Change job status beyond allowed steps
+• Archived jobs are read-only
+• All updates must be database-backed
+
+⸻
+
+REQUIRED TEST CASES (AGENT MUST VERIFY)
+	1.	Supervisor creates quote job → status SENT
+	2.	Subcontractor accepts → status ACCEPTED
+	3.	Quote submitted → supervisor notified
+	4.	Supervisor accepts one quote → others closed
+	5.	Busy subcontractor does not receive new jobs
+	6.	Job auto-reminder triggers correctly
+	7.	Archived job cannot be edited
+
+If any of these fail → feature is incomplete.
+
+⸻
+
+FINAL NOTE FOR THE AGENT
+
+These upgrades are not optional polish — they are foundational workflow improvements.
+
+Do not:
+• Hardcode values
+• Skip permission checks
+• Use in-memory state
+
+Everything must:
+• Survive restarts
+• Work on Railway
+• Be driven by environment variables

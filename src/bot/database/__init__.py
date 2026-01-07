@@ -1,4 +1,4 @@
 from .session import engine, async_session, init_db
-from .models import Base, User, AccessCode, Team, Job
+from .models import Base, User, AccessCode, Team, Job, Quote, UserRole, JobStatus, JobType, AvailabilityStatus
 
-__all__ = ['engine', 'async_session', 'init_db', 'Base', 'User', 'AccessCode', 'Team', 'Job']
+__all__ = ['engine', 'async_session', 'init_db', 'Base', 'User', 'AccessCode', 'Team', 'Job', 'Quote', 'UserRole', 'JobStatus', 'JobType', 'AvailabilityStatus']
