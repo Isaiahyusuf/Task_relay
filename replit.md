@@ -86,6 +86,9 @@ src/bot/
 Uses PostgreSQL with SQLAlchemy async ORM. Supports Railway PostgreSQL with SSL.
 
 ## Recent Changes
+- 2026-01-07: Fixed context-aware pagination (page:sup, page:history, page:archived) to prevent cross-role data contamination
+- 2026-01-07: Added view_job handlers with context tokens for all roles
+- 2026-01-07: Added back navigation for all list views (back:sup, back:history, back:archived)
 - 2026-01-07: Added user-friendly button interface throughout
 - 2026-01-07: Added Railway deployment configuration
 - 2026-01-07: Added production error handling and graceful shutdown
