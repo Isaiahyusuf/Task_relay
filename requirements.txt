@@ -1,2 +1,5 @@
 aiogram
-aiogram
+sqlalchemy
+asyncpg
+python-dotenv
+alembic

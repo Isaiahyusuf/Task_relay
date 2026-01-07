@@ -1,57 +1,60 @@
 # TaskRelay Bot
 
 ## Overview
+TaskRelay Bot is a Telegram-based workflow automation system for managing job assignments between Supervisors, Subcontractors, and Admins.
 
-TaskRelay Bot is a Telegram-based workflow automation system designed to manage job assignments between Supervisors, Subcontractors, and Admins. The bot facilitates job creation, quote collection, acceptance/decline tracking, and supervisor-subcontractor communication. Access is controlled via secure access codes that automatically assign user roles and teams.
+## Project Structure
+```
+src/bot/
+├── main.py              # Entry point
+├── config.py            # Environment configuration
+├── database/
+│   ├── __init__.py
+│   ├── models.py        # SQLAlchemy models (User, Job, AccessCode, Team)
+│   └── session.py       # Database session management
+├── handlers/
+│   ├── __init__.py
+│   ├── auth.py          # Authentication and /start, /help
+│   ├── supervisor.py    # Job creation and dispatch
+│   ├── subcontractor.py # Job accept/decline
+│   └── admin.py         # History, archiving, code management
+├── services/
+│   ├── __init__.py
+│   ├── access_codes.py  # Access code validation and registration
+│   ├── jobs.py          # Job CRUD operations
+│   └── archive.py       # Job archiving
+└── utils/
+    ├── __init__.py
+    └── permissions.py   # Role-based access control
+```
 
-**Core functionality:**
-- Job creation (quote-based and preset price)
-- Quote submission and tracking
-- Role-based access control (Supervisor, Subcontractor, Admin)
-- Job history logging and archiving
-- Real-time notifications between parties
+## Environment Variables (Required)
+- `TELEGRAM_BOT_TOKEN` - Telegram bot token from @BotFather
+- `DATABASE_URL` - PostgreSQL connection string
+- `ADMIN_BOOTSTRAP_CODES` - Comma-separated admin access codes for initial setup
+- `ARCHIVE_AFTER_DAYS` - Days before auto-archiving (default: 90)
+- `LOG_LEVEL` - INFO/DEBUG/ERROR (default: INFO)
+- `ENVIRONMENT` - development/production
 
-## User Preferences
+## User Roles
+- **Admin**: Manages the system, views history, creates access codes
+- **Supervisor**: Creates and dispatches jobs
+- **Subcontractor**: Receives and responds to jobs
 
-Preferred communication style: Simple, everyday language.
+## Commands
+- `/start` - Start bot and authenticate with access code
+- `/help` - Show available commands
+- `/newjob` - Create new job (Supervisor)
+- `/myjobs` - View created jobs (Supervisor)
+- `/jobs` - View assigned jobs (Subcontractor)
+- `/accept <id>` - Accept a job (Subcontractor)
+- `/decline <id>` - Decline a job (Subcontractor)
+- `/history` - View job history (Admin)
+- `/archive` - Archive old jobs (Admin)
+- `/createcode <code> <role>` - Create access code (Admin)
 
-## System Architecture
+## Database
+Uses PostgreSQL with SQLAlchemy async ORM.
 
-### Bot Framework
-- **Framework**: aiogram (Python async Telegram bot framework)
-- **Pattern**: Event-driven with command and message handlers
-- **Async Runtime**: asyncio for non-blocking I/O operations
-
-### Role-Based Access Control
-- Three distinct roles: Supervisor, Subcontractor, Admin
-- Access codes determine user roles and team assignments
-- Each role has specific capabilities and command access
-
-### Application Structure
-- **Entry Point**: `main.py` handles bot initialization and polling
-- **Configuration**: Environment variables for sensitive data (TELEGRAM_BOT_TOKEN)
-- **Current State**: Skeleton implementation with placeholder handlers
-
-### Data Requirements (To Be Implemented)
-The system will need to persist:
-- User registrations with roles and team assignments
-- Job records with status tracking
-- Quote submissions
-- Job history for archival purposes
-
-### Workflow Patterns
-- **Job Creation Flow**: Supervisor creates job → System notifies subcontractors → Subcontractor responds → Supervisor notified
-- **Quote Flow**: Supervisor requests quote → Subcontractor submits price → Supervisor reviews
-
-## External Dependencies
-
-### Telegram Bot API
-- **Purpose**: Core messaging and user interaction
-- **Integration**: Via aiogram library
-- **Authentication**: Bot token stored in TELEGRAM_BOT_TOKEN environment variable
-
-### Python Packages
-- **aiogram**: Async Telegram Bot API framework
-
-### Required Secrets
-- `TELEGRAM_BOT_TOKEN`: Telegram Bot API token from BotFather
+## Recent Changes
+- 2026-01-07: Full project structure created with all modules

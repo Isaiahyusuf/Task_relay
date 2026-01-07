@@ -1,44 +1,57 @@
 import logging
-import os
-from aiogram import Bot, Dispatcher, types
-from aiogram.filters import Command
-from aiogram.types import Message
 import asyncio
+import sys
+import os
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-# Initialize bot and dispatcher
-API_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+from aiogram import Bot, Dispatcher
+from src.bot.config import config
+from src.bot.database import init_db
+from src.bot.database.session import engine
+from src.bot.services.access_codes import AccessCodeService
+from src.bot.handlers import auth_router, supervisor_router, subcontractor_router, admin_router
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 async def main():
-    if not API_TOKEN or API_TOKEN == "YOUR_BOT_TOKEN_HERE":
-        logging.error("TELEGRAM_BOT_TOKEN is not set or is invalid. Please set it in secrets.")
+    config.setup_logging()
+    
+    if not config.validate():
+        logger.error("Configuration validation failed. Exiting.")
         return
-
-    logging.info("Initializing bot with token...")
+    
+    if not engine:
+        logger.error("Database engine not initialized. Check DATABASE_URL.")
+        return
+    
+    logger.info("Initializing database...")
+    await init_db()
+    
+    logger.info("Setting up bootstrap admin codes...")
+    await AccessCodeService.create_bootstrap_codes(config.ADMIN_BOOTSTRAP_CODES)
+    
+    logger.info("Initializing bot...")
+    bot = Bot(token=config.BOT_TOKEN)
+    dp = Dispatcher()
+    
+    dp.include_router(auth_router)
+    dp.include_router(supervisor_router)
+    dp.include_router(subcontractor_router)
+    dp.include_router(admin_router)
+    
+    logger.info("Starting bot polling...")
     try:
-        bot = Bot(token=API_TOKEN)
-        dp = Dispatcher()
-
-        @dp.message(Command("start"))
-        async def cmd_start(message: Message):
-            await message.answer(
-                "Welcome to TaskRelay Bot!\n\n"
-                "Please enter your access code to begin."
-            )
-
-        @dp.message(Command("history"))
-        async def cmd_history(message: Message):
-            await message.answer("Fetching job history... (Admin only)")
-
-        logging.info("Starting bot polling...")
         await dp.start_polling(bot)
-    except Exception as e:
-        logging.error(f"Failed to start bot: {e}")
+    finally:
+        await bot.session.close()
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except (KeyboardInterrupt, SystemExit):
-        logging.info("Bot stopped")
+        logger.info("Bot stopped")

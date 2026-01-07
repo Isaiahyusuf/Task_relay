@@ -1,0 +1,227 @@
+TASKRELAY BOT
+Telegram Workflow Automation & Job Dispatch System
+
+⸻
+
+OVERVIEW
+
+TaskRelay Bot is a Telegram-based workflow automation system designed to manage job assignments between Supervisors, Subcontractors, and Admins.
+
+The bot manages:
+• Job creation and dispatch
+• Quote collection and tracking
+• Job acceptance and decline handling
+• Supervisor–subcontractor communication
+• Persistent job history and archiving
+
+All user access is controlled through pre-issued access codes stored in a database.
+There is no public signup and no hardcoded credentials.
+
+This project is designed for development on Replit and production hosting on Railway.
+
+⸻
+
+CORE ROLES
+
+SUPERVISOR
+Creates and dispatches jobs.
+
+SUBCONTRACTOR
+Receives and responds to jobs.
+
+ADMIN
+Oversees the system and manages records.
+
+Roles are assigned automatically during onboarding via access codes.
+
+⸻
+
+ACCESS CODE AUTHENTICATION (SYSTEM OF RECORD)
+
+The bot validates access codes against a persistent database.
+A code is considered valid only if:
+
+• It exists in the database
+• It is active
+• It has not exceeded usage limits
+• It has not expired
+
+Upon validation:
+• The user’s Telegram ID is bound to the role and team
+• The user never re-enters a code
+• Permissions are enforced on every action
+
+⸻
+
+ACCESS CODE LIFECYCLE
+
+• Codes are created manually by Admins
+• Codes are distributed privately (WhatsApp, Email, Telegram DM)
+• The bot only validates — it never generates public codes
+• Codes can be single-use or reusable
+• Codes can be revoked or expired at any time
+
+⸻
+
+JOB WORKFLOW SUMMARY
+
+SUPERVISOR
+• Create quote jobs or preset-price jobs
+• Attach address, description, photos, and price (if fixed)
+• Dispatch jobs to assigned subcontractors
+• Receive notifications on acceptance or decline
+
+SUBCONTRACTOR
+• Receive assigned jobs
+• Accept or decline
+• Submit quotes for quote-based jobs
+• Actions notify supervisors automatically
+
+ADMIN
+• View job history
+• Track accepted and declined jobs
+• Archive jobs automatically after 3 months
+• Access archived jobs in read-only mode
+
+⸻
+
+COMMANDS
+
+/start – Start bot and authenticate
+/accept – Accept job
+/decline – Decline job
+
+Admin-only:
+/history – View job history
+/archive – Manually archive jobs
+
+⸻
+
+DATA PERSISTENCE & ARCHIVING
+
+• All jobs are stored in a database
+• No in-memory job state is allowed
+• Jobs older than 3 months are auto-archived
+• Archived jobs are immutable and read-only
+
+⸻
+
+SECURITY PRINCIPLES
+
+• Role-based access control
+• Database-backed authentication
+• Team-based job routing
+• No subcontractor sees another’s actions
+• No hardcoded secrets
+• Environment-variable-only configuration
+• Immutable audit logs
+
+⸻
+
+TECH STACK
+
+Bot Platform:
+• Telegram Bot API
+
+Language:
+• Python 3.10+
+
+Framework:
+• Aiogram (preferred)
+
+Database:
+• PostgreSQL (Railway production)
+• SQLite (local or MVP only)
+
+Hosting:
+• Replit (development)
+• Railway (production)
+
+⸻
+
+ENVIRONMENT VARIABLES (MANDATORY)
+
+ALL configuration must be provided via Secret Environment Variables.
+No credentials, tokens, IDs, or URLs may be hardcoded.
+
+Required secrets:
+
+BOT_TOKEN
+Telegram bot token
+
+DATABASE_URL
+PostgreSQL connection string (Railway)
+
+ADMIN_BOOTSTRAP_CODES
+Comma-separated admin access codes for initial setup
+
+ARCHIVE_AFTER_DAYS
+Number of days before auto-archiving (default: 90)
+
+LOG_LEVEL
+INFO / DEBUG / ERROR
+
+ENVIRONMENT
+development / production
+
+⸻
+
+REPLIT AGENT INSTRUCTIONS (IMPORTANT)
+	1.	Create a new Python Replit project
+	2.	DO NOT hardcode any values
+All configuration must be read from environment variables
+	3.	Use a .env loader for local testing only
+(Never commit .env files)
+	4.	Implement database migrations on startup
+Ensure tables exist before bot polling begins
+	5.	Use long polling for Replit development
+Do NOT implement webhooks on Replit
+	6.	Ensure database persistence
+• SQLite must use Replit persistent filesystem
+• PostgreSQL must be used in production
+	7.	Code must be Railway-compatible
+• Read DATABASE_URL dynamically
+• Bind to 0.0.0.0 if HTTP server is used
+• No local-only paths
+	8.	Fail fast on missing environment variables
+The bot must refuse to start if secrets are missing
+
+⸻
+
+RAILWAY DEPLOYMENT NOTES
+
+• Use Railway PostgreSQL plugin
+• Set all secrets in Railway Variables
+• Enable automatic restarts
+• Use polling unless webhooks are explicitly configured
+• Logs must be stdout/stderr only
+
+⸻
+
+PROJECT STRUCTURE (RECOMMENDED)
+
+main.py
+config.py (env loading & validation)
+database/
+models.py
+session.py
+handlers/
+auth.py
+supervisor.py
+subcontractor.py
+admin.py
+services/
+access_codes.py
+jobs.py
+archive.py
+utils/
+permissions.py
+
+⸻
+
+FINAL NOTES
+
+TaskRelay is designed as a closed, enterprise-style system.
+Security, persistence, and role enforcement are non-negotiable.
+
+No shortcuts. No magic. No hidden state.
