@@ -1,57 +1,125 @@
-from aiogram import Router
-from aiogram.filters import Command
-from aiogram.types import Message
+from aiogram import Router, F
+from aiogram.filters import Command, StateFilter
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.types import Message, CallbackQuery
 from sqlalchemy import select
-from src.bot.database import async_session, User
-from src.bot.database.models import UserRole
+from src.bot.database import async_session, User, Job
+from src.bot.database.models import UserRole, JobStatus, JobType
 from src.bot.services.jobs import JobService
 from src.bot.services.archive import ArchiveService
 from src.bot.services.access_codes import AccessCodeService
 from src.bot.utils.permissions import require_role
+from src.bot.utils.keyboards import get_role_selection_keyboard, get_job_list_keyboard, get_back_keyboard
 import logging
 
 logger = logging.getLogger(__name__)
 router = Router()
 
+class CreateCodeStates(StatesGroup):
+    waiting_for_code = State()
+    waiting_for_role = State()
+    confirming = State()
+
 @router.message(Command("history"))
 @require_role(UserRole.ADMIN)
 async def cmd_history(message: Message):
+    await show_history(message)
+
+@router.message(F.text == "📊 Job History")
+async def btn_history(message: Message):
+    if not await check_admin(message):
+        return
+    await show_history(message)
+
+async def check_admin(message: Message) -> bool:
+    if not async_session:
+        await message.answer("⚠️ Database not available.")
+        return False
+    
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == message.from_user.id)
+        )
+        user = result.scalar_one_or_none()
+        if not user or user.role != UserRole.ADMIN:
+            await message.answer("❌ You don't have admin permissions.")
+            return False
+    return True
+
+async def show_history(message: Message):
     async with async_session() as session:
         result = await session.execute(
             select(User).where(User.telegram_id == message.from_user.id)
         )
         user = result.scalar_one_or_none()
     
-    jobs = await JobService.get_job_history(team_id=user.team_id if user else None)
+    jobs = await JobService.get_job_history(team_id=user.team_id if user else None, limit=50)
     
     if not jobs:
-        await message.answer("No job history found.")
+        await message.answer(
+            "📊 *Job History*\n\n"
+            "No job records found.",
+            parse_mode="Markdown"
+        )
         return
     
-    history_lines = []
+    status_counts = {}
     for job in jobs:
-        line = (
-            f"#{job.id}: {job.title}\n"
-            f"  Status: {job.status.value} | Type: {job.job_type.value}\n"
-            f"  Created: {job.created_at.strftime('%Y-%m-%d %H:%M')}"
-        )
-        history_lines.append(line)
+        status = job.status.value
+        status_counts[status] = status_counts.get(status, 0) + 1
     
-    await message.answer("Job History (last 50):\n\n" + "\n\n".join(history_lines))
+    summary = "\n".join([f"• {status.title()}: {count}" for status, count in status_counts.items()])
+    
+    await message.answer(
+        f"📊 *Job History*\n\n"
+        f"*Summary ({len(jobs)} jobs):*\n{summary}\n\n"
+        "Select a job to view details:",
+        reply_markup=get_job_list_keyboard(jobs, context="history"),
+        parse_mode="Markdown"
+    )
 
 @router.message(Command("archive"))
 @require_role(UserRole.ADMIN)
 async def cmd_archive(message: Message):
+    await archive_jobs(message)
+
+@router.message(F.text == "📦 Archive Jobs")
+async def btn_archive(message: Message):
+    if not await check_admin(message):
+        return
+    await archive_jobs(message)
+
+async def archive_jobs(message: Message):
     count = await ArchiveService.archive_old_jobs()
     
     if count > 0:
-        await message.answer(f"Archived {count} old jobs.")
+        await message.answer(
+            f"📦 *Archive Complete*\n\n"
+            f"Archived *{count}* old jobs.\n\n"
+            "Archived jobs can be viewed in 'View Archived'.",
+            parse_mode="Markdown"
+        )
     else:
-        await message.answer("No jobs eligible for archiving.")
+        await message.answer(
+            "📦 *Archive Jobs*\n\n"
+            "No jobs eligible for archiving at this time.\n\n"
+            "Jobs are automatically archived after 90 days.",
+            parse_mode="Markdown"
+        )
 
 @router.message(Command("archived"))
 @require_role(UserRole.ADMIN)
 async def cmd_archived(message: Message):
+    await show_archived(message)
+
+@router.message(F.text == "📋 View Archived")
+async def btn_archived(message: Message):
+    if not await check_admin(message):
+        return
+    await show_archived(message)
+
+async def show_archived(message: Message):
     async with async_session() as session:
         result = await session.execute(
             select(User).where(User.telegram_id == message.from_user.id)
@@ -61,35 +129,109 @@ async def cmd_archived(message: Message):
     jobs = await ArchiveService.get_archived_jobs(team_id=user.team_id if user else None)
     
     if not jobs:
-        await message.answer("No archived jobs found.")
+        await message.answer(
+            "📦 *Archived Jobs*\n\n"
+            "No archived jobs found.",
+            parse_mode="Markdown"
+        )
         return
     
-    archive_lines = []
-    for job in jobs:
-        line = (
-            f"#{job.id}: {job.title}\n"
-            f"  Status: {job.status.value}\n"
-            f"  Archived: {job.archived_at.strftime('%Y-%m-%d %H:%M') if job.archived_at else 'N/A'}"
-        )
-        archive_lines.append(line)
-    
-    await message.answer("Archived Jobs:\n\n" + "\n\n".join(archive_lines))
+    await message.answer(
+        f"📦 *Archived Jobs* ({len(jobs)} total)\n\n"
+        "Select a job to view details:",
+        reply_markup=get_job_list_keyboard(jobs, context="archived"),
+        parse_mode="Markdown"
+    )
 
 @router.message(Command("createcode"))
 @require_role(UserRole.ADMIN)
-async def cmd_create_code(message: Message):
+async def cmd_create_code(message: Message, state: FSMContext):
     parts = message.text.split()
     
-    if len(parts) < 3:
-        await message.answer(
-            "Usage: /createcode <code> <role>\n"
-            "Roles: admin, supervisor, subcontractor\n\n"
-            "Example: /createcode ABC123 supervisor"
+    if len(parts) >= 3:
+        code = parts[1]
+        role_str = parts[2].lower()
+        
+        role_map = {
+            "admin": UserRole.ADMIN,
+            "supervisor": UserRole.SUPERVISOR,
+            "subcontractor": UserRole.SUBCONTRACTOR
+        }
+        
+        if role_str not in role_map:
+            await message.answer(
+                "❌ Invalid role. Use: admin, supervisor, or subcontractor"
+            )
+            return
+        
+        async with async_session() as session:
+            result = await session.execute(
+                select(User).where(User.telegram_id == message.from_user.id)
+            )
+            user = result.scalar_one_or_none()
+        
+        success = await AccessCodeService.create_access_code(
+            code=code,
+            role=role_map[role_str],
+            team_id=user.team_id if user else None
         )
+        
+        if success:
+            await message.answer(
+                f"✅ *Access Code Created*\n\n"
+                f"🔑 Code: `{code}`\n"
+                f"👤 Role: {role_str.title()}\n\n"
+                "Share this code privately with the intended user.",
+                parse_mode="Markdown"
+            )
+        else:
+            await message.answer("❌ Failed to create code. It may already exist.")
         return
     
-    code = parts[1]
-    role_str = parts[2].lower()
+    await start_code_creation(message, state)
+
+@router.message(F.text == "🔑 Create Access Code")
+async def btn_create_code(message: Message, state: FSMContext):
+    if not await check_admin(message):
+        return
+    await start_code_creation(message, state)
+
+async def start_code_creation(message: Message, state: FSMContext):
+    await message.answer(
+        "🔑 *Create Access Code*\n\n"
+        "Step 1/2: Enter the access code\n"
+        "(letters and numbers only):",
+        parse_mode="Markdown"
+    )
+    await state.set_state(CreateCodeStates.waiting_for_code)
+
+@router.message(StateFilter(CreateCodeStates.waiting_for_code))
+async def process_code_input(message: Message, state: FSMContext):
+    code = message.text.strip()
+    
+    if not code.isalnum():
+        await message.answer("❌ Code must contain only letters and numbers. Try again:")
+        return
+    
+    if len(code) < 4:
+        await message.answer("❌ Code must be at least 4 characters. Try again:")
+        return
+    
+    await state.update_data(code=code)
+    await message.answer(
+        "🔑 *Create Access Code*\n\n"
+        f"Code: `{code}`\n\n"
+        "Step 2/2: Select the role for this code:",
+        reply_markup=get_role_selection_keyboard(),
+        parse_mode="Markdown"
+    )
+    await state.set_state(CreateCodeStates.waiting_for_role)
+
+@router.callback_query(F.data.startswith("role:"), StateFilter(CreateCodeStates.waiting_for_role))
+async def process_role_selection(callback: CallbackQuery, state: FSMContext):
+    role_str = callback.data.split(":")[1]
+    data = await state.get_data()
+    code = data.get('code')
     
     role_map = {
         "admin": UserRole.ADMIN,
@@ -97,13 +239,9 @@ async def cmd_create_code(message: Message):
         "subcontractor": UserRole.SUBCONTRACTOR
     }
     
-    if role_str not in role_map:
-        await message.answer("Invalid role. Use: admin, supervisor, or subcontractor")
-        return
-    
     async with async_session() as session:
         result = await session.execute(
-            select(User).where(User.telegram_id == message.from_user.id)
+            select(User).where(User.telegram_id == callback.from_user.id)
         )
         user = result.scalar_one_or_none()
     
@@ -114,6 +252,165 @@ async def cmd_create_code(message: Message):
     )
     
     if success:
-        await message.answer(f"Access code '{code}' created for role '{role_str}'.")
+        role_emoji = {"admin": "👑", "supervisor": "👔", "subcontractor": "🔧"}.get(role_str, "👤")
+        await callback.message.edit_text(
+            f"✅ *Access Code Created!*\n\n"
+            f"🔑 Code: `{code}`\n"
+            f"{role_emoji} Role: {role_str.title()}\n\n"
+            "📤 Share this code privately with the intended user.\n"
+            "They can use it with /start to register.",
+            parse_mode="Markdown"
+        )
     else:
-        await message.answer("Failed to create code. It may already exist.")
+        await callback.message.edit_text(
+            f"❌ Failed to create code.\n\n"
+            "The code may already exist."
+        )
+    
+    await state.clear()
+    await callback.answer()
+
+@router.callback_query(F.data == "code_cancel")
+async def cancel_code_creation(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
+    await callback.message.edit_text("❌ Access code creation cancelled.")
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("page:history:"))
+async def handle_history_pagination(callback: CallbackQuery):
+    page = int(callback.data.split(":")[2])
+    
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == callback.from_user.id)
+        )
+        user = result.scalar_one_or_none()
+    
+    jobs = await JobService.get_job_history(team_id=user.team_id if user else None, limit=50)
+    
+    await callback.message.edit_reply_markup(
+        reply_markup=get_job_list_keyboard(jobs, page=page, context="history")
+    )
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("page:archived:"))
+async def handle_archived_pagination(callback: CallbackQuery):
+    page = int(callback.data.split(":")[2])
+    
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == callback.from_user.id)
+        )
+        user = result.scalar_one_or_none()
+    
+    jobs = await ArchiveService.get_archived_jobs(team_id=user.team_id if user else None)
+    
+    await callback.message.edit_reply_markup(
+        reply_markup=get_job_list_keyboard(jobs, page=page, context="archived")
+    )
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("view_job:history:"))
+async def view_job_details_history(callback: CallbackQuery):
+    job_id = int(callback.data.split(":")[2])
+    await show_job_details(callback, job_id, "history")
+
+@router.callback_query(F.data.startswith("view_job:archived:"))
+async def view_job_details_archived(callback: CallbackQuery):
+    job_id = int(callback.data.split(":")[2])
+    await show_job_details(callback, job_id, "archived")
+
+async def show_job_details(callback: CallbackQuery, job_id: int, context: str):
+    if not async_session:
+        await callback.answer("Database error", show_alert=True)
+        return
+    
+    async with async_session() as session:
+        result = await session.execute(select(Job).where(Job.id == job_id))
+        job = result.scalar_one_or_none()
+    
+    if not job:
+        await callback.answer("Job not found", show_alert=True)
+        return
+    
+    status_emoji = {
+        JobStatus.PENDING: "⏳ Pending",
+        JobStatus.DISPATCHED: "📤 Dispatched",
+        JobStatus.ACCEPTED: "✅ Accepted",
+        JobStatus.DECLINED: "❌ Declined",
+        JobStatus.COMPLETED: "✔️ Completed",
+        JobStatus.ARCHIVED: "📦 Archived"
+    }.get(job.status, "Unknown")
+    
+    type_emoji = "💰 Quote" if job.job_type == JobType.QUOTE else "🏷️ Preset Price"
+    
+    details = (
+        f"📋 *Job #{job.id}*\n\n"
+        f"*Title:* {job.title}\n"
+        f"*Type:* {type_emoji}\n"
+        f"*Status:* {status_emoji}\n"
+    )
+    
+    if job.description:
+        details += f"*Description:* {job.description}\n"
+    if job.address:
+        details += f"*Address:* {job.address}\n"
+    if job.preset_price:
+        details += f"*Price:* {job.preset_price}\n"
+    if job.quoted_price:
+        details += f"*Quoted:* {job.quoted_price}\n"
+    if job.decline_reason:
+        details += f"*Decline Reason:* {job.decline_reason}\n"
+    
+    details += f"\n*Created:* {job.created_at.strftime('%Y-%m-%d %H:%M')}"
+    
+    await callback.message.edit_text(
+        details,
+        reply_markup=get_back_keyboard(f"back:{context}"),
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+@router.callback_query(F.data == "back:history")
+async def back_to_history(callback: CallbackQuery):
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == callback.from_user.id)
+        )
+        user = result.scalar_one_or_none()
+    
+    jobs = await JobService.get_job_history(team_id=user.team_id if user else None, limit=50)
+    
+    status_counts = {}
+    for job in jobs:
+        status = job.status.value
+        status_counts[status] = status_counts.get(status, 0) + 1
+    
+    summary = "\n".join([f"• {status.title()}: {count}" for status, count in status_counts.items()])
+    
+    await callback.message.edit_text(
+        f"📊 *Job History*\n\n"
+        f"*Summary ({len(jobs)} jobs):*\n{summary}\n\n"
+        "Select a job to view details:",
+        reply_markup=get_job_list_keyboard(jobs, context="history"),
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+@router.callback_query(F.data == "back:archived")
+async def back_to_archived(callback: CallbackQuery):
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == callback.from_user.id)
+        )
+        user = result.scalar_one_or_none()
+    
+    jobs = await ArchiveService.get_archived_jobs(team_id=user.team_id if user else None)
+    
+    await callback.message.edit_text(
+        f"📦 *Archived Jobs* ({len(jobs)} total)\n\n"
+        "Select a job to view details:",
+        reply_markup=get_job_list_keyboard(jobs, context="archived"),
+        parse_mode="Markdown"
+    )
+    await callback.answer()
