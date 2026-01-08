@@ -130,6 +130,15 @@ async def handle_confirm_self_delete(callback: CallbackQuery):
             await callback.answer("User not found", show_alert=True)
             return
         
+        if user.access_code_id:
+            from src.bot.database import AccessCode
+            code_result = await session.execute(
+                select(AccessCode).where(AccessCode.id == user.access_code_id)
+            )
+            access_code = code_result.scalar_one_or_none()
+            if access_code and access_code.current_uses > 0:
+                access_code.current_uses -= 1
+        
         user.is_active = False
         await session.commit()
     
