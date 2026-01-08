@@ -37,10 +37,12 @@ class AccessCodeService:
             return False, "Database not configured"
         
         async with async_session() as session:
-            existing = await session.execute(
+            existing_result = await session.execute(
                 select(User).where(User.telegram_id == telegram_id)
             )
-            if existing.scalar_one_or_none():
+            existing_user = existing_result.scalar_one_or_none()
+            
+            if existing_user and existing_user.is_active:
                 return False, "You are already registered."
             
             result = await session.execute(
@@ -60,15 +62,23 @@ class AccessCodeService:
             if access_code.expires_at and access_code.expires_at < datetime.utcnow():
                 return False, "This access code has expired."
             
-            user = User(
-                telegram_id=telegram_id,
-                username=username,
-                first_name=first_name,
-                role=access_code.role,
-                team_id=access_code.team_id,
-                access_code_id=access_code.id
-            )
-            session.add(user)
+            if existing_user:
+                existing_user.is_active = True
+                existing_user.role = access_code.role
+                existing_user.team_id = access_code.team_id
+                existing_user.access_code_id = access_code.id
+                existing_user.username = username
+                existing_user.first_name = first_name
+            else:
+                user = User(
+                    telegram_id=telegram_id,
+                    username=username,
+                    first_name=first_name,
+                    role=access_code.role,
+                    team_id=access_code.team_id,
+                    access_code_id=access_code.id
+                )
+                session.add(user)
             
             access_code.current_uses += 1
             
