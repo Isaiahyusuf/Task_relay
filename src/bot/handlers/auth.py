@@ -7,7 +7,7 @@ from sqlalchemy import select
 from src.bot.database import async_session, User
 from src.bot.database.models import UserRole
 from src.bot.services.access_codes import AccessCodeService
-from src.bot.utils.keyboards import get_main_menu_keyboard
+from src.bot.utils.keyboards import get_main_menu_keyboard, get_self_delete_confirm_keyboard
 import logging
 
 logger = logging.getLogger(__name__)
@@ -90,6 +90,59 @@ async def cmd_help(message: Message):
 @router.message(F.text == "ℹ️ Help")
 async def btn_help(message: Message):
     await show_help(message)
+
+@router.message(F.text == "🗑️ Delete My Account")
+async def btn_delete_account(message: Message):
+    if not async_session:
+        await message.answer("Database not available.")
+        return
+    
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == message.from_user.id)
+        )
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            await message.answer("You are not registered.")
+            return
+    
+    await message.answer(
+        "⚠️ *Delete Your Account*\n\n"
+        "Are you sure you want to delete your account?\n\n"
+        "*This action cannot be undone.*\n"
+        "You will need a new access code to register again.",
+        reply_markup=get_self_delete_confirm_keyboard(user.id),
+        parse_mode="Markdown"
+    )
+
+@router.callback_query(F.data.startswith("confirm_self_delete:"))
+async def handle_confirm_self_delete(callback: CallbackQuery):
+    user_id = int(callback.data.split(":")[1])
+    
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.id == user_id, User.telegram_id == callback.from_user.id)
+        )
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            await callback.answer("User not found", show_alert=True)
+            return
+        
+        user.is_active = False
+        await session.commit()
+    
+    await callback.message.edit_text(
+        "Your account has been deleted.\n\n"
+        "Use /start with a new access code to register again."
+    )
+    await callback.answer()
+
+@router.callback_query(F.data == "cancel_self_delete")
+async def handle_cancel_self_delete(callback: CallbackQuery):
+    await callback.message.edit_text("Account deletion cancelled.")
+    await callback.answer()
 
 @router.message(F.text == "📘 About")
 async def btn_about(message: Message):

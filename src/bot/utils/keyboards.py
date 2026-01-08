@@ -13,13 +13,15 @@ def get_main_menu_keyboard(role: UserRole) -> ReplyKeyboardMarkup:
         buttons = [
             [KeyboardButton(text="➕ New Job"), KeyboardButton(text="📋 My Jobs")],
             [KeyboardButton(text="⏳ Pending Jobs"), KeyboardButton(text="🔄 Active Jobs")],
-            [KeyboardButton(text="ℹ️ Help"), KeyboardButton(text="📘 About")]
+            [KeyboardButton(text="ℹ️ Help"), KeyboardButton(text="📘 About")],
+            [KeyboardButton(text="🗑️ Delete My Account")]
         ]
     else:
         buttons = [
             [KeyboardButton(text="📋 Available Jobs"), KeyboardButton(text="🔄 My Active Jobs")],
             [KeyboardButton(text="🟢 Available"), KeyboardButton(text="🟡 Busy"), KeyboardButton(text="🔴 Away")],
-            [KeyboardButton(text="ℹ️ Help"), KeyboardButton(text="📘 About")]
+            [KeyboardButton(text="ℹ️ Help"), KeyboardButton(text="📘 About")],
+            [KeyboardButton(text="🗑️ Delete My Account")]
         ]
     
     return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
@@ -209,10 +211,19 @@ def get_switch_role_keyboard() -> InlineKeyboardMarkup:
     ])
 
 def get_confirm_delete_keyboard(user_id: int, delete_type: str) -> InlineKeyboardMarkup:
+    cancel_callback = "back:users" if delete_type == "other" else "cancel_self_delete"
     return InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="✅ Yes, Delete", callback_data=f"confirm_delete:{user_id}:{delete_type}"),
-            InlineKeyboardButton(text="❌ No, Cancel", callback_data="back:users")
+            InlineKeyboardButton(text="❌ No, Cancel", callback_data=cancel_callback)
+        ]
+    ])
+
+def get_self_delete_confirm_keyboard(user_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="✅ Yes, Delete My Account", callback_data=f"confirm_self_delete:{user_id}"),
+            InlineKeyboardButton(text="❌ No, Cancel", callback_data="cancel_self_delete")
         ]
     ])
 
