@@ -6,6 +6,7 @@ def get_main_menu_keyboard(role: UserRole) -> ReplyKeyboardMarkup:
         buttons = [
             [KeyboardButton(text="📊 Job History"), KeyboardButton(text="📦 Archive Jobs")],
             [KeyboardButton(text="🔑 Create Access Code"), KeyboardButton(text="📋 View Archived")],
+            [KeyboardButton(text="👥 Manage Users"), KeyboardButton(text="🔄 Switch Role")],
             [KeyboardButton(text="ℹ️ Help"), KeyboardButton(text="📘 About")]
         ]
     elif role == UserRole.SUPERVISOR:
@@ -159,6 +160,60 @@ def get_role_selection_keyboard() -> InlineKeyboardMarkup:
 def get_back_keyboard(callback_data: str = "back:main") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="⬅️ Back", callback_data=callback_data)]
+    ])
+
+def get_user_list_keyboard(users: list, page: int = 0, page_size: int = 5, include_self: bool = True) -> InlineKeyboardMarkup:
+    start = page * page_size
+    end = start + page_size
+    page_users = users[start:end]
+    
+    buttons = []
+    for user in page_users:
+        role_emoji = {"admin": "👑", "supervisor": "👔", "subcontractor": "🔧"}.get(user.role.value, "👤")
+        name = user.first_name or user.username or f"User {user.telegram_id}"
+        buttons.append([InlineKeyboardButton(
+            text=f"{role_emoji} {name}",
+            callback_data=f"manage_user:{user.id}"
+        )])
+    
+    nav_buttons = []
+    if page > 0:
+        nav_buttons.append(InlineKeyboardButton(text="⬅️ Previous", callback_data=f"page:users:{page-1}"))
+    if end < len(users):
+        nav_buttons.append(InlineKeyboardButton(text="➡️ Next", callback_data=f"page:users:{page+1}"))
+    
+    if nav_buttons:
+        buttons.append(nav_buttons)
+    
+    buttons.append([InlineKeyboardButton(text="⬅️ Back", callback_data="back:admin_menu")])
+    
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+def get_user_actions_keyboard(user_id: int, is_self: bool = False) -> InlineKeyboardMarkup:
+    buttons = []
+    
+    if is_self:
+        buttons.append([InlineKeyboardButton(text="🗑️ Delete My Account", callback_data=f"delete_user:{user_id}:self")])
+    else:
+        buttons.append([InlineKeyboardButton(text="🗑️ Delete User", callback_data=f"delete_user:{user_id}:other")])
+    
+    buttons.append([InlineKeyboardButton(text="⬅️ Back to Users", callback_data="back:users")])
+    
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+def get_switch_role_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="👔 Become Supervisor", callback_data="switch_role:supervisor")],
+        [InlineKeyboardButton(text="🔧 Become Subcontractor", callback_data="switch_role:subcontractor")],
+        [InlineKeyboardButton(text="❌ Cancel", callback_data="back:admin_menu")]
+    ])
+
+def get_confirm_delete_keyboard(user_id: int, delete_type: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="✅ Yes, Delete", callback_data=f"confirm_delete:{user_id}:{delete_type}"),
+            InlineKeyboardButton(text="❌ No, Cancel", callback_data="back:users")
+        ]
     ])
 
 def get_decline_reason_keyboard(job_id: int) -> InlineKeyboardMarkup:

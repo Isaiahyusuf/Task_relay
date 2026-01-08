@@ -10,7 +10,11 @@ from src.bot.services.jobs import JobService
 from src.bot.services.archive import ArchiveService
 from src.bot.services.access_codes import AccessCodeService
 from src.bot.utils.permissions import require_role
-from src.bot.utils.keyboards import get_role_selection_keyboard, get_job_list_keyboard, get_back_keyboard
+from src.bot.utils.keyboards import (
+    get_role_selection_keyboard, get_job_list_keyboard, get_back_keyboard,
+    get_user_list_keyboard, get_user_actions_keyboard, get_switch_role_keyboard,
+    get_confirm_delete_keyboard, get_main_menu_keyboard
+)
 import logging
 
 logger = logging.getLogger(__name__)
@@ -410,5 +414,255 @@ async def back_to_archived(callback: CallbackQuery):
         "Select a job to view details:",
         reply_markup=get_job_list_keyboard(jobs, context="archived"),
         parse_mode="Markdown"
+    )
+    await callback.answer()
+
+@router.message(F.text == "👥 Manage Users")
+async def btn_manage_users(message: Message):
+    if not await check_admin(message):
+        return
+    await show_user_list(message)
+
+async def show_user_list(message: Message):
+    async with async_session() as session:
+        admin_result = await session.execute(
+            select(User).where(User.telegram_id == message.from_user.id)
+        )
+        admin = admin_result.scalar_one_or_none()
+        
+        result = await session.execute(
+            select(User).where(User.is_active == True).order_by(User.role, User.first_name)
+        )
+        users = list(result.scalars().all())
+    
+    if not users:
+        await message.answer("No users found.")
+        return
+    
+    await message.answer(
+        f"*Manage Users* ({len(users)} total)\n\n"
+        "Select a user to manage:",
+        reply_markup=get_user_list_keyboard(users),
+        parse_mode="Markdown"
+    )
+
+@router.callback_query(F.data.startswith("manage_user:"))
+async def handle_manage_user(callback: CallbackQuery):
+    user_id = int(callback.data.split(":")[1])
+    
+    async with async_session() as session:
+        admin_result = await session.execute(
+            select(User).where(User.telegram_id == callback.from_user.id)
+        )
+        admin = admin_result.scalar_one_or_none()
+        
+        if not admin or admin.role != UserRole.ADMIN:
+            await callback.answer("Not authorized", show_alert=True)
+            return
+        
+        result = await session.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+    
+    if not user:
+        await callback.answer("User not found", show_alert=True)
+        return
+    
+    is_self = user.telegram_id == callback.from_user.id
+    role_text = user.role.value.title()
+    name = user.first_name or user.username or f"User {user.telegram_id}"
+    
+    await callback.message.edit_text(
+        f"*User Details*\n\n"
+        f"*Name:* {name}\n"
+        f"*Username:* @{user.username or 'N/A'}\n"
+        f"*Role:* {role_text}\n"
+        f"*Status:* {'Active' if user.is_active else 'Inactive'}\n"
+        f"*Joined:* {user.created_at.strftime('%Y-%m-%d')}\n\n"
+        f"{'⚠️ This is your own account.' if is_self else ''}",
+        reply_markup=get_user_actions_keyboard(user_id, is_self),
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("delete_user:"))
+async def handle_delete_user_request(callback: CallbackQuery):
+    parts = callback.data.split(":")
+    user_id = int(parts[1])
+    delete_type = parts[2]
+    
+    async with async_session() as session:
+        admin_result = await session.execute(
+            select(User).where(User.telegram_id == callback.from_user.id)
+        )
+        admin = admin_result.scalar_one_or_none()
+        
+        if not admin or admin.role != UserRole.ADMIN:
+            await callback.answer("Not authorized", show_alert=True)
+            return
+        
+        result = await session.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+    
+    if not user:
+        await callback.answer("User not found", show_alert=True)
+        return
+    
+    name = user.first_name or user.username or f"User {user.telegram_id}"
+    
+    if delete_type == "self":
+        warning = (
+            f"⚠️ *Delete Your Account*\n\n"
+            f"Are you sure you want to delete your own admin account?\n\n"
+            f"*This action cannot be undone.*\n"
+            f"You will be logged out and need a new access code to return."
+        )
+    else:
+        warning = (
+            f"⚠️ *Delete User*\n\n"
+            f"Are you sure you want to delete *{name}*?\n\n"
+            f"*This action cannot be undone.*"
+        )
+    
+    await callback.message.edit_text(
+        warning,
+        reply_markup=get_confirm_delete_keyboard(user_id, delete_type),
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("confirm_delete:"))
+async def handle_confirm_delete(callback: CallbackQuery):
+    parts = callback.data.split(":")
+    user_id = int(parts[1])
+    delete_type = parts[2]
+    
+    async with async_session() as session:
+        admin_result = await session.execute(
+            select(User).where(User.telegram_id == callback.from_user.id)
+        )
+        admin = admin_result.scalar_one_or_none()
+        
+        if not admin or admin.role != UserRole.ADMIN:
+            await callback.answer("Not authorized", show_alert=True)
+            return
+        
+        result = await session.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            await callback.answer("User not found", show_alert=True)
+            return
+        
+        name = user.first_name or user.username or f"User {user.telegram_id}"
+        is_self = user.telegram_id == callback.from_user.id
+        
+        user.is_active = False
+        await session.commit()
+    
+    if is_self:
+        await callback.message.edit_text(
+            "Your account has been deleted.\n\n"
+            "Use /start with a new access code to register again."
+        )
+    else:
+        await callback.message.edit_text(
+            f"*User Deleted*\n\n"
+            f"{name} has been removed from the system.",
+            parse_mode="Markdown"
+        )
+    
+    await callback.answer()
+
+@router.callback_query(F.data == "back:users")
+async def back_to_users(callback: CallbackQuery):
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.is_active == True).order_by(User.role, User.first_name)
+        )
+        users = list(result.scalars().all())
+    
+    await callback.message.edit_text(
+        f"*Manage Users* ({len(users)} total)\n\n"
+        "Select a user to manage:",
+        reply_markup=get_user_list_keyboard(users),
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+@router.callback_query(F.data == "back:admin_menu")
+async def back_to_admin_menu(callback: CallbackQuery):
+    await callback.message.delete()
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("page:users:"))
+async def handle_users_pagination(callback: CallbackQuery):
+    page = int(callback.data.split(":")[2])
+    
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.is_active == True).order_by(User.role, User.first_name)
+        )
+        users = list(result.scalars().all())
+    
+    await callback.message.edit_reply_markup(
+        reply_markup=get_user_list_keyboard(users, page=page)
+    )
+    await callback.answer()
+
+@router.message(F.text == "🔄 Switch Role")
+async def btn_switch_role(message: Message):
+    if not await check_admin(message):
+        return
+    
+    await message.answer(
+        "*Switch Your Role*\n\n"
+        "You are currently an Admin.\n\n"
+        "⚠️ *Warning:* Switching roles will change your access level.\n"
+        "You can ask another admin to switch you back later.\n\n"
+        "Select your new role:",
+        reply_markup=get_switch_role_keyboard(),
+        parse_mode="Markdown"
+    )
+
+@router.callback_query(F.data.startswith("switch_role:"))
+async def handle_switch_role(callback: CallbackQuery):
+    new_role_str = callback.data.split(":")[1]
+    
+    role_map = {
+        "supervisor": UserRole.SUPERVISOR,
+        "subcontractor": UserRole.SUBCONTRACTOR
+    }
+    
+    new_role = role_map.get(new_role_str)
+    if not new_role:
+        await callback.answer("Invalid role", show_alert=True)
+        return
+    
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == callback.from_user.id)
+        )
+        user = result.scalar_one_or_none()
+        
+        if not user or user.role != UserRole.ADMIN:
+            await callback.answer("Not authorized", show_alert=True)
+            return
+        
+        user.role = new_role
+        await session.commit()
+    
+    keyboard = get_main_menu_keyboard(new_role)
+    
+    await callback.message.edit_text(
+        f"*Role Changed!*\n\n"
+        f"You are now a *{new_role_str.title()}*.\n\n"
+        f"Your menu has been updated.",
+        parse_mode="Markdown"
+    )
+    
+    await callback.message.answer(
+        f"Welcome to your new role as {new_role_str.title()}!\n\n"
+        "Use the menu below:",
+        reply_markup=keyboard
     )
     await callback.answer()
