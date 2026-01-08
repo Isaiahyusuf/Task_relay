@@ -661,7 +661,17 @@ async def handle_switch_role(callback: CallbackQuery):
             await callback.answer("Not authorized", show_alert=True)
             return
         
+        if user.access_code_id:
+            from src.bot.database import AccessCode
+            code_result = await session.execute(
+                select(AccessCode).where(AccessCode.id == user.access_code_id)
+            )
+            access_code = code_result.scalar_one_or_none()
+            if access_code and access_code.current_uses > 0:
+                access_code.current_uses -= 1
+        
         user.role = new_role
+        user.access_code_id = None
         await session.commit()
     
     keyboard = get_main_menu_keyboard(new_role)
@@ -669,7 +679,7 @@ async def handle_switch_role(callback: CallbackQuery):
     await callback.message.edit_text(
         f"*Role Changed!*\n\n"
         f"You are now a *{new_role_str.title()}*.\n\n"
-        f"Your menu has been updated.",
+        f"Your admin access code has been freed up for reuse.",
         parse_mode="Markdown"
     )
     
