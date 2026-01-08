@@ -507,6 +507,10 @@ async def handle_delete_user_request(callback: CallbackQuery):
         await callback.answer("User not found", show_alert=True)
         return
     
+    if user.role == UserRole.ADMIN and delete_type == "other":
+        await callback.answer("Admins cannot delete other admins", show_alert=True)
+        return
+    
     name = user.first_name or user.username or f"User {user.telegram_id}"
     
     if delete_type == "self":
