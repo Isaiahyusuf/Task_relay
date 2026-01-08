@@ -28,7 +28,7 @@ async def cmd_start(message: Message, state: FSMContext):
         )
         user = result.scalar_one_or_none()
         
-        if user:
+        if user and user.is_active:
             role_name = user.role.value.capitalize()
             keyboard = get_main_menu_keyboard(user.role)
             await message.answer(
