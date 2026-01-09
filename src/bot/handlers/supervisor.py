@@ -155,6 +155,11 @@ async def skip_address(callback: CallbackQuery, state: FSMContext):
 
 @router.message(StateFilter(NewJobStates.waiting_for_address))
 async def process_job_address(message: Message, state: FSMContext):
+    if message.text.startswith("/"):
+        await message.answer("Job creation cancelled.")
+        await state.clear()
+        return
+        
     await state.update_data(address=message.text.strip())
     data = await state.get_data()
     
@@ -179,6 +184,11 @@ async def ask_for_price(message: Message, state: FSMContext, edit: bool = False)
 
 @router.message(StateFilter(NewJobStates.waiting_for_price))
 async def process_job_price(message: Message, state: FSMContext):
+    if message.text.startswith("/"):
+        await message.answer("Job creation cancelled.")
+        await state.clear()
+        return
+        
     await state.update_data(preset_price=message.text.strip())
     await show_subcontractor_selection(message, state, message.from_user.id, edit=False)
 
