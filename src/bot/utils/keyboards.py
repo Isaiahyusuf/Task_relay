@@ -13,6 +13,7 @@ def get_main_menu_keyboard(role: UserRole) -> ReplyKeyboardMarkup:
         buttons = [
             [KeyboardButton(text="➕ New Job"), KeyboardButton(text="📋 My Jobs")],
             [KeyboardButton(text="⏳ Pending Jobs"), KeyboardButton(text="🔄 Active Jobs")],
+            [KeyboardButton(text="🔑 Create Subcontractor Code")],
             [KeyboardButton(text="ℹ️ Help"), KeyboardButton(text="📘 About")],
             [KeyboardButton(text="🗑️ Delete My Account")]
         ]

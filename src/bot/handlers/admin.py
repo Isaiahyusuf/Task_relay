@@ -221,6 +221,37 @@ async def process_code_input(message: Message, state: FSMContext):
         await message.answer("Code must be at least 4 characters. Try again:")
         return
     
+    data = await state.get_data()
+    forced_role = data.get("forced_role")
+    
+    if forced_role:
+        # If role is forced (e.g. by supervisor), skip role selection step
+        async with async_session() as session:
+            result = await session.execute(
+                select(User).where(User.telegram_id == message.from_user.id)
+            )
+            user = result.scalar_one_or_none()
+        
+        success = await AccessCodeService.create_access_code(
+            code=code,
+            role=forced_role,
+            team_id=user.team_id if user else None
+        )
+        
+        if success:
+            await message.answer(
+                f"*Access Code Created!*\n\n"
+                f"Code: `{code}`\n"
+                f"Role: {forced_role.value.title()}\n\n"
+                "Share this code privately with the intended subcontractor.",
+                parse_mode="Markdown"
+            )
+        else:
+            await message.answer("Failed to create code. It may already exist.")
+        
+        await state.clear()
+        return
+
     await state.update_data(code=code)
     await message.answer(
         "*Create Access Code*\n\n"

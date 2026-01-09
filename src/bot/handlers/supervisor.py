@@ -8,6 +8,8 @@ from src.bot.database import async_session, User, Job
 from src.bot.database.models import UserRole, JobType, JobStatus
 from src.bot.services.jobs import JobService
 from src.bot.services.quotes import QuoteService
+from src.bot.services.access_codes import AccessCodeService
+from src.bot.handlers.admin import CreateCodeStates
 from src.bot.utils.permissions import require_role
 from src.bot.utils.keyboards import (
     get_job_type_keyboard, get_skip_keyboard, get_subcontractor_selection_keyboard,
@@ -33,6 +35,18 @@ class NewJobStates(StatesGroup):
 @require_role(UserRole.SUPERVISOR)
 async def cmd_new_job(message: Message, state: FSMContext):
     await start_new_job(message, state)
+
+@router.message(F.text == "🔑 Create Subcontractor Code")
+@require_role(UserRole.SUPERVISOR)
+async def btn_create_sub_code(message: Message, state: FSMContext):
+    await message.answer(
+        "*Create Subcontractor Access Code*\n\n"
+        "Step 1/1: Enter the access code\n"
+        "(letters and numbers only):",
+        parse_mode="Markdown"
+    )
+    await state.set_state(CreateCodeStates.waiting_for_code)
+    await state.update_data(forced_role=UserRole.SUBCONTRACTOR)
 
 @router.message(F.text == "➕ New Job")
 async def btn_new_job(message: Message, state: FSMContext):
