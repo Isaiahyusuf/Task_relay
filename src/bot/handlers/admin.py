@@ -13,9 +13,11 @@ from src.bot.utils.permissions import require_role
 from src.bot.utils.keyboards import (
     get_role_selection_keyboard, get_job_list_keyboard, get_back_keyboard,
     get_user_list_keyboard, get_user_actions_keyboard, get_switch_role_keyboard,
-    get_confirm_delete_keyboard, get_main_menu_keyboard
+    get_confirm_delete_keyboard, get_main_menu_keyboard, get_supervisor_job_actions_keyboard,
+    get_confirm_job_delete_keyboard
 )
 import logging
+import sqlalchemy
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -399,8 +401,57 @@ async def show_job_details(callback: CallbackQuery, job_id: int, context: str):
     
     await callback.message.edit_text(
         details,
-        reply_markup=get_back_keyboard(f"back:{context}"),
+        reply_markup=get_supervisor_job_actions_keyboard(job.id, job.status.value, job.job_type.value, is_admin=True),
         parse_mode="Markdown"
+    )
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("admin_delete_job:"))
+async def handle_admin_delete_job(callback: CallbackQuery):
+    job_id = int(callback.data.split(":")[1])
+    
+    if not await check_admin(callback.message):
+        await callback.answer("Not authorized", show_alert=True)
+        return
+
+    await callback.message.edit_text(
+        f"⚠️ *Delete Job #{job_id}*\n\n"
+        "Are you sure you want to delete this job record completely?\n"
+        "*This action cannot be undone.*",
+        reply_markup=get_confirm_job_delete_keyboard(job_id),
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("confirm_job_delete:"))
+async def handle_confirm_job_delete(callback: CallbackQuery):
+    job_id = int(callback.data.split(":")[1])
+    
+    async with async_session() as session:
+        # Check admin again
+        admin_result = await session.execute(
+            select(User).where(User.telegram_id == callback.from_user.id)
+        )
+        admin = admin_result.scalar_one_or_none()
+        if not admin or admin.role != UserRole.ADMIN:
+            await callback.answer("Not authorized", show_alert=True)
+            return
+
+        # Delete quotes first to maintain integrity
+        from src.bot.database import Quote
+        await session.execute(
+            sqlalchemy.delete(Quote).where(Quote.job_id == job_id)
+        )
+        
+        # Delete job
+        await session.execute(
+            sqlalchemy.delete(Job).where(Job.id == job_id)
+        )
+        await session.commit()
+
+    await callback.message.edit_text(
+        f"✅ Job #{job_id} and all associated quotes have been deleted.",
+        reply_markup=get_back_keyboard("back:history")
     )
     await callback.answer()
 

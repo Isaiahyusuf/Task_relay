@@ -79,13 +79,16 @@ def get_job_actions_keyboard(job_id: int, job_type: str = "preset", job_status: 
     
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-def get_supervisor_job_actions_keyboard(job_id: int, job_status: str, job_type: str = "preset") -> InlineKeyboardMarkup:
+def get_supervisor_job_actions_keyboard(job_id: int, job_status: str, job_type: str = "preset", is_admin: bool = False) -> InlineKeyboardMarkup:
     buttons = []
     
-    if job_status == "ARCHIVED":
+    if job_status == "ARCHIVED" and not is_admin:
         buttons.append([InlineKeyboardButton(text="⬅️ Back", callback_data="back:sup")])
         return InlineKeyboardMarkup(inline_keyboard=buttons)
     
+    if is_admin:
+        buttons.append([InlineKeyboardButton(text="🗑️ Delete Job", callback_data=f"admin_delete_job:{job_id}")])
+
     if job_type == "quote" and job_status in ["SENT", "CREATED"]:
         buttons.append([InlineKeyboardButton(text="📊 View Quotes", callback_data=f"view_quotes:{job_id}")])
     
@@ -95,7 +98,8 @@ def get_supervisor_job_actions_keyboard(job_id: int, job_status: str, job_type: 
     if job_status in ["IN_PROGRESS", "ACCEPTED"]:
         buttons.append([InlineKeyboardButton(text="✔️ Mark Complete", callback_data=f"sup_complete:{job_id}")])
     
-    buttons.append([InlineKeyboardButton(text="⬅️ Back", callback_data="back:sup")])
+    back_callback = "back:history" if is_admin else "back:sup"
+    buttons.append([InlineKeyboardButton(text="⬅️ Back", callback_data=back_callback)])
     
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -225,6 +229,14 @@ def get_self_delete_confirm_keyboard(user_id: int) -> InlineKeyboardMarkup:
         [
             InlineKeyboardButton(text="✅ Yes, Delete My Account", callback_data=f"confirm_self_delete:{user_id}"),
             InlineKeyboardButton(text="❌ No, Cancel", callback_data="cancel_self_delete")
+        ]
+    ])
+
+def get_confirm_job_delete_keyboard(job_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="✅ Yes, Delete Job", callback_data=f"confirm_job_delete:{job_id}"),
+            InlineKeyboardButton(text="❌ No, Cancel", callback_data=f"view_job:history:{job_id}")
         ]
     ])
 
