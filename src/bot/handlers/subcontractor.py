@@ -168,7 +168,7 @@ async def accept_job_callback(callback: CallbackQuery):
         await callback.answer("Quote jobs require a quote submission first", show_alert=True)
         return
     
-    success, msg = await JobService.accept_job(job_id, callback.from_user.id)
+    success, msg, supervisor_tg_id = await JobService.accept_job(job_id, callback.from_user.id)
     
     if success:
         await callback.message.edit_text(
@@ -178,6 +178,20 @@ async def accept_job_callback(callback: CallbackQuery):
             parse_mode="Markdown"
         )
         await callback.answer("Job accepted!")
+        
+        # Notify Supervisor
+        if supervisor_tg_id:
+            from src.bot.main import bot
+            sub_name = callback.from_user.first_name or callback.from_user.username or "A subcontractor"
+            try:
+                await bot.send_message(
+                    supervisor_tg_id,
+                    f"✅ *Job Accepted*\n\n"
+                    f"Job #{job_id} ({job.title}) has been accepted by *{sub_name}*.",
+                    parse_mode="Markdown"
+                )
+            except Exception as e:
+                logger.error(f"Failed to notify supervisor {supervisor_tg_id}: {e}")
     else:
         await callback.answer(msg, show_alert=True)
 

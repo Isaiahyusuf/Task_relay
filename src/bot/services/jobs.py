@@ -76,22 +76,22 @@ class JobService:
             return True, "Job sent successfully"
     
     @staticmethod
-    async def accept_job(job_id: int, telegram_id: int) -> tuple[bool, str]:
+    async def accept_job(job_id: int, telegram_id: int) -> tuple[bool, str, int | None]:
         if not async_session:
-            return False, "Database not available"
+            return False, "Database not available", None
         
         async with async_session() as session:
             job_result = await session.execute(select(Job).where(Job.id == job_id))
             job = job_result.scalar_one_or_none()
             
             if not job:
-                return False, "Job not found"
+                return False, "Job not found", None
             
             if job.status == JobStatus.ARCHIVED:
-                return False, "Cannot modify archived job"
+                return False, "Cannot modify archived job", None
             
             if job.status not in [JobStatus.SENT, JobStatus.CREATED]:
-                return False, f"Job cannot be accepted (current status: {job.status.value})"
+                return False, f"Job cannot be accepted (current status: {job.status.value})", None
             
             user_result = await session.execute(
                 select(User).where(User.telegram_id == telegram_id)
@@ -99,14 +99,20 @@ class JobService:
             user = user_result.scalar_one_or_none()
             
             if not user:
-                return False, "User not found"
+                return False, "User not found", None
             
             job.status = JobStatus.ACCEPTED
             job.subcontractor_id = user.id
             job.accepted_at = datetime.utcnow()
             
+            # Get supervisor's telegram_id for notification
+            sup_result = await session.execute(
+                select(User.telegram_id).where(User.id == job.supervisor_id)
+            )
+            supervisor_tg_id = sup_result.scalar()
+            
             await session.commit()
-            return True, "Job accepted successfully"
+            return True, "Job accepted successfully", supervisor_tg_id
     
     @staticmethod
     async def start_job(job_id: int, telegram_id: int) -> tuple[bool, str]:
