@@ -26,6 +26,9 @@ class QuoteStates(StatesGroup):
 class DeclineStates(StatesGroup):
     waiting_for_reason = State()
 
+class CompletionStates(StatesGroup):
+    waiting_for_photo = State()
+
 @router.message(F.text == "📋 Available Jobs")
 async def btn_available_jobs(message: Message):
     if not await check_subcontractor(message):
@@ -256,21 +259,44 @@ async def start_job_callback(callback: CallbackQuery):
         await callback.answer(msg, show_alert=True)
 
 @router.callback_query(F.data.startswith("job_complete:"))
-async def complete_job_callback(callback: CallbackQuery):
+async def complete_job_callback(callback: CallbackQuery, state: FSMContext):
     job_id = int(callback.data.split(":")[1])
     
-    success, msg = await JobService.complete_job(job_id, callback.from_user.id)
+    await state.update_data(completing_job_id=job_id)
+    await callback.message.edit_text(
+        f"*Completing Job #{job_id}*\n\n"
+        "Please send a photo of the completed work as evidence:",
+        parse_mode="Markdown"
+    )
+    await state.set_state(CompletionStates.waiting_for_photo)
+    await callback.answer()
+
+@router.message(StateFilter(CompletionStates.waiting_for_photo), F.photo)
+async def process_completion_photo(message: Message, state: FSMContext):
+    data = await state.get_data()
+    job_id = data.get('completing_job_id')
+    photo = message.photo[-1]
+    
+    async with async_session() as session:
+        result = await session.execute(select(Job).where(Job.id == job_id))
+        job = result.scalar_one_or_none()
+        if job:
+            job.photos = photo.file_id
+            await session.commit()
+
+    success, msg = await JobService.complete_job(job_id, message.from_user.id)
     
     if success:
-        await callback.message.edit_text(
+        await message.answer(
             f"*Job Completed!*\n\n"
-            f"Job #{job_id} has been marked as complete.\n\n"
+            f"Job #{job_id} has been marked as complete with photo evidence.\n\n"
             "Great work!",
             parse_mode="Markdown"
         )
-        await callback.answer("Job completed!")
     else:
-        await callback.answer(msg, show_alert=True)
+        await message.answer(f"Error: {msg}")
+    
+    await state.clear()
 
 @router.callback_query(F.data.startswith("job_decline:"))
 async def decline_job_callback(callback: CallbackQuery):

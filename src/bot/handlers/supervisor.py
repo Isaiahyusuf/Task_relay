@@ -31,6 +31,10 @@ class NewJobStates(StatesGroup):
     waiting_for_subcontractor = State()
     confirming = State()
 
+class RatingStates(StatesGroup):
+    waiting_for_rating = State()
+    waiting_for_comment = State()
+
 @router.message(Command("newjob"))
 @require_role(UserRole.SUPERVISOR)
 async def cmd_new_job(message: Message, state: FSMContext):
@@ -426,6 +430,14 @@ async def view_job_details_supervisor(callback: CallbackQuery):
     if job.preset_price:
         details += f"*Price:* {job.preset_price}\n"
     
+    if job.photos:
+        details += "\n📸 *Photo Evidence available*"
+    
+    if job.rating:
+        details += f"\n⭐ *Rating:* {job.rating}/5"
+        if job.rating_comment:
+            details += f"\n💬 *Comment:* {job.rating_comment}"
+    
     details += f"\n*Created:* {job.created_at.strftime('%Y-%m-%d %H:%M')}"
     
     keyboard = get_supervisor_job_actions_keyboard(job.id, job.status.value, job.job_type.value)
@@ -523,20 +535,61 @@ async def supervisor_cancel_job(callback: CallbackQuery):
         await callback.answer(msg, show_alert=True)
 
 @router.callback_query(F.data.startswith("sup_complete:"))
-async def supervisor_complete_job(callback: CallbackQuery):
+async def supervisor_complete_job(callback: CallbackQuery, state: FSMContext):
     job_id = int(callback.data.split(":")[1])
     
     success, msg = await JobService.complete_job(job_id, callback.from_user.id, is_supervisor=True)
     
     if success:
+        from aiogram.utils.keyboard import InlineKeyboardBuilder
+        kb = InlineKeyboardBuilder()
+        for i in range(1, 6):
+            kb.button(text=f"{i} ⭐", callback_data=f"rate:{job_id}:{i}")
+        kb.adjust(5)
+        
         await callback.message.edit_text(
             f"*Job Completed*\n\n"
-            f"Job #{job_id} has been marked as complete.",
+            f"Job #{job_id} has been marked as complete.\n\n"
+            "Please rate the subcontractor's work:",
+            reply_markup=kb.as_markup(),
             parse_mode="Markdown"
         )
         await callback.answer("Job completed!")
     else:
         await callback.answer(msg, show_alert=True)
+
+@router.callback_query(F.data.startswith("rate:"))
+async def process_rating_selection(callback: CallbackQuery, state: FSMContext):
+    parts = callback.data.split(":")
+    job_id = int(parts[1])
+    rating = int(parts[2])
+    
+    await state.update_data(rating_job_id=job_id, rating_value=rating)
+    await callback.message.edit_text(
+        f"*Rating: {rating} ⭐*\n\n"
+        "Please provide a short comment about the work (or send /skip):",
+        parse_mode="Markdown"
+    )
+    await state.set_state(RatingStates.waiting_for_comment)
+    await callback.answer()
+
+@router.message(StateFilter(RatingStates.waiting_for_comment))
+async def process_rating_comment(message: Message, state: FSMContext):
+    data = await state.get_data()
+    job_id = data.get('rating_job_id')
+    rating = data.get('rating_value')
+    comment = None if message.text == "/skip" else message.text
+    
+    async with async_session() as session:
+        result = await session.execute(select(Job).where(Job.id == job_id))
+        job = result.scalar_one_or_none()
+        if job:
+            job.rating = rating
+            job.rating_comment = comment
+            await session.commit()
+            
+    await message.answer(f"Thank you! Rating of {rating} ⭐ saved for Job #{job_id}.")
+    await state.clear()
 
 @router.callback_query(F.data == "back:sup")
 async def back_to_my_jobs(callback: CallbackQuery):

@@ -93,6 +93,9 @@ class Job(Base):
     photos = Column(Text, nullable=True)
     decline_reason = Column(Text, nullable=True)
     
+    rating = Column(Integer, nullable=True)
+    rating_comment = Column(Text, nullable=True)
+    
     reminder_sent = Column(Boolean, default=False)
     reminder_sent_at = Column(DateTime, nullable=True)
     
