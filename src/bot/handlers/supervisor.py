@@ -563,16 +563,23 @@ async def view_submission(callback: CallbackQuery):
     
     if job.photos:
         from src.bot.main import bot
+        photo_ids = job.photos.split(",")
+        
         try:
             await bot.send_photo(
                 callback.from_user.id,
-                job.photos,
+                photo_ids[0],
                 caption=f"*Photo proof for Job #{job_id}*\n\n"
                         f"*Title:* {job.title}\n"
+                        f"Photos: {len(photo_ids)}\n\n"
                         f"Review this submission and mark as completed if satisfied.",
                 parse_mode="Markdown"
             )
-            await callback.answer("Photo sent!")
+            
+            for photo_id in photo_ids[1:]:
+                await bot.send_photo(callback.from_user.id, photo_id)
+            
+            await callback.answer(f"Sent {len(photo_ids)} photo(s)!")
         except Exception as e:
             logger.error(f"Failed to send photo: {e}")
             await callback.answer("Failed to send photo", show_alert=True)

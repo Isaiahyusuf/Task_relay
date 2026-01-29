@@ -353,42 +353,45 @@ async def start_job_submission(callback: CallbackQuery, state: FSMContext, job_i
 @router.message(StateFilter(SubmissionStates.waiting_for_notes))
 async def process_submission_notes(message: Message, state: FSMContext):
     notes = None if message.text.strip().lower() == "/skip" else message.text.strip()
-    await state.update_data(submission_notes=notes)
+    await state.update_data(submission_notes=notes, submission_photos=[])
     
     await message.answer(
         "*Submit Job*\n\n"
-        "Now please send a photo as proof of completed work:",
+        "Now please send photos as proof of completed work.\n"
+        "You can send multiple photos. When done, type /done to submit.",
         parse_mode="Markdown"
     )
     await state.set_state(SubmissionStates.waiting_for_photo)
 
-@router.message(StateFilter(SubmissionStates.waiting_for_photo))
-async def process_submission_photo(message: Message, state: FSMContext):
-    if not message.photo:
+@router.message(StateFilter(SubmissionStates.waiting_for_photo), F.text == "/done")
+async def finish_photo_submission(message: Message, state: FSMContext):
+    data = await state.get_data()
+    photos = data.get('submission_photos', [])
+    
+    if not photos:
         await message.answer(
-            "Please send a photo as proof of completed work.\n"
-            "You must include a photo to submit the job."
+            "You must include at least one photo to submit the job.\n"
+            "Please send a photo first."
         )
         return
     
-    photo = message.photo[-1]
-    data = await state.get_data()
     job_id = data.get('submitting_job_id')
     notes = data.get('submission_notes')
+    photos_str = ",".join(photos)
     
     success, msg, supervisor_tg_id = await JobService.submit_job(
-        job_id, message.from_user.id, notes, photo.file_id
+        job_id, message.from_user.id, notes, photos_str
     )
     
     if success:
+        await state.clear()
         await message.answer(
             f"*Job Submitted!*\n\n"
-            f"Job #{job_id} has been submitted for supervisor review.\n\n"
+            f"Job #{job_id} has been submitted with {len(photos)} photo(s) for supervisor review.\n\n"
             "The supervisor will be notified to investigate and mark as completed.",
             parse_mode="Markdown"
         )
         
-        # Notify supervisor
         if supervisor_tg_id:
             from src.bot.main import bot
             async with async_session() as session:
@@ -403,12 +406,35 @@ async def process_submission_photo(message: Message, state: FSMContext):
                 await bot.send_message(
                     supervisor_tg_id,
                     f"📥 *Job Submitted for Review*\n\n"
-                    f"Job #{job_id} ({job.title if job else 'Unknown'}) has been submitted by *{sub_name}*.\n\n"
+                    f"Job #{job_id} ({job.title if job else 'Unknown'}) has been submitted by *{sub_name}*.\n"
+                    f"Photos attached: {len(photos)}\n\n"
                     f"Please review the submission and mark as completed if satisfied.",
                     parse_mode="Markdown"
                 )
             except Exception as e:
                 logger.error(f"Failed to notify supervisor {supervisor_tg_id}: {e}")
+    else:
+        await message.answer(f"Error: {msg}")
+
+@router.message(StateFilter(SubmissionStates.waiting_for_photo))
+async def process_submission_photo(message: Message, state: FSMContext):
+    if not message.photo:
+        await message.answer(
+            "Please send a photo as proof of completed work.\n"
+            "When you're done adding photos, type /done to submit."
+        )
+        return
+    
+    photo = message.photo[-1]
+    data = await state.get_data()
+    photos = data.get('submission_photos', [])
+    photos.append(photo.file_id)
+    await state.update_data(submission_photos=photos)
+    
+    await message.answer(
+        f"Photo {len(photos)} added.\n\n"
+        f"Send more photos or type /done to submit the job."
+    )
     else:
         await message.answer(f"Error: {msg}")
     

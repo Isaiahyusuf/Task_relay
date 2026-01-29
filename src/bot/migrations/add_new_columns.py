@@ -38,6 +38,15 @@ async def run_migration():
             print("Added super_admin_code column to users table")
         except Exception as e:
             print(f"super_admin_code column may already exist: {e}")
+        
+        # Add SUBMITTED status to jobstatus enum
+        try:
+            await conn.execute(text(
+                "ALTER TYPE jobstatus ADD VALUE IF NOT EXISTS 'SUBMITTED'"
+            ))
+            print("Added SUBMITTED to jobstatus enum")
+        except Exception as e:
+            print(f"SUBMITTED status may already exist: {e}")
     
     await engine.dispose()
     print("Migration completed!")
