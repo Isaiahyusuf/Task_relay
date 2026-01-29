@@ -75,7 +75,7 @@ def get_job_actions_keyboard(job_id: int, job_type: str = "preset", job_status: 
     elif job_status == "accepted":
         buttons.append([InlineKeyboardButton(text="▶️ Start Job", callback_data=f"job_start:{job_id}")])
     elif job_status == "in_progress":
-        buttons.append([InlineKeyboardButton(text="✔️ Mark Complete", callback_data=f"job_complete:{job_id}")])
+        buttons.append([InlineKeyboardButton(text="✔️ Mark Done", callback_data=f"job_done:{job_id}")])
     
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 

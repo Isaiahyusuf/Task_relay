@@ -164,19 +164,21 @@ async def accept_job_callback(callback: CallbackQuery):
         await callback.answer("Job not found", show_alert=True)
         return
     
-    async with async_session() as session:
-        result = await session.execute(
-            select(User).where(User.telegram_id == callback.from_user.id)
-        )
-        user = result.scalar_one_or_none()
-    
-    if not user:
-        await callback.answer("User not found", show_alert=True)
+    if job.job_type == JobType.QUOTE:
+        await callback.answer("Quote jobs require a quote submission first", show_alert=True)
         return
     
     success, msg, supervisor_tg_id = await JobService.accept_job(job_id, callback.from_user.id)
     
     if success:
+        # Get user for sub_name
+        async with async_session() as session:
+            result = await session.execute(
+                select(User).where(User.telegram_id == callback.from_user.id)
+            )
+            user_obj = result.scalar_one_or_none()
+            sub_name = user_obj.first_name or user_obj.username or "A subcontractor"
+
         await callback.message.edit_text(
             f"*Job Accepted!*\n\n"
             f"Job #{job_id}: {job.title}\n\n"
@@ -188,12 +190,75 @@ async def accept_job_callback(callback: CallbackQuery):
         # Notify Supervisor
         if supervisor_tg_id:
             from src.bot.main import bot
-            sub_name = user.first_name or user.username or "A subcontractor"
             try:
                 await bot.send_message(
                     supervisor_tg_id,
                     f"✅ *Job Accepted*\n\n"
                     f"Job #{job_id} ({job.title}) has been accepted by *{sub_name}*.",
+                    parse_mode="Markdown"
+                )
+            except Exception as e:
+                logger.error(f"Failed to notify supervisor {supervisor_tg_id}: {e}")
+    else:
+        await callback.answer(msg, show_alert=True)
+
+@router.callback_query(F.data.startswith("job_done:"))
+async def mark_job_done_callback(callback: CallbackQuery):
+    job_id = int(callback.data.split(":")[1])
+    
+    job = await JobService.get_job_by_id(job_id)
+    
+    if not job:
+        await callback.answer("Job not found", show_alert=True)
+        return
+    
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == callback.from_user.id)
+        )
+        user = result.scalar_one_or_none()
+    
+    if not job:
+        await callback.answer("Job not found", show_alert=True)
+        return
+
+    # Check if job is already marked as done
+    if job.status == JobStatus.COMPLETED:
+        await callback.answer("Job already marked as done", show_alert=True)
+        return
+
+    success, msg = await JobService.complete_job(job_id, callback.from_user.id)
+    
+    if success:
+        await callback.message.edit_text(
+            f"*Job Marked as Done!*\n\n"
+            f"Job #{job_id}: {job.title}\n\n"
+            "The supervisor has been notified for investigation.",
+            parse_mode="Markdown"
+        )
+        await callback.answer("Job marked as done!")
+        
+        # Notify Supervisor
+        async with async_session() as session:
+            sup_result = await session.execute(
+                select(User.telegram_id).where(User.id == job.supervisor_id)
+            )
+            supervisor_tg_id = sup_result.scalar()
+            
+            sub_result = await session.execute(
+                select(User).where(User.telegram_id == callback.from_user.id)
+            )
+            sub = sub_result.scalar_one_or_none()
+            sub_name = sub.first_name or sub.username or "A subcontractor"
+
+        if supervisor_tg_id:
+            from src.bot.main import bot
+            try:
+                await bot.send_message(
+                    supervisor_tg_id,
+                    f"🔔 *Job Marked Done*\n\n"
+                    f"Job #{job_id} ({job.title}) has been marked as done by *{sub_name}*.\n\n"
+                    f"Please investigate and mark as completed if satisfied.",
                     parse_mode="Markdown"
                 )
             except Exception as e:
