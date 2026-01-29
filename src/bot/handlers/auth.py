@@ -8,6 +8,7 @@ from src.bot.database import async_session, User
 from src.bot.database.models import UserRole
 from src.bot.services.access_codes import AccessCodeService
 from src.bot.utils.keyboards import get_main_menu_keyboard, get_self_delete_confirm_keyboard
+from src.bot.config import config
 import logging
 
 logger = logging.getLogger(__name__)
@@ -29,7 +30,23 @@ async def cmd_start(message: Message, state: FSMContext):
         user = result.scalar_one_or_none()
         
         if user and user.is_active:
-            role_name = user.role.value.capitalize()
+            # Check if super admin code is still valid
+            if user.role == UserRole.SUPER_ADMIN:
+                if not config.SUPER_ADMIN_CODE or user.super_admin_code != config.SUPER_ADMIN_CODE:
+                    # Super admin code has changed, invalidate this user
+                    user.is_active = False
+                    user.role = UserRole.SUBCONTRACTOR  # Reset to lowest role
+                    await session.commit()
+                    await message.answer(
+                        "*Access Revoked*\n\n"
+                        "Your super admin access has been revoked because the access code was changed.\n\n"
+                        "Please enter a new access code to continue:",
+                        parse_mode="Markdown"
+                    )
+                    await state.set_state(AuthStates.waiting_for_code)
+                    return
+            
+            role_name = user.role.value.replace("_", " ").title()
             keyboard = get_main_menu_keyboard(user.role)
             await message.answer(
                 f"Welcome back, {message.from_user.first_name or 'there'}!\n\n"

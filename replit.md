@@ -39,6 +39,7 @@ src/bot/
 - `TELEGRAM_BOT_TOKEN` - Telegram bot token from @BotFather
 - `DATABASE_URL` - PostgreSQL connection string
 - `ADMIN_BOOTSTRAP_CODES` - Comma-separated admin access codes for initial setup
+- `SUPER_ADMIN_CODE` - Secret code for super admin access (changing this invalidates current super admin)
 - `ARCHIVE_AFTER_DAYS` - Days before auto-archiving (default: 90)
 - `RESPONSE_REMINDER_HOURS` - Hours before sending job reminder (default: 24)
 - `JOB_AUTO_CLOSE_HOURS` - Hours before auto-cancelling unanswered jobs (default: 72)

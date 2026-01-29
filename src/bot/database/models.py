@@ -50,6 +50,7 @@ class User(Base):
     role = Column(Enum(UserRole), nullable=False)
     team_id = Column(Integer, ForeignKey("teams.id"), nullable=True)
     access_code_id = Column(Integer, ForeignKey("access_codes.id"), nullable=True)
+    super_admin_code = Column(String(100), nullable=True)
     is_active = Column(Boolean, default=True)
     availability_status = Column(Enum(AvailabilityStatus), default=AvailabilityStatus.AVAILABLE)
     created_at = Column(DateTime, default=datetime.utcnow)

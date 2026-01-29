@@ -2,6 +2,7 @@ from datetime import datetime
 from sqlalchemy import select
 from src.bot.database import async_session, AccessCode, User, Team
 from src.bot.database.models import UserRole
+from src.bot.config import config
 import logging
 
 logger = logging.getLogger(__name__)
@@ -44,6 +45,27 @@ class AccessCodeService:
             
             if existing_user and existing_user.is_active:
                 return False, "You are already registered."
+            
+            # Check if this is the super admin code from environment
+            if config.SUPER_ADMIN_CODE and code == config.SUPER_ADMIN_CODE:
+                if existing_user:
+                    existing_user.is_active = True
+                    existing_user.role = UserRole.SUPER_ADMIN
+                    existing_user.super_admin_code = code
+                    existing_user.username = username
+                    existing_user.first_name = first_name
+                else:
+                    user = User(
+                        telegram_id=telegram_id,
+                        username=username,
+                        first_name=first_name,
+                        role=UserRole.SUPER_ADMIN,
+                        super_admin_code=code
+                    )
+                    session.add(user)
+                
+                await session.commit()
+                return True, "Welcome! You have been registered as a Super Admin."
             
             result = await session.execute(
                 select(AccessCode).where(AccessCode.code == code)

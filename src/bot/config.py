@@ -7,6 +7,7 @@ class Config:
     BOT_TOKEN: str
     DATABASE_URL: str
     ADMIN_BOOTSTRAP_CODES: list[str]
+    SUPER_ADMIN_CODE: str
     ARCHIVE_AFTER_DAYS: int
     LOG_LEVEL: str
     ENVIRONMENT: str
@@ -19,6 +20,8 @@ class Config:
         
         admin_codes = os.getenv("ADMIN_BOOTSTRAP_CODES", "")
         self.ADMIN_BOOTSTRAP_CODES = [c.strip() for c in admin_codes.split(",") if c.strip()]
+        
+        self.SUPER_ADMIN_CODE = os.getenv("SUPER_ADMIN_CODE", "")
         
         self.ARCHIVE_AFTER_DAYS = int(os.getenv("ARCHIVE_AFTER_DAYS", "90"))
         self.LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
