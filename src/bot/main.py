@@ -12,6 +12,7 @@ from aiogram.enums import ParseMode
 from src.bot.config import config
 from src.bot.database import init_db
 from src.bot.database.session import engine
+from src.bot.migrations.add_new_columns import run_migration
 from src.bot.services.access_codes import AccessCodeService
 from src.bot.services.scheduler import SchedulerService
 from src.bot.handlers import auth_router, supervisor_router, subcontractor_router, admin_router
@@ -69,6 +70,13 @@ async def main():
     if not engine:
         logger.error("Database engine not initialized. Check DATABASE_URL.")
         sys.exit(1)
+    
+    logger.info("Running database migrations...")
+    try:
+        await run_migration()
+        logger.info("Database migrations completed")
+    except Exception as e:
+        logger.warning(f"Migration warning (may be normal): {e}")
     
     logger.info("Initializing database...")
     try:
