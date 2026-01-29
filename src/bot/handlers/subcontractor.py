@@ -334,12 +334,19 @@ async def process_submission_notes(message: Message, state: FSMContext):
     )
     await state.set_state(SubmissionStates.waiting_for_photo)
 
-@router.message(StateFilter(SubmissionStates.waiting_for_photo), F.photo)
+@router.message(StateFilter(SubmissionStates.waiting_for_photo))
 async def process_submission_photo(message: Message, state: FSMContext):
+    if not message.photo:
+        await message.answer(
+            "Please send a photo as proof of completed work.\n"
+            "You must include a photo to submit the job."
+        )
+        return
+    
+    photo = message.photo[-1]
     data = await state.get_data()
     job_id = data.get('submitting_job_id')
     notes = data.get('submission_notes')
-    photo = message.photo[-1]
     
     success, msg, supervisor_tg_id = await JobService.submit_job(
         job_id, message.from_user.id, notes, photo.file_id

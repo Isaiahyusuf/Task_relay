@@ -522,7 +522,27 @@ async def btn_manage_users(message: Message):
         return
     await show_user_list(message)
 
-async def show_user_list(message: Message):
+@router.message(F.text == "👥 Manage All Users")
+async def btn_manage_all_users(message: Message):
+    if not await check_super_admin(message):
+        return
+    await show_user_list(message, is_super_admin=True)
+
+@router.message(F.text == "🗑️ Delete Anything")
+async def btn_delete_anything(message: Message):
+    if not await check_super_admin(message):
+        return
+    await message.answer(
+        "*Super Admin - Delete Options*\n\n"
+        "You have full access to delete:\n"
+        "- Any user (including admins)\n"
+        "- Any job record\n\n"
+        "Use 'Manage All Users' to view and delete users.\n"
+        "Use 'Job History' to view and delete jobs.",
+        parse_mode="Markdown"
+    )
+
+async def show_user_list(message: Message, is_super_admin: bool = False):
     async with async_session() as session:
         admin_result = await session.execute(
             select(User).where(User.telegram_id == message.from_user.id)
@@ -538,10 +558,11 @@ async def show_user_list(message: Message):
         await message.answer("No users found.")
         return
     
+    title = "Manage All Users (Super Admin)" if is_super_admin else "Manage Users"
     await message.answer(
-        f"*Manage Users* ({len(users)} total)\n\n"
+        f"*{title}* ({len(users)} total)\n\n"
         "Select a user to manage:",
-        reply_markup=get_user_list_keyboard(users),
+        reply_markup=get_user_list_keyboard(users, is_super_admin=is_super_admin),
         parse_mode="Markdown"
     )
 
@@ -555,7 +576,7 @@ async def handle_manage_user(callback: CallbackQuery):
         )
         admin = admin_result.scalar_one_or_none()
         
-        if not admin or admin.role != UserRole.ADMIN:
+        if not admin or admin.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
             await callback.answer("Not authorized", show_alert=True)
             return
         

@@ -211,9 +211,6 @@ class JobService:
             if job.status == JobStatus.CANCELLED:
                 return False, "Cannot complete a cancelled job"
             
-            if job.status not in [JobStatus.IN_PROGRESS, JobStatus.ACCEPTED, JobStatus.SUBMITTED]:
-                return False, f"Job cannot be completed (current status: {job.status.value})"
-            
             user_result = await session.execute(
                 select(User).where(User.telegram_id == telegram_id)
             )
@@ -223,6 +220,9 @@ class JobService:
                 return False, "User not found"
             
             if is_supervisor:
+                # Supervisors can only complete jobs that have been submitted
+                if job.status != JobStatus.SUBMITTED:
+                    return False, "Job must be submitted by subcontractor before you can mark it complete. Wait for the subcontractor to submit with photo proof."
                 if job.supervisor_id != user.id:
                     return False, "You don't have permission to complete this job"
             else:

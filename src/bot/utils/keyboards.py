@@ -107,8 +107,6 @@ def get_supervisor_job_actions_keyboard(job_id: int, job_status: str, job_type: 
     if job_status == "SUBMITTED":
         buttons.append([InlineKeyboardButton(text="📸 View Submission", callback_data=f"view_submission:{job_id}")])
         buttons.append([InlineKeyboardButton(text="✔️ Mark Complete", callback_data=f"sup_complete:{job_id}")])
-    elif job_status in ["IN_PROGRESS", "ACCEPTED"]:
-        buttons.append([InlineKeyboardButton(text="✔️ Mark Complete", callback_data=f"sup_complete:{job_id}")])
     
     back_callback = "back:history" if is_admin else "back:sup"
     buttons.append([InlineKeyboardButton(text="⬅️ Back", callback_data=back_callback)])
@@ -185,7 +183,7 @@ def get_back_keyboard(callback_data: str = "back:main") -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="⬅️ Back", callback_data=callback_data)]
     ])
 
-def get_user_list_keyboard(users: list, page: int = 0, page_size: int = 5, include_self: bool = True) -> InlineKeyboardMarkup:
+def get_user_list_keyboard(users: list, page: int = 0, page_size: int = 5, include_self: bool = True, is_super_admin: bool = False) -> InlineKeyboardMarkup:
     start = page * page_size
     end = start + page_size
     page_users = users[start:end]

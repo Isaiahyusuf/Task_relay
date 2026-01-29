@@ -34,7 +34,11 @@ def require_role(*roles: UserRole):
             if user_role is None:
                 await message.answer("You are not registered. Please use /start with your access code.")
                 return
-            if user_role not in roles:
+            # Super admin can access all admin routes
+            allowed_roles = list(roles)
+            if UserRole.ADMIN in roles and UserRole.SUPER_ADMIN not in roles:
+                allowed_roles.append(UserRole.SUPER_ADMIN)
+            if user_role not in allowed_roles:
                 await message.answer("You don't have permission to use this command.")
                 return
             return await handler(message, *args, **kwargs)
