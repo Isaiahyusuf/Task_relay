@@ -2,7 +2,14 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeybo
 from src.bot.database.models import UserRole, JobStatus, AvailabilityStatus
 
 def get_main_menu_keyboard(role: UserRole) -> ReplyKeyboardMarkup:
-    if role == UserRole.ADMIN:
+    if role == UserRole.SUPER_ADMIN:
+        buttons = [
+            [KeyboardButton(text="📊 Job History"), KeyboardButton(text="📦 Archive Jobs")],
+            [KeyboardButton(text="🔑 Create Access Code"), KeyboardButton(text="📋 View Archived")],
+            [KeyboardButton(text="👥 Manage All Users"), KeyboardButton(text="🗑️ Delete Anything")],
+            [KeyboardButton(text="ℹ️ Help"), KeyboardButton(text="📘 About")]
+        ]
+    elif role == UserRole.ADMIN:
         buttons = [
             [KeyboardButton(text="📊 Job History"), KeyboardButton(text="📦 Archive Jobs")],
             [KeyboardButton(text="🔑 Create Access Code"), KeyboardButton(text="📋 View Archived")],
@@ -13,6 +20,7 @@ def get_main_menu_keyboard(role: UserRole) -> ReplyKeyboardMarkup:
         buttons = [
             [KeyboardButton(text="➕ New Job"), KeyboardButton(text="📋 My Jobs")],
             [KeyboardButton(text="⏳ Pending Jobs"), KeyboardButton(text="🔄 Active Jobs")],
+            [KeyboardButton(text="📥 Submitted Jobs")],
             [KeyboardButton(text="🔑 Create Subcontractor Code")],
             [KeyboardButton(text="ℹ️ Help"), KeyboardButton(text="📘 About")],
             [KeyboardButton(text="🗑️ Delete My Account")]
@@ -20,6 +28,7 @@ def get_main_menu_keyboard(role: UserRole) -> ReplyKeyboardMarkup:
     else:
         buttons = [
             [KeyboardButton(text="📋 Available Jobs"), KeyboardButton(text="🔄 My Active Jobs")],
+            [KeyboardButton(text="📤 Submit Job")],
             [KeyboardButton(text="🟢 Available"), KeyboardButton(text="🟡 Busy"), KeyboardButton(text="🔴 Away")],
             [KeyboardButton(text="ℹ️ Help"), KeyboardButton(text="📘 About")],
             [KeyboardButton(text="🗑️ Delete My Account")]
@@ -74,8 +83,8 @@ def get_job_actions_keyboard(job_id: int, job_type: str = "preset", job_status: 
         ])
     elif job_status == "accepted":
         buttons.append([InlineKeyboardButton(text="▶️ Start Job", callback_data=f"job_start:{job_id}")])
-    elif job_status == "in_progress":
-        buttons.append([InlineKeyboardButton(text="✔️ Mark Done", callback_data=f"job_done:{job_id}")])
+    elif job_status == "in_progress" or job_status == "IN_PROGRESS":
+        buttons.append([InlineKeyboardButton(text="📤 Submit Job", callback_data=f"job_submit:{job_id}")])
     
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -95,7 +104,10 @@ def get_supervisor_job_actions_keyboard(job_id: int, job_status: str, job_type: 
     if job_status in ["CREATED", "SENT"]:
         buttons.append([InlineKeyboardButton(text="❌ Cancel Job", callback_data=f"sup_cancel:{job_id}")])
     
-    if job_status in ["IN_PROGRESS", "ACCEPTED"]:
+    if job_status == "SUBMITTED":
+        buttons.append([InlineKeyboardButton(text="📸 View Submission", callback_data=f"view_submission:{job_id}")])
+        buttons.append([InlineKeyboardButton(text="✔️ Mark Complete", callback_data=f"sup_complete:{job_id}")])
+    elif job_status in ["IN_PROGRESS", "ACCEPTED"]:
         buttons.append([InlineKeyboardButton(text="✔️ Mark Complete", callback_data=f"sup_complete:{job_id}")])
     
     back_callback = "back:history" if is_admin else "back:sup"
@@ -135,6 +147,7 @@ def get_job_list_keyboard(jobs: list, page: int = 0, page_size: int = 5, context
             JobStatus.SENT: "📤",
             JobStatus.ACCEPTED: "✅",
             JobStatus.IN_PROGRESS: "🔄",
+            JobStatus.SUBMITTED: "📥",
             JobStatus.COMPLETED: "✔️",
             JobStatus.CANCELLED: "🚫",
             JobStatus.ARCHIVED: "📦"
@@ -156,13 +169,16 @@ def get_job_list_keyboard(jobs: list, page: int = 0, page_size: int = 5, context
     
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-def get_role_selection_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[
+def get_role_selection_keyboard(include_super_admin: bool = False) -> InlineKeyboardMarkup:
+    buttons = [
         [InlineKeyboardButton(text="👔 Supervisor", callback_data="role:supervisor")],
         [InlineKeyboardButton(text="🔧 Subcontractor", callback_data="role:subcontractor")],
-        [InlineKeyboardButton(text="👑 Admin", callback_data="role:admin")],
-        [InlineKeyboardButton(text="❌ Cancel", callback_data="code_cancel")]
-    ])
+        [InlineKeyboardButton(text="👑 Admin", callback_data="role:admin")]
+    ]
+    if include_super_admin:
+        buttons.insert(0, [InlineKeyboardButton(text="🦸 Super Admin", callback_data="role:super_admin")])
+    buttons.append([InlineKeyboardButton(text="❌ Cancel", callback_data="code_cancel")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def get_back_keyboard(callback_data: str = "back:main") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[

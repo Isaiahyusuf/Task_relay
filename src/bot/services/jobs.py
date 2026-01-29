@@ -147,6 +147,50 @@ class JobService:
             return True, "Job started"
     
     @staticmethod
+    async def submit_job(job_id: int, telegram_id: int, notes: str = None, photo_id: str = None) -> tuple[bool, str, int | None]:
+        if not async_session:
+            return False, "Database not available", None
+        
+        async with async_session() as session:
+            job_result = await session.execute(select(Job).where(Job.id == job_id))
+            job = job_result.scalar_one_or_none()
+            
+            if not job:
+                return False, "Job not found", None
+            
+            if job.status == JobStatus.ARCHIVED:
+                return False, "Cannot modify archived job", None
+            
+            if job.status not in [JobStatus.IN_PROGRESS, JobStatus.ACCEPTED]:
+                return False, f"Job cannot be submitted (current status: {job.status.value})", None
+            
+            user_result = await session.execute(
+                select(User).where(User.telegram_id == telegram_id)
+            )
+            user = user_result.scalar_one_or_none()
+            
+            if not user:
+                return False, "User not found", None
+            
+            if job.subcontractor_id != user.id:
+                return False, "You are not assigned to this job", None
+            
+            job.status = JobStatus.SUBMITTED
+            if photo_id:
+                job.photos = photo_id
+            if notes:
+                job.description = (job.description or "") + f"\n\n[Submission Notes]: {notes}"
+            
+            # Get supervisor telegram_id for notification
+            sup_result = await session.execute(
+                select(User.telegram_id).where(User.id == job.supervisor_id)
+            )
+            supervisor_tg_id = sup_result.scalar()
+            
+            await session.commit()
+            return True, "Job submitted for review", supervisor_tg_id
+    
+    @staticmethod
     async def complete_job(job_id: int, telegram_id: int, is_supervisor: bool = False) -> tuple[bool, str]:
         if not async_session:
             return False, "Database not available"
@@ -167,7 +211,7 @@ class JobService:
             if job.status == JobStatus.CANCELLED:
                 return False, "Cannot complete a cancelled job"
             
-            if job.status not in [JobStatus.IN_PROGRESS, JobStatus.ACCEPTED]:
+            if job.status not in [JobStatus.IN_PROGRESS, JobStatus.ACCEPTED, JobStatus.SUBMITTED]:
                 return False, f"Job cannot be completed (current status: {job.status.value})"
             
             user_result = await session.execute(
@@ -190,6 +234,28 @@ class JobService:
             
             await session.commit()
             return True, "Job marked as complete"
+    
+    @staticmethod
+    async def get_submitted_jobs_for_supervisor(telegram_id: int) -> list:
+        if not async_session:
+            return []
+        
+        async with async_session() as session:
+            user_result = await session.execute(
+                select(User).where(User.telegram_id == telegram_id)
+            )
+            user = user_result.scalar_one_or_none()
+            
+            if not user:
+                return []
+            
+            result = await session.execute(
+                select(Job).where(
+                    Job.supervisor_id == user.id,
+                    Job.status == JobStatus.SUBMITTED
+                ).order_by(Job.created_at.desc())
+            )
+            return list(result.scalars().all())
     
     @staticmethod
     async def cancel_job(job_id: int, telegram_id: int) -> tuple[bool, str]:

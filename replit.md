@@ -108,6 +108,9 @@ Uses PostgreSQL with SQLAlchemy async ORM. Supports Railway PostgreSQL with SSL.
 - `teams` - Team groupings for users and jobs
 
 ## Recent Changes
+- 2026-01-29: Added SUPER_ADMIN role with full access to delete any user including admins
+- 2026-01-29: Added job submission flow - subcontractors submit with notes and photo proof
+- 2026-01-29: Added SUBMITTED job status - supervisors review submissions before marking complete
 - 2026-01-29: Removed team restrictions - any subcontractor can now see and accept any job bot-wide
 - 2026-01-29: Added notifications for job creation (all available subs) and acceptance (supervisor)
 - 2026-01-29: Added 'Mark Done' button for subcontractors to notify supervisors for investigation

@@ -48,8 +48,23 @@ async def check_admin(message: Message) -> bool:
             select(User).where(User.telegram_id == message.from_user.id)
         )
         user = result.scalar_one_or_none()
-        if not user or user.role != UserRole.ADMIN:
+        if not user or user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
             await message.answer("You don't have admin permissions.")
+            return False
+    return True
+
+async def check_super_admin(message: Message) -> bool:
+    if not async_session:
+        await message.answer("Database not available.")
+        return False
+    
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == message.from_user.id)
+        )
+        user = result.scalar_one_or_none()
+        if not user or user.role != UserRole.SUPER_ADMIN:
+            await message.answer("You don't have super admin permissions.")
             return False
     return True
 
@@ -271,6 +286,7 @@ async def process_role_selection(callback: CallbackQuery, state: FSMContext):
     code = data.get('code')
     
     role_map = {
+        "super_admin": UserRole.SUPER_ADMIN,
         "admin": UserRole.ADMIN,
         "supervisor": UserRole.SUPERVISOR,
         "subcontractor": UserRole.SUBCONTRACTOR
@@ -374,6 +390,7 @@ async def show_job_details(callback: CallbackQuery, job_id: int, context: str):
         JobStatus.SENT: "Sent",
         JobStatus.ACCEPTED: "Accepted",
         JobStatus.IN_PROGRESS: "In Progress",
+        JobStatus.SUBMITTED: "Submitted",
         JobStatus.COMPLETED: "Completed",
         JobStatus.CANCELLED: "Cancelled",
         JobStatus.ARCHIVED: "Archived"
@@ -578,7 +595,7 @@ async def handle_delete_user_request(callback: CallbackQuery):
         )
         admin = admin_result.scalar_one_or_none()
         
-        if not admin or admin.role != UserRole.ADMIN:
+        if not admin or admin.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
             await callback.answer("Not authorized", show_alert=True)
             return
         
@@ -589,8 +606,9 @@ async def handle_delete_user_request(callback: CallbackQuery):
         await callback.answer("User not found", show_alert=True)
         return
     
-    if user.role == UserRole.ADMIN and delete_type == "other":
-        await callback.answer("Admins cannot delete other admins", show_alert=True)
+    # Only super admins can delete admins
+    if user.role == UserRole.ADMIN and delete_type == "other" and admin.role != UserRole.SUPER_ADMIN:
+        await callback.answer("Only Super Admins can delete other admins", show_alert=True)
         return
     
     name = user.first_name or user.username or f"User {user.telegram_id}"
@@ -628,7 +646,7 @@ async def handle_confirm_delete(callback: CallbackQuery):
         )
         admin = admin_result.scalar_one_or_none()
         
-        if not admin or admin.role != UserRole.ADMIN:
+        if not admin or admin.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
             await callback.answer("Not authorized", show_alert=True)
             return
         

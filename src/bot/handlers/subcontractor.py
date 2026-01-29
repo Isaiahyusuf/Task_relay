@@ -29,6 +29,10 @@ class DeclineStates(StatesGroup):
 class CompletionStates(StatesGroup):
     waiting_for_photo = State()
 
+class SubmissionStates(StatesGroup):
+    waiting_for_notes = State()
+    waiting_for_photo = State()
+
 @router.message(F.text == "📋 Available Jobs")
 async def btn_available_jobs(message: Message):
     if not await check_subcontractor(message):
@@ -265,6 +269,115 @@ async def mark_job_done_callback(callback: CallbackQuery):
                 logger.error(f"Failed to notify supervisor {supervisor_tg_id}: {e}")
     else:
         await callback.answer(msg, show_alert=True)
+
+@router.message(F.text == "📤 Submit Job")
+async def btn_submit_job_menu(message: Message):
+    if not await check_subcontractor(message):
+        return
+    
+    jobs = await JobService.get_subcontractor_active_jobs(message.from_user.id)
+    in_progress_jobs = [j for j in jobs if j.status == JobStatus.IN_PROGRESS]
+    
+    if not in_progress_jobs:
+        await message.answer(
+            "*Submit Job*\n\n"
+            "You have no jobs in progress to submit.\n\n"
+            "Start a job first from 'My Active Jobs'.",
+            parse_mode="Markdown"
+        )
+        return
+    
+    await message.answer(
+        "*Submit Job*\n\n"
+        "Select a job to submit for supervisor review:",
+        reply_markup=get_job_list_keyboard(in_progress_jobs, context="submit"),
+        parse_mode="Markdown"
+    )
+
+@router.callback_query(F.data.startswith("view_job:submit:"))
+async def view_job_for_submission(callback: CallbackQuery, state: FSMContext):
+    job_id = int(callback.data.split(":")[2])
+    await start_job_submission(callback, state, job_id)
+
+@router.callback_query(F.data.startswith("job_submit:"))
+async def submit_job_callback(callback: CallbackQuery, state: FSMContext):
+    job_id = int(callback.data.split(":")[1])
+    await start_job_submission(callback, state, job_id)
+
+async def start_job_submission(callback: CallbackQuery, state: FSMContext, job_id: int):
+    job = await JobService.get_job_by_id(job_id)
+    
+    if not job:
+        await callback.answer("Job not found", show_alert=True)
+        return
+    
+    await state.update_data(submitting_job_id=job_id, job_title=job.title)
+    await callback.message.edit_text(
+        f"*Submit Job #{job_id}*\n\n"
+        f"*{job.title}*\n\n"
+        "Please provide any notes about the completed work\n"
+        "(or send /skip to continue without notes):",
+        parse_mode="Markdown"
+    )
+    await state.set_state(SubmissionStates.waiting_for_notes)
+    await callback.answer()
+
+@router.message(StateFilter(SubmissionStates.waiting_for_notes))
+async def process_submission_notes(message: Message, state: FSMContext):
+    notes = None if message.text.strip().lower() == "/skip" else message.text.strip()
+    await state.update_data(submission_notes=notes)
+    
+    await message.answer(
+        "*Submit Job*\n\n"
+        "Now please send a photo as proof of completed work:",
+        parse_mode="Markdown"
+    )
+    await state.set_state(SubmissionStates.waiting_for_photo)
+
+@router.message(StateFilter(SubmissionStates.waiting_for_photo), F.photo)
+async def process_submission_photo(message: Message, state: FSMContext):
+    data = await state.get_data()
+    job_id = data.get('submitting_job_id')
+    notes = data.get('submission_notes')
+    photo = message.photo[-1]
+    
+    success, msg, supervisor_tg_id = await JobService.submit_job(
+        job_id, message.from_user.id, notes, photo.file_id
+    )
+    
+    if success:
+        await message.answer(
+            f"*Job Submitted!*\n\n"
+            f"Job #{job_id} has been submitted for supervisor review.\n\n"
+            "The supervisor will be notified to investigate and mark as completed.",
+            parse_mode="Markdown"
+        )
+        
+        # Notify supervisor
+        if supervisor_tg_id:
+            from src.bot.main import bot
+            async with async_session() as session:
+                result = await session.execute(
+                    select(User).where(User.telegram_id == message.from_user.id)
+                )
+                sub = result.scalar_one_or_none()
+                sub_name = sub.first_name or sub.username or "A subcontractor"
+            
+            try:
+                job = await JobService.get_job_by_id(job_id)
+                await bot.send_message(
+                    supervisor_tg_id,
+                    f"📥 *Job Submitted for Review*\n\n"
+                    f"Job #{job_id} ({job.title if job else 'Unknown'}) has been submitted by *{sub_name}*.\n\n"
+                    f"Please review the submission and mark as completed if satisfied.",
+                    parse_mode="Markdown"
+                )
+            except Exception as e:
+                logger.error(f"Failed to notify supervisor {supervisor_tg_id}: {e}")
+    else:
+        await message.answer(f"Error: {msg}")
+    
+    await state.clear()
 
 @router.callback_query(F.data.startswith("job_quote:"))
 async def quote_job_callback(callback: CallbackQuery, state: FSMContext):

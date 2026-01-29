@@ -368,6 +368,12 @@ async def btn_active_jobs(message: Message):
         return
     await show_filtered_jobs(message, [JobStatus.ACCEPTED, JobStatus.IN_PROGRESS], "Active Jobs")
 
+@router.message(F.text == "📥 Submitted Jobs")
+async def btn_submitted_jobs(message: Message):
+    if not await check_supervisor(message):
+        return
+    await show_filtered_jobs(message, [JobStatus.SUBMITTED], "Submitted Jobs")
+
 async def check_supervisor(message: Message) -> bool:
     if not async_session:
         await message.answer("Database not available.")
@@ -435,6 +441,7 @@ async def view_job_details_supervisor(callback: CallbackQuery):
         JobStatus.SENT: "Sent",
         JobStatus.ACCEPTED: "Accepted",
         JobStatus.IN_PROGRESS: "In Progress",
+        JobStatus.SUBMITTED: "Submitted for Review",
         JobStatus.COMPLETED: "Completed",
         JobStatus.CANCELLED: "Cancelled",
         JobStatus.ARCHIVED: "Archived"
@@ -543,6 +550,34 @@ async def accept_quote(callback: CallbackQuery):
         await callback.answer("Quote accepted!")
     else:
         await callback.answer(msg, show_alert=True)
+
+@router.callback_query(F.data.startswith("view_submission:"))
+async def view_submission(callback: CallbackQuery):
+    job_id = int(callback.data.split(":")[1])
+    
+    job = await JobService.get_job_by_id(job_id)
+    
+    if not job:
+        await callback.answer("Job not found", show_alert=True)
+        return
+    
+    if job.photos:
+        from src.bot.main import bot
+        try:
+            await bot.send_photo(
+                callback.from_user.id,
+                job.photos,
+                caption=f"*Photo proof for Job #{job_id}*\n\n"
+                        f"*Title:* {job.title}\n"
+                        f"Review this submission and mark as completed if satisfied.",
+                parse_mode="Markdown"
+            )
+            await callback.answer("Photo sent!")
+        except Exception as e:
+            logger.error(f"Failed to send photo: {e}")
+            await callback.answer("Failed to send photo", show_alert=True)
+    else:
+        await callback.answer("No photo submitted for this job", show_alert=True)
 
 @router.callback_query(F.data.startswith("sup_cancel:"))
 async def supervisor_cancel_job(callback: CallbackQuery):

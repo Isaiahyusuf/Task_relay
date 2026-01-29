@@ -6,6 +6,7 @@ from sqlalchemy.orm import relationship, declarative_base
 Base = declarative_base()
 
 class UserRole(PyEnum):
+    SUPER_ADMIN = "super_admin"
     ADMIN = "admin"
     SUPERVISOR = "supervisor"
     SUBCONTRACTOR = "subcontractor"
@@ -20,6 +21,7 @@ class JobStatus(PyEnum):
     SENT = "SENT"
     ACCEPTED = "ACCEPTED"
     IN_PROGRESS = "IN_PROGRESS"
+    SUBMITTED = "SUBMITTED"
     COMPLETED = "COMPLETED"
     CANCELLED = "CANCELLED"
     ARCHIVED = "ARCHIVED"
