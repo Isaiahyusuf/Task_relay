@@ -435,10 +435,6 @@ async def process_submission_photo(message: Message, state: FSMContext):
         f"Photo {len(photos)} added.\n\n"
         f"Send more photos or type /done to submit the job."
     )
-    else:
-        await message.answer(f"Error: {msg}")
-    
-    await state.clear()
 
 @router.callback_query(F.data.startswith("job_quote:"))
 async def quote_job_callback(callback: CallbackQuery, state: FSMContext):
