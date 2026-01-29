@@ -74,16 +74,18 @@ def get_subcontractor_selection_keyboard(subcontractors: list, include_skip: boo
 def get_job_actions_keyboard(job_id: int, job_type: str = "preset", job_status: str = "sent") -> InlineKeyboardMarkup:
     buttons = []
     
-    if job_status == "sent":
+    status_lower = job_status.lower() if job_status else ""
+    
+    if status_lower == "sent":
         if job_type == "quote":
             buttons.append([InlineKeyboardButton(text="💬 Submit Quote", callback_data=f"job_quote:{job_id}")])
         buttons.append([
             InlineKeyboardButton(text="✅ Accept", callback_data=f"job_accept:{job_id}"),
             InlineKeyboardButton(text="❌ Decline", callback_data=f"job_decline:{job_id}")
         ])
-    elif job_status == "accepted":
+    elif status_lower == "accepted":
         buttons.append([InlineKeyboardButton(text="▶️ Start Job", callback_data=f"job_start:{job_id}")])
-    elif job_status == "in_progress" or job_status == "IN_PROGRESS":
+    elif status_lower == "in_progress":
         buttons.append([InlineKeyboardButton(text="📤 Submit Job", callback_data=f"job_submit:{job_id}")])
     
     return InlineKeyboardMarkup(inline_keyboard=buttons)
