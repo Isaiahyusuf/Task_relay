@@ -276,12 +276,11 @@ async def process_subcontractor_selection(callback: CallbackQuery, state: FSMCon
                 parse_mode="Markdown"
             )
             
-            # Notify all available subcontractors
+            # Notify all available subcontractors (bot-wide, not team-restricted)
             async with async_session() as session:
                 result = await session.execute(
                     select(User).where(
                         User.role == UserRole.SUBCONTRACTOR,
-                        User.team_id == job.team_id,
                         User.is_active == True,
                         User.availability_status == AvailabilityStatus.AVAILABLE
                     )

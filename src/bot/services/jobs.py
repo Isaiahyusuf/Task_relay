@@ -300,7 +300,6 @@ class JobService:
                         Job.subcontractor_id == user.id,
                         Job.subcontractor_id == None
                     ),
-                    Job.team_id == user.team_id,
                     Job.status == JobStatus.SENT
                 ).order_by(Job.created_at.desc())
             )
@@ -345,7 +344,7 @@ class JobService:
             return list(result.scalars().all())
     
     @staticmethod
-    async def get_available_subcontractors(team_id: int) -> list:
+    async def get_available_subcontractors(team_id: int = None) -> list:
         if not async_session:
             return []
         
@@ -353,7 +352,6 @@ class JobService:
             result = await session.execute(
                 select(User).where(
                     User.role == UserRole.SUBCONTRACTOR,
-                    User.team_id == team_id,
                     User.is_active == True,
                     User.availability_status == AvailabilityStatus.AVAILABLE
                 )
