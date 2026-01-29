@@ -76,7 +76,7 @@ class JobService:
             return True, "Job sent successfully"
     
     @staticmethod
-    async def accept_job(job_id: int, telegram_id: int) -> tuple[bool, str, int | None]:
+    async def accept_job(job_id: int, telegram_id: int, company_name: str = None) -> tuple[bool, str, int | None]:
         if not async_session:
             return False, "Database not available", None
         
@@ -104,6 +104,8 @@ class JobService:
             job.status = JobStatus.ACCEPTED
             job.subcontractor_id = user.id
             job.accepted_at = datetime.utcnow()
+            if company_name:
+                job.company_name = company_name
             
             # Get supervisor's telegram_id for notification
             sup_result = await session.execute(

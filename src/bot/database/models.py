@@ -94,6 +94,7 @@ class Job(Base):
     
     photos = Column(Text, nullable=True)
     decline_reason = Column(Text, nullable=True)
+    company_name = Column(String(200), nullable=True)
     
     rating = Column(Integer, nullable=True)
     rating_comment = Column(Text, nullable=True)

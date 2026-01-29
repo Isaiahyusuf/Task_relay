@@ -33,6 +33,9 @@ class SubmissionStates(StatesGroup):
     waiting_for_notes = State()
     waiting_for_photo = State()
 
+class AcceptJobStates(StatesGroup):
+    waiting_for_company_name = State()
+
 @router.message(F.text == "📋 Available Jobs")
 async def btn_available_jobs(message: Message):
     if not await check_subcontractor(message):
@@ -159,7 +162,7 @@ async def show_active_jobs(message: Message):
         await message.answer(job_text, reply_markup=keyboard, parse_mode="Markdown")
 
 @router.callback_query(F.data.startswith("job_accept:"))
-async def accept_job_callback(callback: CallbackQuery):
+async def accept_job_callback(callback: CallbackQuery, state: FSMContext):
     job_id = int(callback.data.split(":")[1])
     
     job = await JobService.get_job_by_id(job_id)
@@ -172,24 +175,46 @@ async def accept_job_callback(callback: CallbackQuery):
         await callback.answer("Quote jobs require a quote submission first", show_alert=True)
         return
     
-    success, msg, supervisor_tg_id = await JobService.accept_job(job_id, callback.from_user.id)
+    # Ask for company name before accepting
+    await state.update_data(accepting_job_id=job_id, job_title=job.title)
+    await callback.message.edit_text(
+        f"*Accept Job #{job_id}*\n\n"
+        f"*{job.title}*\n\n"
+        "Please enter your company name to accept this job:",
+        parse_mode="Markdown"
+    )
+    await state.set_state(AcceptJobStates.waiting_for_company_name)
+    await callback.answer()
+
+@router.message(StateFilter(AcceptJobStates.waiting_for_company_name))
+async def process_company_name_for_accept(message: Message, state: FSMContext):
+    company_name = message.text.strip()
+    
+    if len(company_name) < 2:
+        await message.answer("Please enter a valid company name (at least 2 characters):")
+        return
+    
+    data = await state.get_data()
+    job_id = data.get('accepting_job_id')
+    job_title = data.get('job_title')
+    
+    success, msg, supervisor_tg_id = await JobService.accept_job(job_id, message.from_user.id, company_name)
     
     if success:
-        # Get user for sub_name
         async with async_session() as session:
             result = await session.execute(
-                select(User).where(User.telegram_id == callback.from_user.id)
+                select(User).where(User.telegram_id == message.from_user.id)
             )
             user_obj = result.scalar_one_or_none()
             sub_name = user_obj.first_name or user_obj.username or "A subcontractor"
 
-        await callback.message.edit_text(
+        await message.answer(
             f"*Job Accepted!*\n\n"
-            f"Job #{job_id}: {job.title}\n\n"
+            f"Job #{job_id}: {job_title}\n"
+            f"Company: {company_name}\n\n"
             "Use 'My Active Jobs' to start the job when ready.",
             parse_mode="Markdown"
         )
-        await callback.answer("Job accepted!")
         
         # Notify Supervisor
         if supervisor_tg_id:
@@ -198,13 +223,16 @@ async def accept_job_callback(callback: CallbackQuery):
                 await bot.send_message(
                     supervisor_tg_id,
                     f"✅ *Job Accepted*\n\n"
-                    f"Job #{job_id} ({job.title}) has been accepted by *{sub_name}*.",
+                    f"Job #{job_id} ({job_title}) has been accepted by *{sub_name}*.\n"
+                    f"Company: *{company_name}*",
                     parse_mode="Markdown"
                 )
             except Exception as e:
                 logger.error(f"Failed to notify supervisor {supervisor_tg_id}: {e}")
     else:
-        await callback.answer(msg, show_alert=True)
+        await message.answer(f"Error: {msg}")
+    
+    await state.clear()
 
 @router.callback_query(F.data.startswith("job_done:"))
 async def mark_job_done_callback(callback: CallbackQuery):
