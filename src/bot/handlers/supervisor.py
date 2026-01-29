@@ -5,7 +5,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message, CallbackQuery
 from sqlalchemy import select
 from src.bot.database import async_session, User, Job
-from src.bot.database.models import UserRole, JobType, JobStatus
+from src.bot.database.models import UserRole, JobType, JobStatus, AvailabilityStatus
 from src.bot.services.jobs import JobService
 from src.bot.services.quotes import QuoteService
 from src.bot.services.access_codes import AccessCodeService
@@ -275,6 +275,33 @@ async def process_subcontractor_selection(callback: CallbackQuery, state: FSMCon
                 "The subcontractor will be notified.",
                 parse_mode="Markdown"
             )
+            
+            # Notify all available subcontractors
+            async with async_session() as session:
+                result = await session.execute(
+                    select(User).where(
+                        User.role == UserRole.SUBCONTRACTOR,
+                        User.team_id == job.team_id,
+                        User.is_active == True,
+                        User.availability_status == AvailabilityStatus.AVAILABLE
+                    )
+                )
+                available_subs = result.scalars().all()
+                
+                from src.bot.main import bot
+                for sub in available_subs:
+                    try:
+                        await bot.send_message(
+                            sub.telegram_id,
+                            f"🆕 *New Job Available*\n\n"
+                            f"Job #{job.id}: {job.title}\n"
+                            f"Location: {job.address or 'N/A'}\n"
+                            f"Price: {job.preset_price or 'N/A'}\n\n"
+                            f"Check 'Available Jobs' to view details!",
+                            parse_mode="Markdown"
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to notify subcontractor {sub.telegram_id}: {e}")
         else:
             await callback.message.edit_text(
                 f"Job #{job.id} created but sending failed.\n"

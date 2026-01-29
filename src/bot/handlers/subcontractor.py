@@ -164,8 +164,14 @@ async def accept_job_callback(callback: CallbackQuery):
         await callback.answer("Job not found", show_alert=True)
         return
     
-    if job.job_type == JobType.QUOTE:
-        await callback.answer("Quote jobs require a quote submission first", show_alert=True)
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == callback.from_user.id)
+        )
+        user = result.scalar_one_or_none()
+    
+    if not user:
+        await callback.answer("User not found", show_alert=True)
         return
     
     success, msg, supervisor_tg_id = await JobService.accept_job(job_id, callback.from_user.id)
@@ -182,7 +188,7 @@ async def accept_job_callback(callback: CallbackQuery):
         # Notify Supervisor
         if supervisor_tg_id:
             from src.bot.main import bot
-            sub_name = callback.from_user.first_name or callback.from_user.username or "A subcontractor"
+            sub_name = user.first_name or user.username or "A subcontractor"
             try:
                 await bot.send_message(
                     supervisor_tg_id,
