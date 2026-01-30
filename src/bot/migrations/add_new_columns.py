@@ -47,6 +47,15 @@ async def run_migration():
             print("Added SUBMITTED to jobstatus enum")
         except Exception as e:
             print(f"SUBMITTED status may already exist: {e}")
+        
+        # Add SUPER_ADMIN to userrole enum
+        try:
+            await conn.execute(text(
+                "ALTER TYPE userrole ADD VALUE IF NOT EXISTS 'SUPER_ADMIN'"
+            ))
+            print("Added SUPER_ADMIN to userrole enum")
+        except Exception as e:
+            print(f"SUPER_ADMIN role may already exist: {e}")
     
     await engine.dispose()
     print("Migration completed!")
