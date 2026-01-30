@@ -208,14 +208,14 @@ async def show_subcontractor_selection(message: Message, state: FSMContext, tele
         )
         supervisor = result.scalar_one_or_none()
         
-        subcontractors = await JobService.get_available_subcontractors(supervisor.team_id)
+        subcontractors = await JobService.get_available_subcontractors()
     
     await state.update_data(supervisor_id=supervisor.id, team_id=supervisor.team_id)
     
     if not subcontractors:
         text = (
             "*Creating a New Job*\n\n"
-            "No available subcontractors in your team.\n\n"
+            "No available subcontractors on the bot right now.\n\n"
             "Would you like to save the job as a draft?"
         )
         keyboard = get_confirmation_keyboard("save_pending")
@@ -263,6 +263,53 @@ async def process_subcontractor_selection(callback: CallbackQuery, state: FSMCon
             "You can send it later from 'My Jobs'.",
             parse_mode="Markdown"
         )
+    elif subcontractor_part == "all":
+        # Send to all available subcontractors (no specific assignment)
+        success, msg = await JobService.send_job_to_all(job.id)
+        
+        if success:
+            # Notify all available subcontractors
+            async with async_session() as session:
+                result = await session.execute(
+                    select(User).where(
+                        User.role == UserRole.SUBCONTRACTOR,
+                        User.is_active == True,
+                        User.availability_status == AvailabilityStatus.AVAILABLE
+                    )
+                )
+                available_subs = list(result.scalars().all())
+                
+                from src.bot.main import bot
+                notified_count = 0
+                for sub in available_subs:
+                    try:
+                        await bot.send_message(
+                            sub.telegram_id,
+                            f"🆕 *New Job Available*\n\n"
+                            f"Job #{job.id}: {job.title}\n"
+                            f"Location: {job.address or 'N/A'}\n"
+                            f"Price: {job.preset_price or 'N/A'}\n\n"
+                            f"Check 'Available Jobs' to accept this job!",
+                            parse_mode="Markdown"
+                        )
+                        notified_count += 1
+                    except Exception as e:
+                        logger.error(f"Failed to notify subcontractor {sub.telegram_id}: {e}")
+            
+            await callback.message.edit_text(
+                f"*Job Created & Broadcast!*\n\n"
+                f"Job #{job.id}: {job.title}\n"
+                f"Status: Sent to all subcontractors\n\n"
+                f"📢 Notified {notified_count} available subcontractor(s).\n"
+                "First one to accept will get the job!",
+                parse_mode="Markdown"
+            )
+        else:
+            await callback.message.edit_text(
+                f"Job #{job.id} created but sending failed.\n"
+                f"Reason: {msg}\n"
+                "Please try sending again from 'My Jobs'."
+            )
     else:
         subcontractor_id = int(subcontractor_part)
         success, msg = await JobService.send_job(job.id, subcontractor_id)
@@ -276,23 +323,19 @@ async def process_subcontractor_selection(callback: CallbackQuery, state: FSMCon
                 parse_mode="Markdown"
             )
             
-            # Notify all available subcontractors (bot-wide, not team-restricted)
+            # Notify the specific subcontractor
             async with async_session() as session:
                 result = await session.execute(
-                    select(User).where(
-                        User.role == UserRole.SUBCONTRACTOR,
-                        User.is_active == True,
-                        User.availability_status == AvailabilityStatus.AVAILABLE
-                    )
+                    select(User).where(User.id == subcontractor_id)
                 )
-                available_subs = result.scalars().all()
+                sub = result.scalar_one_or_none()
                 
-                from src.bot.main import bot
-                for sub in available_subs:
+                if sub:
+                    from src.bot.main import bot
                     try:
                         await bot.send_message(
                             sub.telegram_id,
-                            f"🆕 *New Job Available*\n\n"
+                            f"🆕 *New Job Assigned to You*\n\n"
                             f"Job #{job.id}: {job.title}\n"
                             f"Location: {job.address or 'N/A'}\n"
                             f"Price: {job.preset_price or 'N/A'}\n\n"

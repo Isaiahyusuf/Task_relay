@@ -61,6 +61,11 @@ def get_confirmation_keyboard(action: str, item_id: int = 0) -> InlineKeyboardMa
 
 def get_subcontractor_selection_keyboard(subcontractors: list, include_skip: bool = True) -> InlineKeyboardMarkup:
     buttons = []
+    
+    # Add "Send to All" option at the top
+    if subcontractors:
+        buttons.append([InlineKeyboardButton(text="📢 Send to All Available", callback_data="assign:all")])
+    
     for sub in subcontractors:
         name = sub.first_name or sub.username or f"User {sub.telegram_id}"
         avail = "🟢" if sub.availability_status == AvailabilityStatus.AVAILABLE else "🟡" if sub.availability_status == AvailabilityStatus.BUSY else "🔴"

@@ -76,6 +76,33 @@ class JobService:
             return True, "Job sent successfully"
     
     @staticmethod
+    async def send_job_to_all(job_id: int) -> tuple[bool, str]:
+        """Send job to all available subcontractors (no specific assignment)."""
+        if not async_session:
+            return False, "Database not available"
+        
+        async with async_session() as session:
+            result = await session.execute(select(Job).where(Job.id == job_id))
+            job = result.scalar_one_or_none()
+            
+            if not job:
+                return False, "Job not found"
+            
+            if job.status == JobStatus.ARCHIVED:
+                return False, "Cannot modify archived job"
+            
+            if job.status != JobStatus.CREATED:
+                return False, f"Job must be in CREATED status to send (current: {job.status.value})"
+            
+            # Don't assign to specific subcontractor - leave it open for anyone
+            job.subcontractor_id = None
+            job.status = JobStatus.SENT
+            job.sent_at = datetime.utcnow()
+            
+            await session.commit()
+            return True, "Job broadcast to all subcontractors"
+    
+    @staticmethod
     async def accept_job(job_id: int, telegram_id: int, company_name: str = None) -> tuple[bool, str, int | None]:
         if not async_session:
             return False, "Database not available", None
