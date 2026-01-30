@@ -801,22 +801,26 @@ async def handle_manage_user(callback: CallbackQuery):
         
         result = await session.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
-    
-    if not user:
-        await callback.answer("User not found", show_alert=True)
-        return
-    
-    is_self = user.telegram_id == callback.from_user.id
-    role_text = user.role.value.title()
-    name = user.first_name or user.username or f"User {user.telegram_id}"
+        
+        if not user:
+            await callback.answer("User not found", show_alert=True)
+            return
+        
+        # Extract all needed data within the session
+        is_self = user.telegram_id == callback.from_user.id
+        role_text = user.role.value.title()
+        name = user.first_name or user.username or f"User {user.telegram_id}"
+        username = user.username or 'N/A'
+        is_active = user.is_active
+        created_date = user.created_at.strftime('%Y-%m-%d') if user.created_at else 'Unknown'
     
     await callback.message.edit_text(
         f"*User Details*\n\n"
         f"*Name:* {name}\n"
-        f"*Username:* @{user.username or 'N/A'}\n"
+        f"*Username:* @{username}\n"
         f"*Role:* {role_text}\n"
-        f"*Status:* {'Active' if user.is_active else 'Inactive'}\n"
-        f"*Joined:* {user.created_at.strftime('%Y-%m-%d')}\n\n"
+        f"*Status:* {'Active' if is_active else 'Inactive'}\n"
+        f"*Joined:* {created_date}\n\n"
         f"{'⚠️ This is your own account.' if is_self else ''}",
         reply_markup=get_user_actions_keyboard(user_id, is_self),
         parse_mode="Markdown"

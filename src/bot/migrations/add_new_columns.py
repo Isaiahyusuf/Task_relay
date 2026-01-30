@@ -56,6 +56,36 @@ async def run_migration():
             print("Added SUPER_ADMIN to userrole enum")
         except Exception as e:
             print(f"SUPER_ADMIN role may already exist: {e}")
+        
+        # Add availabilitystatus enum if not exists
+        try:
+            await conn.execute(text(
+                "DO $$ BEGIN "
+                "CREATE TYPE availabilitystatus AS ENUM ('AVAILABLE', 'BUSY', 'AWAY'); "
+                "EXCEPTION WHEN duplicate_object THEN null; "
+                "END $$;"
+            ))
+            print("Created availabilitystatus enum")
+        except Exception as e:
+            print(f"availabilitystatus enum may already exist: {e}")
+        
+        # Add availability_status column if not exists
+        try:
+            await conn.execute(text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS availability_status availabilitystatus DEFAULT 'AVAILABLE'"
+            ))
+            print("Added availability_status column to users table")
+        except Exception as e:
+            print(f"availability_status column may already exist: {e}")
+        
+        # Update NULL availability_status to AVAILABLE for existing subcontractors
+        try:
+            await conn.execute(text(
+                "UPDATE users SET availability_status = 'AVAILABLE' WHERE availability_status IS NULL AND role = 'SUBCONTRACTOR'"
+            ))
+            print("Updated NULL availability_status to AVAILABLE")
+        except Exception as e:
+            print(f"Error updating availability_status: {e}")
     
     await engine.dispose()
     print("Migration completed!")
