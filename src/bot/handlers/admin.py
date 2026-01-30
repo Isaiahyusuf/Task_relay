@@ -293,18 +293,19 @@ async def process_role_selection(callback: CallbackQuery, state: FSMContext):
     
     await state.update_data(role=role_map[role_str], role_str=role_str)
     
-    # If subcontractor, ask for team assignment
-    if role_str == "subcontractor":
+    # Ask for team assignment for admin, supervisor, and subcontractor
+    if role_str in ["admin", "supervisor", "subcontractor"]:
         from src.bot.utils.keyboards import get_team_selection_keyboard
+        role_label = role_str.title()
         await callback.message.edit_text(
-            "*Select Team*\n\n"
-            "Which team should this subcontractor be assigned to?",
+            f"*Select Team*\n\n"
+            f"Which team should this {role_label} be assigned to?",
             reply_markup=get_team_selection_keyboard(for_code=True),
             parse_mode="Markdown"
         )
         await state.set_state(CreateCodeStates.waiting_for_team)
     else:
-        # For other roles, create code immediately
+        # For super_admin, no team assignment needed
         await create_code_with_team(callback, state, team_type=None)
     
     await callback.answer()

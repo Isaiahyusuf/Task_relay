@@ -114,8 +114,10 @@ Subcontractors are organized into two teams:
 - **Southeast Team** - ☀️ Subcontractors in the Southeast region
 
 ### Team Assignment
-- When creating a subcontractor access code, admins must select which team the subcontractor will belong to
-- The team assignment is automatic when the subcontractor registers with that code
+- When creating access codes for Admins, Supervisors, or Subcontractors, the creator must select which team they will belong to
+- The team assignment flows from top to bottom: Super Admin → Admin → Supervisor → Subcontractor
+- The team assignment is automatic when the user registers with that code
+- Only Super Admins are not assigned to a team (they have access to everything)
 
 ### Job Sending Options
 When supervisors create jobs, they can choose:
