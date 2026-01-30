@@ -266,13 +266,18 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
         if success:
             # Determine which subcontractors to notify
             async with async_session() as session:
+                from sqlalchemy import or_
+                
                 if send_option == "all":
-                    # All available subcontractors
+                    # All available subcontractors (AVAILABLE or NULL status)
                     result = await session.execute(
                         select(User).where(
                             User.role == UserRole.SUBCONTRACTOR,
                             User.is_active == True,
-                            User.availability_status == AvailabilityStatus.AVAILABLE
+                            or_(
+                                User.availability_status == AvailabilityStatus.AVAILABLE,
+                                User.availability_status == None
+                            )
                         )
                     )
                     team_label = "all teams"
@@ -289,7 +294,10 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
                             select(User).where(
                                 User.role == UserRole.SUBCONTRACTOR,
                                 User.is_active == True,
-                                User.availability_status == AvailabilityStatus.AVAILABLE,
+                                or_(
+                                    User.availability_status == AvailabilityStatus.AVAILABLE,
+                                    User.availability_status == None
+                                ),
                                 User.team_id == team.id
                             )
                         )
