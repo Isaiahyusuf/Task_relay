@@ -5,9 +5,10 @@ def get_main_menu_keyboard(role: UserRole) -> ReplyKeyboardMarkup:
     if role == UserRole.SUPER_ADMIN:
         buttons = [
             [KeyboardButton(text="📊 Job History"), KeyboardButton(text="📦 Archive Jobs")],
-            [KeyboardButton(text="🔑 Create Access Code"), KeyboardButton(text="📋 View Archived")],
-            [KeyboardButton(text="👥 Manage All Users"), KeyboardButton(text="🗑️ Delete Anything")],
-            [KeyboardButton(text="ℹ️ Help"), KeyboardButton(text="📘 About")]
+            [KeyboardButton(text="🔑 All Access Codes"), KeyboardButton(text="🔑 Create Access Code")],
+            [KeyboardButton(text="👑 View Admins"), KeyboardButton(text="👔 View Supervisors")],
+            [KeyboardButton(text="🔧 View Subcontractors"), KeyboardButton(text="👥 All Users")],
+            [KeyboardButton(text="📋 View Archived"), KeyboardButton(text="📘 About")]
         ]
     elif role == UserRole.ADMIN:
         buttons = [

@@ -522,23 +522,85 @@ async def btn_manage_users(message: Message):
         return
     await show_user_list(message)
 
-@router.message(F.text == "👥 Manage All Users")
-async def btn_manage_all_users(message: Message):
+@router.message(F.text == "👥 All Users")
+async def btn_all_users(message: Message):
     if not await check_super_admin(message):
         return
     await show_user_list(message, is_super_admin=True)
 
-@router.message(F.text == "🗑️ Delete Anything")
-async def btn_delete_anything(message: Message):
+@router.message(F.text == "🔑 All Access Codes")
+async def btn_all_access_codes(message: Message):
     if not await check_super_admin(message):
         return
+    await show_all_access_codes(message)
+
+async def show_all_access_codes(message: Message):
+    from src.bot.database import AccessCode
+    
+    async with async_session() as session:
+        result = await session.execute(
+            select(AccessCode).where(AccessCode.is_used == False).order_by(AccessCode.role, AccessCode.code)
+        )
+        codes = list(result.scalars().all())
+    
+    if not codes:
+        await message.answer(
+            "*All Access Codes*\n\n"
+            "No unused access codes found.\n\n"
+            "Use 'Create Access Code' to create new codes.",
+            parse_mode="Markdown"
+        )
+        return
+    
+    code_text = ""
+    for code in codes:
+        role_emoji = {"ADMIN": "👑", "SUPERVISOR": "👔", "SUBCONTRACTOR": "🔧", "SUPER_ADMIN": "🦸"}.get(code.role.value, "👤")
+        code_text += f"{role_emoji} `{code.code}` - {code.role.value.replace('_', ' ').title()}\n"
+    
     await message.answer(
-        "*Super Admin - Delete Options*\n\n"
-        "You have full access to delete:\n"
-        "- Any user (including admins)\n"
-        "- Any job record\n\n"
-        "Use 'Manage All Users' to view and delete users.\n"
-        "Use 'Job History' to view and delete jobs.",
+        f"*All Access Codes* ({len(codes)} unused)\n\n"
+        f"{code_text}\n"
+        "Share these codes privately with intended users.",
+        parse_mode="Markdown"
+    )
+
+@router.message(F.text == "👑 View Admins")
+async def btn_view_admins(message: Message):
+    if not await check_super_admin(message):
+        return
+    await show_users_by_role(message, UserRole.ADMIN, "Admins")
+
+@router.message(F.text == "👔 View Supervisors")
+async def btn_view_supervisors(message: Message):
+    if not await check_super_admin(message):
+        return
+    await show_users_by_role(message, UserRole.SUPERVISOR, "Supervisors")
+
+@router.message(F.text == "🔧 View Subcontractors")
+async def btn_view_subcontractors(message: Message):
+    if not await check_super_admin(message):
+        return
+    await show_users_by_role(message, UserRole.SUBCONTRACTOR, "Subcontractors")
+
+async def show_users_by_role(message: Message, role: UserRole, role_name: str):
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.is_active == True, User.role == role).order_by(User.first_name)
+        )
+        users = list(result.scalars().all())
+    
+    if not users:
+        await message.answer(
+            f"*{role_name}*\n\n"
+            f"No {role_name.lower()} found.",
+            parse_mode="Markdown"
+        )
+        return
+    
+    await message.answer(
+        f"*{role_name}* ({len(users)} total)\n\n"
+        "Select a user to manage:",
+        reply_markup=get_user_list_keyboard(users, is_super_admin=True),
         parse_mode="Markdown"
     )
 
