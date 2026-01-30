@@ -8,6 +8,7 @@ def get_main_menu_keyboard(role: UserRole) -> ReplyKeyboardMarkup:
             [KeyboardButton(text="🔑 All Access Codes")],
             [KeyboardButton(text="👑 Create Admin Code"), KeyboardButton(text="👔 Create Supervisor Code")],
             [KeyboardButton(text="🔧 Create Subcontractor Code")],
+            [KeyboardButton(text="🏢 View By Teams")],
             [KeyboardButton(text="👑 View Admins"), KeyboardButton(text="👔 View Supervisors")],
             [KeyboardButton(text="🔧 View Subcontractors"), KeyboardButton(text="👥 All Users")],
             [KeyboardButton(text="🔄 Switch Role"), KeyboardButton(text="📋 View Archived")],
@@ -17,7 +18,8 @@ def get_main_menu_keyboard(role: UserRole) -> ReplyKeyboardMarkup:
         buttons = [
             [KeyboardButton(text="📊 Job History"), KeyboardButton(text="📦 Archive Jobs")],
             [KeyboardButton(text="🔑 Create Access Code"), KeyboardButton(text="📋 View Archived")],
-            [KeyboardButton(text="👥 Manage Users"), KeyboardButton(text="🔄 Switch Role")],
+            [KeyboardButton(text="🏢 View By Teams"), KeyboardButton(text="👥 Manage Users")],
+            [KeyboardButton(text="🔄 Switch Role")],
             [KeyboardButton(text="ℹ️ Help"), KeyboardButton(text="📘 About")]
         ]
     elif role == UserRole.SUPERVISOR:

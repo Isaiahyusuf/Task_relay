@@ -269,7 +269,7 @@ MENU_BUTTON_TEXTS = {
     "👥 All Users", "🔑 All Access Codes", "🔑 Create Access Code",
     "👑 Create Admin Code", "👔 Create Supervisor Code", "🔧 Create Subcontractor Code",
     "📋 View Jobs", "➕ Create Job", "📜 Job History", "🏠 Main Menu",
-    "⬅️ Back", "❌ Cancel"
+    "🏢 View By Teams", "⬅️ Back", "❌ Cancel"
 }
 
 @router.message(StateFilter(CreateCodeStates.waiting_for_code), ~F.text.in_(MENU_BUTTON_TEXTS))
@@ -677,6 +677,111 @@ async def show_all_access_codes(message: Message):
         "Share these codes privately with intended users.",
         parse_mode="Markdown"
     )
+
+@router.message(F.text == "🏢 View By Teams")
+async def btn_view_by_teams(message: Message, state: FSMContext):
+    await state.clear()
+    
+    # Check if admin or super admin
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == message.from_user.id)
+        )
+        user = result.scalar_one_or_none()
+    
+    if not user or user.role not in [UserRole.SUPER_ADMIN, UserRole.ADMIN]:
+        await message.answer("Only admins can view team members.")
+        return
+    
+    # Super admins see all teams, admins only see their own team
+    is_super_admin = user.role == UserRole.SUPER_ADMIN
+    await show_team_hierarchy(message, user_team_id=user.team_id if not is_super_admin else None, is_super_admin=is_super_admin)
+
+async def show_team_hierarchy(message: Message, user_team_id: int = None, is_super_admin: bool = False):
+    from src.bot.database.models import Team, TeamType
+    
+    async with async_session() as session:
+        # Get teams based on access level
+        if is_super_admin or user_team_id is None:
+            # Super admin sees all teams
+            teams_result = await session.execute(select(Team).order_by(Team.name))
+        else:
+            # Admin only sees their own team
+            teams_result = await session.execute(
+                select(Team).where(Team.id == user_team_id)
+            )
+        teams = list(teams_result.scalars().all())
+        
+        # Get users - super admin sees all, admin sees their team only
+        if is_super_admin:
+            users_result = await session.execute(
+                select(User).where(User.is_active == True).order_by(User.first_name)
+            )
+        else:
+            users_result = await session.execute(
+                select(User).where(
+                    User.is_active == True,
+                    User.team_id == user_team_id
+                ).order_by(User.first_name)
+            )
+        all_users = list(users_result.scalars().all())
+    
+    title = "*📊 All Teams Hierarchy*" if is_super_admin else "*📊 My Team Hierarchy*"
+    text = f"{title}\n\n"
+    
+    # Group users by team
+    team_users = {}
+    unassigned = []
+    
+    for user in all_users:
+        if user.team_id:
+            if user.team_id not in team_users:
+                team_users[user.team_id] = []
+            team_users[user.team_id].append(user)
+        else:
+            unassigned.append(user)
+    
+    # Display each team
+    for team in teams:
+        team_emoji = "🌲" if team.team_type and team.team_type.value == "northwest" else "☀️"
+        text += f"{team_emoji} *{team.name}*\n"
+        
+        users_in_team = team_users.get(team.id, [])
+        
+        if users_in_team:
+            # Group by role within team
+            role_order = [UserRole.ADMIN, UserRole.SUPERVISOR, UserRole.SUBCONTRACTOR]
+            role_emojis = {
+                UserRole.ADMIN: "👑",
+                UserRole.SUPERVISOR: "👔",
+                UserRole.SUBCONTRACTOR: "🔧"
+            }
+            
+            for role in role_order:
+                role_users = [u for u in users_in_team if u.role == role]
+                if role_users:
+                    text += f"  {role_emojis.get(role, '👤')} *{role.value.replace('_', ' ').title()}s:*\n"
+                    for u in role_users:
+                        name = u.first_name or "Unknown"
+                        if u.last_name:
+                            name += f" {u.last_name}"
+                        text += f"    • {name}\n"
+        else:
+            text += "  _No members_\n"
+        
+        text += "\n"
+    
+    # Show unassigned users (Super Admins and others without team) - only for super admins
+    if is_super_admin and unassigned:
+        text += "🦸 *Super Admins / Unassigned*\n"
+        for u in unassigned:
+            role_emoji = "🦸" if u.role == UserRole.SUPER_ADMIN else "👤"
+            name = u.first_name or "Unknown"
+            if u.last_name:
+                name += f" {u.last_name}"
+            text += f"  {role_emoji} {name} ({u.role.value.replace('_', ' ').title()})\n"
+    
+    await message.answer(text, parse_mode="Markdown")
 
 @router.message(F.text == "👑 View Admins")
 async def btn_view_admins(message: Message, state: FSMContext):

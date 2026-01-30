@@ -317,6 +317,32 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
                         notified_count += 1
                     except Exception as e:
                         logger.error(f"Failed to notify subcontractor {sub.telegram_id}: {e}")
+                
+                # Notify super admins, admins, and supervisors only for bot-wide jobs
+                if send_option == "all":
+                    mgmt_result = await session.execute(
+                        select(User).where(
+                            User.role.in_([UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SUPERVISOR]),
+                            User.is_active == True,
+                            User.telegram_id != callback.from_user.id  # Don't notify the creator
+                        )
+                    )
+                    management_users = list(mgmt_result.scalars().all())
+                    
+                    for mgmt_user in management_users:
+                        try:
+                            await bot.send_message(
+                                mgmt_user.telegram_id,
+                                f"📋 *Bot-Wide Job Created*\n\n"
+                                f"Job #{job.id}: {job.title}\n"
+                                f"Sent to: All Teams\n"
+                                f"Location: {job.address or 'N/A'}\n"
+                                f"Price: {job.preset_price or 'N/A'}\n\n"
+                                f"Created by a supervisor.",
+                                parse_mode="Markdown"
+                            )
+                        except Exception as e:
+                            logger.error(f"Failed to notify management user {mgmt_user.telegram_id}: {e}")
             
             await callback.message.edit_text(
                 f"*Job Created & Sent!*\n\n"
