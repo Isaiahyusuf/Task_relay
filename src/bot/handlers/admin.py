@@ -227,7 +227,14 @@ async def start_code_creation(message: Message, state: FSMContext):
     )
     await state.set_state(CreateCodeStates.waiting_for_code)
 
-@router.message(StateFilter(CreateCodeStates.waiting_for_code))
+MENU_BUTTON_TEXTS = {
+    "👔 View Supervisors", "🔧 View Subcontractors", "👑 View Admins",
+    "👥 All Users", "🔑 All Access Codes", "🔑 Create Access Code",
+    "📋 View Jobs", "➕ Create Job", "📜 Job History", "🏠 Main Menu",
+    "⬅️ Back", "❌ Cancel"
+}
+
+@router.message(StateFilter(CreateCodeStates.waiting_for_code), ~F.text.in_(MENU_BUTTON_TEXTS))
 async def process_code_input(message: Message, state: FSMContext):
     code = message.text.strip()
     
