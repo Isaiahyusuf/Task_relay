@@ -193,14 +193,25 @@ def get_job_list_keyboard(jobs: list, page: int = 0, page_size: int = 5, context
     
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-def get_role_selection_keyboard(include_super_admin: bool = False) -> InlineKeyboardMarkup:
-    buttons = [
-        [InlineKeyboardButton(text="👔 Supervisor", callback_data="role:supervisor")],
-        [InlineKeyboardButton(text="🔧 Subcontractor", callback_data="role:subcontractor")],
-        [InlineKeyboardButton(text="👑 Admin", callback_data="role:admin")]
-    ]
-    if include_super_admin:
-        buttons.insert(0, [InlineKeyboardButton(text="🦸 Super Admin", callback_data="role:super_admin")])
+def get_role_selection_keyboard(creator_role: str = "super_admin") -> InlineKeyboardMarkup:
+    """
+    Returns role options based on hierarchy:
+    - Super Admin: can create Admin, Supervisor, Subcontractor codes
+    - Admin: can create Supervisor, Subcontractor codes
+    - Supervisor: can create Subcontractor codes only
+    """
+    buttons = []
+    
+    if creator_role == "super_admin":
+        buttons.append([InlineKeyboardButton(text="👑 Admin", callback_data="role:admin")])
+        buttons.append([InlineKeyboardButton(text="👔 Supervisor", callback_data="role:supervisor")])
+        buttons.append([InlineKeyboardButton(text="🔧 Subcontractor", callback_data="role:subcontractor")])
+    elif creator_role == "admin":
+        buttons.append([InlineKeyboardButton(text="👔 Supervisor", callback_data="role:supervisor")])
+        buttons.append([InlineKeyboardButton(text="🔧 Subcontractor", callback_data="role:subcontractor")])
+    elif creator_role == "supervisor":
+        buttons.append([InlineKeyboardButton(text="🔧 Subcontractor", callback_data="role:subcontractor")])
+    
     buttons.append([InlineKeyboardButton(text="❌ Cancel", callback_data="code_cancel")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 

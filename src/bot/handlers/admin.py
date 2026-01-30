@@ -270,12 +270,20 @@ async def process_code_input(message: Message, state: FSMContext):
         await state.clear()
         return
 
-    await state.update_data(code=code)
+    # Get creator's role to determine which roles they can create
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == message.from_user.id)
+        )
+        creator = result.scalar_one_or_none()
+        creator_role = creator.role.value if creator else "admin"
+    
+    await state.update_data(code=code, creator_role=creator_role)
     await message.answer(
         "*Create Access Code*\n\n"
         f"Code: `{code}`\n\n"
         "Step 2/2: Select the role for this code:",
-        reply_markup=get_role_selection_keyboard(),
+        reply_markup=get_role_selection_keyboard(creator_role=creator_role),
         parse_mode="Markdown"
     )
     await state.set_state(CreateCodeStates.waiting_for_role)
