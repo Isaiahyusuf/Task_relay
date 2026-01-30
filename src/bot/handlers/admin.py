@@ -14,7 +14,7 @@ from src.bot.utils.keyboards import (
     get_role_selection_keyboard, get_job_list_keyboard, get_back_keyboard,
     get_user_list_keyboard, get_user_actions_keyboard, get_switch_role_keyboard,
     get_confirm_delete_keyboard, get_main_menu_keyboard, get_supervisor_job_actions_keyboard,
-    get_confirm_job_delete_keyboard
+    get_confirm_job_delete_keyboard, get_team_selection_keyboard
 )
 import logging
 import sqlalchemy
@@ -218,6 +218,43 @@ async def btn_create_code(message: Message, state: FSMContext):
         return
     await start_code_creation(message, state)
 
+@router.message(F.text == "👑 Create Admin Code")
+async def btn_create_admin_code(message: Message, state: FSMContext):
+    if not await check_super_admin(message):
+        return
+    await start_role_specific_code_creation(message, state, UserRole.ADMIN, "Admin")
+
+@router.message(F.text == "👔 Create Supervisor Code")
+async def btn_create_supervisor_code(message: Message, state: FSMContext):
+    if not await check_super_admin(message):
+        return
+    await start_role_specific_code_creation(message, state, UserRole.SUPERVISOR, "Supervisor")
+
+@router.message(F.text == "🔧 Create Subcontractor Code")
+async def btn_create_subcontractor_code(message: Message, state: FSMContext):
+    # Check if super admin or supervisor
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == message.from_user.id)
+        )
+        user = result.scalar_one_or_none()
+    
+    if not user or user.role not in [UserRole.SUPER_ADMIN, UserRole.SUPERVISOR]:
+        await message.answer("Only super admins and supervisors can create subcontractor codes.")
+        return
+    
+    await start_role_specific_code_creation(message, state, UserRole.SUBCONTRACTOR, "Subcontractor")
+
+async def start_role_specific_code_creation(message: Message, state: FSMContext, role: UserRole, role_name: str):
+    await state.update_data(preset_role=role.value, preset_role_name=role_name)
+    await message.answer(
+        f"*Create {role_name} Code*\n\n"
+        "Enter the access code\n"
+        "(letters and numbers only):",
+        parse_mode="Markdown"
+    )
+    await state.set_state(CreateCodeStates.waiting_for_code)
+
 async def start_code_creation(message: Message, state: FSMContext):
     await message.answer(
         "*Create Access Code*\n\n"
@@ -230,6 +267,7 @@ async def start_code_creation(message: Message, state: FSMContext):
 MENU_BUTTON_TEXTS = {
     "👔 View Supervisors", "🔧 View Subcontractors", "👑 View Admins",
     "👥 All Users", "🔑 All Access Codes", "🔑 Create Access Code",
+    "👑 Create Admin Code", "👔 Create Supervisor Code", "🔧 Create Subcontractor Code",
     "📋 View Jobs", "➕ Create Job", "📜 Job History", "🏠 Main Menu",
     "⬅️ Back", "❌ Cancel"
 }
@@ -248,6 +286,8 @@ async def process_code_input(message: Message, state: FSMContext):
     
     data = await state.get_data()
     forced_role = data.get("forced_role")
+    preset_role = data.get("preset_role")
+    preset_role_name = data.get("preset_role_name")
     
     if forced_role:
         # If role is forced (e.g. by supervisor), skip role selection step
@@ -275,6 +315,27 @@ async def process_code_input(message: Message, state: FSMContext):
             await message.answer("Failed to create code. It may already exist.")
         
         await state.clear()
+        return
+    
+    if preset_role:
+        # Role was pre-selected via specific button, go directly to team selection
+        role_map = {
+            "super_admin": UserRole.SUPER_ADMIN,
+            "admin": UserRole.ADMIN,
+            "supervisor": UserRole.SUPERVISOR,
+            "subcontractor": UserRole.SUBCONTRACTOR
+        }
+        role = role_map.get(preset_role)
+        await state.update_data(code=code, role=role)
+        
+        await message.answer(
+            f"*Create {preset_role_name} Code*\n\n"
+            f"Code: `{code}`\n\n"
+            "Select which team this user will belong to:",
+            reply_markup=get_team_selection_keyboard(for_code=True),
+            parse_mode="Markdown"
+        )
+        await state.set_state(CreateCodeStates.waiting_for_team)
         return
 
     # Get creator's role to determine which roles they can create
