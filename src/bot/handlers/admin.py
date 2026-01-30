@@ -2,7 +2,7 @@ from aiogram import Router, F
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from sqlalchemy import select
 from src.bot.database import async_session, User, Job
 from src.bot.database.models import UserRole, JobStatus, JobType
@@ -611,6 +611,155 @@ async def show_users_by_role(message: Message, role: UserRole, role_name: str):
         reply_markup=get_user_list_keyboard(users, is_super_admin=True),
         parse_mode="Markdown"
     )
+
+@router.message(F.text == "🔄 Switch Role")
+async def btn_switch_role_super_admin(message: Message, state: FSMContext):
+    await state.clear()
+    
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == message.from_user.id)
+        )
+        user = result.scalar_one_or_none()
+    
+    if not user:
+        await message.answer("User not found.")
+        return
+    
+    # Check if super admin or has super admin code
+    if user.role == UserRole.SUPER_ADMIN:
+        from src.bot.utils.keyboards import get_super_admin_switch_role_keyboard
+        await message.answer(
+            "*Switch Role*\n\n"
+            "As Super Admin, you can temporarily switch to any role.\n"
+            "You can always switch back using the super admin code.\n\n"
+            "Select a role:",
+            reply_markup=get_super_admin_switch_role_keyboard(),
+            parse_mode="Markdown"
+        )
+    elif user.super_admin_code:
+        # User was a super admin, show return option
+        await message.answer(
+            "*Switch Role*\n\n"
+            "You can return to Super Admin using the button below.",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🦸 Return to Super Admin", callback_data="sa_switch:super_admin")],
+                [InlineKeyboardButton(text="❌ Cancel", callback_data="back:main")]
+            ]),
+            parse_mode="Markdown"
+        )
+    elif user.role == UserRole.ADMIN:
+        await message.answer(
+            "*Switch Role*\n\n"
+            "Select a role to switch to:",
+            reply_markup=get_switch_role_keyboard(),
+            parse_mode="Markdown"
+        )
+    else:
+        await message.answer("You don't have permission to switch roles.")
+
+@router.callback_query(F.data.startswith("sa_switch:"))
+async def handle_super_admin_switch(callback: CallbackQuery):
+    role_str = callback.data.split(":")[1]
+    
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == callback.from_user.id)
+        )
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            await callback.answer("User not found", show_alert=True)
+            return
+        
+        from src.bot.config import config
+        
+        if role_str == "super_admin":
+            # Return to super admin
+            if user.super_admin_code and user.super_admin_code == config.SUPER_ADMIN_CODE:
+                user.role = UserRole.SUPER_ADMIN
+                await session.commit()
+                
+                await callback.message.edit_text(
+                    "✅ *Welcome back, Super Admin!*\n\n"
+                    "You have returned to Super Admin role.",
+                    parse_mode="Markdown"
+                )
+                keyboard = get_main_menu_keyboard(UserRole.SUPER_ADMIN)
+                await callback.message.answer(
+                    "Use the menu below:",
+                    reply_markup=keyboard
+                )
+            else:
+                await callback.answer("Cannot return to Super Admin - code has changed", show_alert=True)
+        else:
+            # Switch to another role
+            if user.role != UserRole.SUPER_ADMIN and not user.super_admin_code:
+                await callback.answer("Not authorized", show_alert=True)
+                return
+            
+            role_map = {
+                "admin": UserRole.ADMIN,
+                "supervisor": UserRole.SUPERVISOR,
+                "subcontractor": UserRole.SUBCONTRACTOR
+            }
+            
+            new_role = role_map.get(role_str)
+            if not new_role:
+                await callback.answer("Invalid role", show_alert=True)
+                return
+            
+            user.role = new_role
+            await session.commit()
+            
+            await callback.message.edit_text(
+                f"✅ *Role Changed*\n\n"
+                f"You are now a *{role_str.title()}*.\n\n"
+                f"You can return to Super Admin anytime by using 'Switch Role' or entering the super admin code.",
+                parse_mode="Markdown"
+            )
+            keyboard = get_main_menu_keyboard(new_role)
+            await callback.message.answer(
+                "Use the menu below:",
+                reply_markup=keyboard
+            )
+    
+    await callback.answer()
+
+@router.callback_query(F.data == "back:sa_menu")
+async def back_to_super_admin_menu(callback: CallbackQuery):
+    await callback.message.delete()
+    await callback.answer()
+
+@router.message(F.text == "🦸 Return to Super Admin")
+async def btn_return_to_super_admin(message: Message, state: FSMContext):
+    await state.clear()
+    
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == message.from_user.id)
+        )
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            await message.answer("User not found.")
+            return
+        
+        from src.bot.config import config
+        
+        if user.super_admin_code and user.super_admin_code == config.SUPER_ADMIN_CODE:
+            user.role = UserRole.SUPER_ADMIN
+            await session.commit()
+            
+            keyboard = get_main_menu_keyboard(UserRole.SUPER_ADMIN)
+            await message.answer(
+                "✅ *Welcome back, Super Admin!*\n\n"
+                "You have returned to Super Admin role.",
+                reply_markup=keyboard,
+                parse_mode="Markdown"
+            )
+        else:
+            await message.answer("Cannot return to Super Admin - code has changed or you were never a super admin.")
 
 async def show_user_list(message: Message, is_super_admin: bool = False):
     async with async_session() as session:

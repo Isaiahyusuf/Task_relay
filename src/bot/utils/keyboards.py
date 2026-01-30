@@ -8,7 +8,8 @@ def get_main_menu_keyboard(role: UserRole) -> ReplyKeyboardMarkup:
             [KeyboardButton(text="🔑 All Access Codes"), KeyboardButton(text="🔑 Create Access Code")],
             [KeyboardButton(text="👑 View Admins"), KeyboardButton(text="👔 View Supervisors")],
             [KeyboardButton(text="🔧 View Subcontractors"), KeyboardButton(text="👥 All Users")],
-            [KeyboardButton(text="📋 View Archived"), KeyboardButton(text="📘 About")]
+            [KeyboardButton(text="🔄 Switch Role"), KeyboardButton(text="📋 View Archived")],
+            [KeyboardButton(text="📘 About")]
         ]
     elif role == UserRole.ADMIN:
         buttons = [
@@ -230,6 +231,14 @@ def get_switch_role_keyboard() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="👔 Become Supervisor", callback_data="switch_role:supervisor")],
         [InlineKeyboardButton(text="🔧 Become Subcontractor", callback_data="switch_role:subcontractor")],
         [InlineKeyboardButton(text="❌ Cancel", callback_data="back:admin_menu")]
+    ])
+
+def get_super_admin_switch_role_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="👑 Admin", callback_data="sa_switch:admin")],
+        [InlineKeyboardButton(text="👔 Supervisor", callback_data="sa_switch:supervisor")],
+        [InlineKeyboardButton(text="🔧 Subcontractor", callback_data="sa_switch:subcontractor")],
+        [InlineKeyboardButton(text="❌ Cancel", callback_data="back:sa_menu")]
     ])
 
 def get_confirm_delete_keyboard(user_id: int, delete_type: str) -> InlineKeyboardMarkup:
