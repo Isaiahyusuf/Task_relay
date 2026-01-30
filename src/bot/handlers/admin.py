@@ -522,31 +522,22 @@ async def btn_manage_users(message: Message):
         return
     await show_user_list(message)
 
-@router.message(F.text == "👥 All Users")
-async def btn_all_users(message: Message):
-    if not await check_super_admin(message):
-        return
-    await show_user_list(message, is_super_admin=True)
-
-@router.message(F.text == "🔑 All Access Codes")
-async def btn_all_access_codes(message: Message):
-    if not await check_super_admin(message):
-        return
-    await show_all_access_codes(message)
-
 async def show_all_access_codes(message: Message):
     from src.bot.database import AccessCode
     
     async with async_session() as session:
         result = await session.execute(
-            select(AccessCode).where(AccessCode.is_used == False).order_by(AccessCode.role, AccessCode.code)
+            select(AccessCode).where(
+                AccessCode.is_active == True,
+                AccessCode.current_uses < AccessCode.max_uses
+            ).order_by(AccessCode.role, AccessCode.code)
         )
         codes = list(result.scalars().all())
     
     if not codes:
         await message.answer(
             "*All Access Codes*\n\n"
-            "No unused access codes found.\n\n"
+            "No available access codes found.\n\n"
             "Use 'Create Access Code' to create new codes.",
             parse_mode="Markdown"
         )
@@ -554,33 +545,50 @@ async def show_all_access_codes(message: Message):
     
     code_text = ""
     for code in codes:
-        role_emoji = {"ADMIN": "👑", "SUPERVISOR": "👔", "SUBCONTRACTOR": "🔧", "SUPER_ADMIN": "🦸"}.get(code.role.value, "👤")
+        role_emoji = {"admin": "👑", "supervisor": "👔", "subcontractor": "🔧", "super_admin": "🦸"}.get(code.role.value, "👤")
         code_text += f"{role_emoji} `{code.code}` - {code.role.value.replace('_', ' ').title()}\n"
     
     await message.answer(
-        f"*All Access Codes* ({len(codes)} unused)\n\n"
+        f"*All Access Codes* ({len(codes)} available)\n\n"
         f"{code_text}\n"
         "Share these codes privately with intended users.",
         parse_mode="Markdown"
     )
 
 @router.message(F.text == "👑 View Admins")
-async def btn_view_admins(message: Message):
+async def btn_view_admins(message: Message, state: FSMContext):
+    await state.clear()
     if not await check_super_admin(message):
         return
     await show_users_by_role(message, UserRole.ADMIN, "Admins")
 
 @router.message(F.text == "👔 View Supervisors")
-async def btn_view_supervisors(message: Message):
+async def btn_view_supervisors(message: Message, state: FSMContext):
+    await state.clear()
     if not await check_super_admin(message):
         return
     await show_users_by_role(message, UserRole.SUPERVISOR, "Supervisors")
 
 @router.message(F.text == "🔧 View Subcontractors")
-async def btn_view_subcontractors(message: Message):
+async def btn_view_subcontractors(message: Message, state: FSMContext):
+    await state.clear()
     if not await check_super_admin(message):
         return
     await show_users_by_role(message, UserRole.SUBCONTRACTOR, "Subcontractors")
+
+@router.message(F.text == "🔑 All Access Codes")
+async def btn_all_access_codes_v2(message: Message, state: FSMContext):
+    await state.clear()
+    if not await check_super_admin(message):
+        return
+    await show_all_access_codes(message)
+
+@router.message(F.text == "👥 All Users")
+async def btn_all_users_v2(message: Message, state: FSMContext):
+    await state.clear()
+    if not await check_super_admin(message):
+        return
+    await show_user_list(message, is_super_admin=True)
 
 async def show_users_by_role(message: Message, role: UserRole, role_name: str):
     async with async_session() as session:
