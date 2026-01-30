@@ -45,12 +45,13 @@ async def cmd_new_job(message: Message, state: FSMContext):
 async def btn_create_sub_code(message: Message, state: FSMContext):
     await message.answer(
         "*Create Subcontractor Access Code*\n\n"
-        "Step 1/1: Enter the access code\n"
+        "Step 1/2: Enter the access code\n"
         "(letters and numbers only):",
         parse_mode="Markdown"
     )
     await state.set_state(CreateCodeStates.waiting_for_code)
-    await state.update_data(forced_role=UserRole.SUBCONTRACTOR)
+    # Use preset_role instead of forced_role to trigger team selection
+    await state.update_data(preset_role=UserRole.SUBCONTRACTOR.value, preset_role_name="Subcontractor")
 
 @router.message(F.text == "➕ New Job")
 async def btn_new_job(message: Message, state: FSMContext):
