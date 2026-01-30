@@ -278,11 +278,11 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
                     logger.info(f"  Sub: {s.first_name}, is_active={s.is_active}, availability={s.availability_status}, team_id={s.team_id}")
                 
                 if send_option == "all":
-                    # All available subcontractors (AVAILABLE or NULL status)
+                    # All available subcontractors (AVAILABLE or NULL status, is_active True or NULL)
                     result = await session.execute(
                         select(User).where(
                             User.role == UserRole.SUBCONTRACTOR,
-                            User.is_active == True,
+                            or_(User.is_active == True, User.is_active == None),
                             or_(
                                 User.availability_status == AvailabilityStatus.AVAILABLE,
                                 User.availability_status == None
@@ -302,7 +302,7 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
                         result = await session.execute(
                             select(User).where(
                                 User.role == UserRole.SUBCONTRACTOR,
-                                User.is_active == True,
+                                or_(User.is_active == True, User.is_active == None),
                                 or_(
                                     User.availability_status == AvailabilityStatus.AVAILABLE,
                                     User.availability_status == None
