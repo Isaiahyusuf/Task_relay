@@ -39,7 +39,7 @@ class Team(Base):
     
     id = Column(Integer, primary_key=True)
     name = Column(String(100), nullable=False, unique=True)
-    team_type = Column(Enum(TeamType), nullable=True)
+    team_type = Column(Enum(TeamType, values_callable=lambda x: [e.value for e in x]), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     users = relationship("User", back_populates="team")

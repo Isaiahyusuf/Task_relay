@@ -326,7 +326,7 @@ async def process_code_input(message: Message, state: FSMContext):
             "subcontractor": UserRole.SUBCONTRACTOR
         }
         role = role_map.get(preset_role)
-        await state.update_data(code=code, role=role)
+        await state.update_data(code=code, role=role, role_str=preset_role)
         
         await message.answer(
             f"*Create {preset_role_name} Code*\n\n"
