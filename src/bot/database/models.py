@@ -30,11 +30,16 @@ class JobType(PyEnum):
     QUOTE = "quote"
     PRESET_PRICE = "preset_price"
 
+class TeamType(PyEnum):
+    NORTHWEST = "northwest"
+    SOUTHEAST = "southeast"
+
 class Team(Base):
     __tablename__ = "teams"
     
     id = Column(Integer, primary_key=True)
     name = Column(String(100), nullable=False, unique=True)
+    team_type = Column(Enum(TeamType), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     users = relationship("User", back_populates="team")

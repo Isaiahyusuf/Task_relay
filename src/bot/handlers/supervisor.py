@@ -194,9 +194,9 @@ async def process_job_price(message: Message, state: FSMContext):
         return
         
     await state.update_data(preset_price=message.text.strip())
-    await show_subcontractor_selection(message, state, message.from_user.id, edit=False)
+    await show_team_selection(message, state, message.from_user.id, edit=False)
 
-async def show_subcontractor_selection(message: Message, state: FSMContext, telegram_id: int, edit: bool = False):
+async def show_team_selection(message: Message, state: FSMContext, telegram_id: int, edit: bool = False):
     if not async_session:
         await message.answer("Database error. Please try again.")
         await state.clear()
@@ -207,24 +207,18 @@ async def show_subcontractor_selection(message: Message, state: FSMContext, tele
             select(User).where(User.telegram_id == telegram_id)
         )
         supervisor = result.scalar_one_or_none()
-        
-        subcontractors = await JobService.get_available_subcontractors()
     
     await state.update_data(supervisor_id=supervisor.id, team_id=supervisor.team_id)
     
-    if not subcontractors:
-        text = (
-            "*Creating a New Job*\n\n"
-            "No available subcontractors on the bot right now.\n\n"
-            "Would you like to save the job as a draft?"
-        )
-        keyboard = get_confirmation_keyboard("save_pending")
-    else:
-        text = (
-            "*Creating a New Job*\n\n"
-            "Final step: Select a subcontractor to send the job to:"
-        )
-        keyboard = get_subcontractor_selection_keyboard(subcontractors)
+    from src.bot.utils.keyboards import get_job_team_selection_keyboard
+    text = (
+        "*Creating a New Job*\n\n"
+        "Final step: Where do you want to send this job?\n\n"
+        "🌐 *Bot-Wide* - All available subcontractors\n"
+        "🌲 *Northwest* - Northwest Team only\n"
+        "☀️ *Southeast* - Southeast Team only"
+    )
+    keyboard = get_job_team_selection_keyboard()
     
     if edit:
         await message.edit_text(text, reply_markup=keyboard, parse_mode="Markdown")
@@ -233,9 +227,12 @@ async def show_subcontractor_selection(message: Message, state: FSMContext, tele
     
     await state.set_state(NewJobStates.waiting_for_subcontractor)
 
-@router.callback_query(F.data.startswith("assign:"), StateFilter(NewJobStates.waiting_for_subcontractor))
-async def process_subcontractor_selection(callback: CallbackQuery, state: FSMContext):
+@router.callback_query(F.data.startswith("job_send:"), StateFilter(NewJobStates.waiting_for_subcontractor))
+async def process_team_send(callback: CallbackQuery, state: FSMContext):
+    from src.bot.database.models import Team, TeamType
+    
     data = await state.get_data()
+    send_option = callback.data.split(":")[1]
     
     job = await JobService.create_job(
         supervisor_id=data['supervisor_id'],
@@ -253,30 +250,55 @@ async def process_subcontractor_selection(callback: CallbackQuery, state: FSMCon
         await callback.answer()
         return
     
-    subcontractor_part = callback.data.split(":")[1]
-    
-    if subcontractor_part == "none":
+    if send_option == "draft":
         await callback.message.edit_text(
-            f"*Job Created Successfully!*\n\n"
+            f"*Job Saved as Draft!*\n\n"
             f"Job #{job.id}: {job.title}\n"
             f"Status: Created (not sent)\n\n"
             "You can send it later from 'My Jobs'.",
             parse_mode="Markdown"
         )
-    elif subcontractor_part == "all":
-        # Send to all available subcontractors (no specific assignment)
+    else:
+        # Send to team(s)
         success, msg = await JobService.send_job_to_all(job.id)
         
         if success:
-            # Notify all available subcontractors
+            # Determine which subcontractors to notify
             async with async_session() as session:
-                result = await session.execute(
-                    select(User).where(
-                        User.role == UserRole.SUBCONTRACTOR,
-                        User.is_active == True,
-                        User.availability_status == AvailabilityStatus.AVAILABLE
+                if send_option == "all":
+                    # All available subcontractors
+                    result = await session.execute(
+                        select(User).where(
+                            User.role == UserRole.SUBCONTRACTOR,
+                            User.is_active == True,
+                            User.availability_status == AvailabilityStatus.AVAILABLE
+                        )
                     )
-                )
+                    team_label = "all teams"
+                else:
+                    # Get team by type
+                    team_type = TeamType.NORTHWEST if send_option == "northwest" else TeamType.SOUTHEAST
+                    team_result = await session.execute(
+                        select(Team).where(Team.team_type == team_type)
+                    )
+                    team = team_result.scalar_one_or_none()
+                    
+                    if team:
+                        result = await session.execute(
+                            select(User).where(
+                                User.role == UserRole.SUBCONTRACTOR,
+                                User.is_active == True,
+                                User.availability_status == AvailabilityStatus.AVAILABLE,
+                                User.team_id == team.id
+                            )
+                        )
+                        team_label = team.name
+                    else:
+                        result = await session.execute(
+                            select(User).where(User.id == -1)  # Empty result
+                        )
+                        team_label = send_option.title()
+                
                 available_subs = list(result.scalars().all())
                 
                 from src.bot.main import bot
@@ -297,53 +319,13 @@ async def process_subcontractor_selection(callback: CallbackQuery, state: FSMCon
                         logger.error(f"Failed to notify subcontractor {sub.telegram_id}: {e}")
             
             await callback.message.edit_text(
-                f"*Job Created & Broadcast!*\n\n"
+                f"*Job Created & Sent!*\n\n"
                 f"Job #{job.id}: {job.title}\n"
-                f"Status: Sent to all subcontractors\n\n"
+                f"Sent to: {team_label}\n\n"
                 f"📢 Notified {notified_count} available subcontractor(s).\n"
                 "First one to accept will get the job!",
                 parse_mode="Markdown"
             )
-        else:
-            await callback.message.edit_text(
-                f"Job #{job.id} created but sending failed.\n"
-                f"Reason: {msg}\n"
-                "Please try sending again from 'My Jobs'."
-            )
-    else:
-        subcontractor_id = int(subcontractor_part)
-        success, msg = await JobService.send_job(job.id, subcontractor_id)
-        
-        if success:
-            await callback.message.edit_text(
-                f"*Job Created & Sent!*\n\n"
-                f"Job #{job.id}: {job.title}\n"
-                f"Status: Sent to subcontractor\n\n"
-                "The subcontractor will be notified.",
-                parse_mode="Markdown"
-            )
-            
-            # Notify the specific subcontractor
-            async with async_session() as session:
-                result = await session.execute(
-                    select(User).where(User.id == subcontractor_id)
-                )
-                sub = result.scalar_one_or_none()
-                
-                if sub:
-                    from src.bot.main import bot
-                    try:
-                        await bot.send_message(
-                            sub.telegram_id,
-                            f"🆕 *New Job Assigned to You*\n\n"
-                            f"Job #{job.id}: {job.title}\n"
-                            f"Location: {job.address or 'N/A'}\n"
-                            f"Price: {job.preset_price or 'N/A'}\n\n"
-                            f"Check 'Available Jobs' to view details!",
-                            parse_mode="Markdown"
-                        )
-                    except Exception as e:
-                        logger.error(f"Failed to notify subcontractor {sub.telegram_id}: {e}")
         else:
             await callback.message.edit_text(
                 f"Job #{job.id} created but sending failed.\n"

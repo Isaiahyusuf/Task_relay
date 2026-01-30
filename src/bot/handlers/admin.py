@@ -25,6 +25,7 @@ router = Router()
 class CreateCodeStates(StatesGroup):
     waiting_for_code = State()
     waiting_for_role = State()
+    waiting_for_team = State()
     confirming = State()
 
 @router.message(Command("history"))
@@ -282,8 +283,6 @@ async def process_code_input(message: Message, state: FSMContext):
 @router.callback_query(F.data.startswith("role:"), StateFilter(CreateCodeStates.waiting_for_role))
 async def process_role_selection(callback: CallbackQuery, state: FSMContext):
     role_str = callback.data.split(":")[1]
-    data = await state.get_data()
-    code = data.get('code')
     
     role_map = {
         "super_admin": UserRole.SUPER_ADMIN,
@@ -292,23 +291,65 @@ async def process_role_selection(callback: CallbackQuery, state: FSMContext):
         "subcontractor": UserRole.SUBCONTRACTOR
     }
     
-    async with async_session() as session:
-        result = await session.execute(
-            select(User).where(User.telegram_id == callback.from_user.id)
+    await state.update_data(role=role_map[role_str], role_str=role_str)
+    
+    # If subcontractor, ask for team assignment
+    if role_str == "subcontractor":
+        from src.bot.utils.keyboards import get_team_selection_keyboard
+        await callback.message.edit_text(
+            "*Select Team*\n\n"
+            "Which team should this subcontractor be assigned to?",
+            reply_markup=get_team_selection_keyboard(for_code=True),
+            parse_mode="Markdown"
         )
-        user = result.scalar_one_or_none()
+        await state.set_state(CreateCodeStates.waiting_for_team)
+    else:
+        # For other roles, create code immediately
+        await create_code_with_team(callback, state, team_type=None)
+    
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("code_team:"), StateFilter(CreateCodeStates.waiting_for_team))
+async def process_team_selection(callback: CallbackQuery, state: FSMContext):
+    team_type = callback.data.split(":")[1]
+    await create_code_with_team(callback, state, team_type=team_type)
+    await callback.answer()
+
+async def create_code_with_team(callback: CallbackQuery, state: FSMContext, team_type: str = None):
+    from src.bot.database.models import TeamType, Team
+    
+    data = await state.get_data()
+    code = data.get('code')
+    role = data.get('role')
+    role_str = data.get('role_str')
+    
+    team_id = None
+    team_name = None
+    
+    if team_type:
+        async with async_session() as session:
+            team_type_enum = TeamType.NORTHWEST if team_type == "northwest" else TeamType.SOUTHEAST
+            result = await session.execute(
+                select(Team).where(Team.team_type == team_type_enum)
+            )
+            team = result.scalar_one_or_none()
+            if team:
+                team_id = team.id
+                team_name = team.name
     
     success = await AccessCodeService.create_access_code(
         code=code,
-        role=role_map[role_str],
-        team_id=user.team_id if user else None
+        role=role,
+        team_id=team_id
     )
     
     if success:
+        team_info = f"Team: {team_name}\n" if team_name else ""
         await callback.message.edit_text(
             f"*Access Code Created!*\n\n"
             f"Code: `{code}`\n"
-            f"Role: {role_str.title()}\n\n"
+            f"Role: {role_str.title()}\n"
+            f"{team_info}\n"
             "Share this code privately with the intended user.\n"
             "They can use it with /start to register.",
             parse_mode="Markdown"
@@ -320,6 +361,11 @@ async def process_role_selection(callback: CallbackQuery, state: FSMContext):
         )
     
     await state.clear()
+
+@router.callback_query(F.data == "cancel_code")
+async def cancel_code_from_team(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
+    await callback.message.edit_text("Access code creation cancelled.")
     await callback.answer()
 
 @router.callback_query(F.data == "code_cancel")

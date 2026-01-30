@@ -108,7 +108,26 @@ Uses PostgreSQL with SQLAlchemy async ORM. Supports Railway PostgreSQL with SSL.
 - `access_codes` - Registration codes by role
 - `teams` - Team groupings for users and jobs
 
+## Teams
+Subcontractors are organized into two teams:
+- **Northwest Team** - 🌲 Subcontractors in the Northwest region
+- **Southeast Team** - ☀️ Subcontractors in the Southeast region
+
+### Team Assignment
+- When creating a subcontractor access code, admins must select which team the subcontractor will belong to
+- The team assignment is automatic when the subcontractor registers with that code
+
+### Job Sending Options
+When supervisors create jobs, they can choose:
+- **Bot-Wide** - Send to ALL available subcontractors from both teams
+- **Northwest Team Only** - Send only to Northwest Team members
+- **Southeast Team Only** - Send only to Southeast Team members
+- **Save as Draft** - Save without sending
+
 ## Recent Changes
+- 2026-01-30: Added team system - Northwest and Southeast teams
+- 2026-01-30: Supervisors can now send jobs to specific teams or bot-wide
+- 2026-01-30: Access codes for subcontractors require team selection
 - 2026-01-29: Subcontractors must provide company name when accepting jobs
 - 2026-01-29: Added SUPER_ADMIN role with full access to delete any user including admins
 - 2026-01-29: Added job submission flow - subcontractors submit with notes and photo proof

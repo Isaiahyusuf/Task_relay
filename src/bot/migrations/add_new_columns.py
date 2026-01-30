@@ -86,6 +86,41 @@ async def run_migration():
             print("Updated NULL availability_status to AVAILABLE")
         except Exception as e:
             print(f"Error updating availability_status: {e}")
+        
+        # Add TeamType enum if not exists
+        try:
+            await conn.execute(text(
+                "DO $$ BEGIN "
+                "CREATE TYPE teamtype AS ENUM ('northwest', 'southeast'); "
+                "EXCEPTION WHEN duplicate_object THEN null; "
+                "END $$;"
+            ))
+            print("Created teamtype enum")
+        except Exception as e:
+            print(f"teamtype enum may already exist: {e}")
+        
+        # Add team_type column to teams table
+        try:
+            await conn.execute(text(
+                "ALTER TABLE teams ADD COLUMN IF NOT EXISTS team_type teamtype"
+            ))
+            print("Added team_type column to teams table")
+        except Exception as e:
+            print(f"team_type column may already exist: {e}")
+        
+        # Create default teams if they don't exist
+        try:
+            await conn.execute(text(
+                "INSERT INTO teams (name, team_type) VALUES ('Northwest Team', 'northwest') "
+                "ON CONFLICT (name) DO UPDATE SET team_type = 'northwest'"
+            ))
+            await conn.execute(text(
+                "INSERT INTO teams (name, team_type) VALUES ('Southeast Team', 'southeast') "
+                "ON CONFLICT (name) DO UPDATE SET team_type = 'southeast'"
+            ))
+            print("Created default teams (Northwest and Southeast)")
+        except Exception as e:
+            print(f"Error creating default teams: {e}")
     
     await engine.dispose()
     print("Migration completed!")
