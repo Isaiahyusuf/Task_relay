@@ -297,10 +297,10 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
                     result = await session.execute(
                         select(User).where(
                             User.role == UserRole.SUBCONTRACTOR,
-                            or_(User.is_active == True, User.is_active == None),
+                            or_(User.is_active == True, User.is_active.is_(None)),
                             or_(
                                 User.availability_status == AvailabilityStatus.AVAILABLE,
-                                User.availability_status == None
+                                User.availability_status.is_(None)
                             )
                         )
                     )
@@ -317,10 +317,10 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
                         result = await session.execute(
                             select(User).where(
                                 User.role == UserRole.SUBCONTRACTOR,
-                                or_(User.is_active == True, User.is_active == None),
+                                or_(User.is_active == True, User.is_active.is_(None)),
                                 or_(
                                     User.availability_status == AvailabilityStatus.AVAILABLE,
-                                    User.availability_status == None
+                                    User.availability_status.is_(None)
                                 ),
                                 User.team_id == team.id
                             )
