@@ -280,11 +280,20 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
         
         if success:
             # Determine which subcontractors to notify
+            logger.info(f"Starting notification process. send_option={send_option}")
             async with async_session() as session:
                 from sqlalchemy import or_
                 
+                # First, log ALL users in the database for debugging
+                all_users_result = await session.execute(select(User))
+                all_users = list(all_users_result.scalars().all())
+                logger.info(f"Total users in database: {len(all_users)}")
+                for u in all_users:
+                    logger.info(f"  User {u.id}: role={u.role}, telegram_id={u.telegram_id}, team_id={u.team_id}")
+                
                 if send_option == "all":
                     # Get ALL subcontractors regardless of availability
+                    logger.info("Querying for ALL subcontractors (bot-wide)")
                     result = await session.execute(
                         select(User).where(User.role == UserRole.SUBCONTRACTOR)
                     )
