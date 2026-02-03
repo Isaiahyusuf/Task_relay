@@ -219,6 +219,11 @@ async def show_team_selection(message: Message, state: FSMContext, telegram_id: 
         )
         supervisor = result.scalar_one_or_none()
     
+    if not supervisor:
+        await message.answer("User not found. Please register first with /start")
+        await state.clear()
+        return
+    
     await state.update_data(supervisor_id=supervisor.id, team_id=supervisor.team_id)
     
     from src.bot.utils.keyboards import get_job_team_selection_keyboard
