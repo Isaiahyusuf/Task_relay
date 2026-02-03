@@ -28,6 +28,9 @@ class CreateCodeStates(StatesGroup):
     waiting_for_team = State()
     confirming = State()
 
+class SwitchRoleStates(StatesGroup):
+    waiting_for_team = State()
+
 @router.message(Command("history"))
 @require_role(UserRole.ADMIN)
 async def cmd_history(message: Message):
@@ -953,6 +956,28 @@ async def handle_super_admin_switch(callback: CallbackQuery):
                 await callback.answer("Invalid role", show_alert=True)
                 return
             
+            # For subcontractor, ask for team selection first
+            if role_str == "subcontractor":
+                from aiogram.fsm.context import FSMContext
+                from aiogram import Bot
+                # Get state from dispatcher
+                import src.bot.main as main_module
+                
+                # Store the pending role change and ask for team
+                kb = InlineKeyboardBuilder()
+                kb.button(text="North/West subcontractors", callback_data="switch_team:northwest")
+                kb.button(text="South/East subcontractors", callback_data="switch_team:southeast")
+                kb.adjust(1)
+                
+                await callback.message.edit_text(
+                    "*Select Team*\n\n"
+                    "Which team would you like to join as a subcontractor?",
+                    reply_markup=kb.as_markup(),
+                    parse_mode="Markdown"
+                )
+                await callback.answer()
+                return
+            
             user.role = new_role
             await session.commit()
             
@@ -973,6 +998,50 @@ async def handle_super_admin_switch(callback: CallbackQuery):
 @router.callback_query(F.data == "back:sa_menu")
 async def back_to_super_admin_menu(callback: CallbackQuery):
     await callback.message.delete()
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("switch_team:"))
+async def handle_switch_team_selection(callback: CallbackQuery):
+    team_type_str = callback.data.split(":")[1]
+    
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == callback.from_user.id)
+        )
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            await callback.answer("User not found", show_alert=True)
+            return
+        
+        # Get the team
+        team_type = TeamType.NORTHWEST if team_type_str == "northwest" else TeamType.SOUTHEAST
+        team_result = await session.execute(
+            select(Team).where(Team.team_type == team_type)
+        )
+        team = team_result.scalar_one_or_none()
+        
+        if not team:
+            await callback.answer("Team not found", show_alert=True)
+            return
+        
+        # Update user role and team
+        user.role = UserRole.SUBCONTRACTOR
+        user.team_id = team.id
+        await session.commit()
+        
+        await callback.message.edit_text(
+            f"✅ *Role Changed*\n\n"
+            f"You are now a *Subcontractor* in the *{team.name}* team.\n\n"
+            f"You can return to Super Admin anytime by using 'Switch Role' or entering the super admin code.",
+            parse_mode="Markdown"
+        )
+        keyboard = get_main_menu_keyboard(UserRole.SUBCONTRACTOR)
+        await callback.message.answer(
+            "Use the menu below:",
+            reply_markup=keyboard
+        )
+    
     await callback.answer()
 
 @router.message(F.text == "🦸 Return to Super Admin")
