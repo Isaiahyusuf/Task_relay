@@ -284,25 +284,9 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
                 from sqlalchemy import or_
                 
                 if send_option == "all":
-                    # First, check total subcontractors for debugging
-                    all_subs_result = await session.execute(
-                        select(User).where(User.role == UserRole.SUBCONTRACTOR)
-                    )
-                    all_subs = list(all_subs_result.scalars().all())
-                    logger.info(f"Total subcontractors in DB: {len(all_subs)}")
-                    for s in all_subs:
-                        logger.info(f"  Sub {s.id}: is_active={s.is_active}, availability={s.availability_status}")
-                    
-                    # All available subcontractors (AVAILABLE or NULL status, is_active True or NULL)
+                    # Get ALL subcontractors regardless of availability
                     result = await session.execute(
-                        select(User).where(
-                            User.role == UserRole.SUBCONTRACTOR,
-                            or_(User.is_active == True, User.is_active.is_(None)),
-                            or_(
-                                User.availability_status == AvailabilityStatus.AVAILABLE,
-                                User.availability_status.is_(None)
-                            )
-                        )
+                        select(User).where(User.role == UserRole.SUBCONTRACTOR)
                     )
                     team_label = "all teams"
                 else:
@@ -314,14 +298,10 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
                     team = team_result.scalar_one_or_none()
                     
                     if team:
+                        # Get ALL subcontractors in this team regardless of availability
                         result = await session.execute(
                             select(User).where(
                                 User.role == UserRole.SUBCONTRACTOR,
-                                or_(User.is_active == True, User.is_active.is_(None)),
-                                or_(
-                                    User.availability_status == AvailabilityStatus.AVAILABLE,
-                                    User.availability_status.is_(None)
-                                ),
                                 User.team_id == team.id
                             )
                         )
@@ -739,13 +719,46 @@ async def process_rating_comment(message: Message, state: FSMContext):
     rating = data.get('rating_value')
     comment = None if message.text == "/skip" else message.text
     
+    subcontractor_tg_id = None
+    job_title = ""
+    
     async with async_session() as session:
         result = await session.execute(select(Job).where(Job.id == job_id))
         job = result.scalar_one_or_none()
         if job:
             job.rating = rating
             job.rating_comment = comment
+            job_title = job.title
+            
+            # Get subcontractor's telegram_id
+            if job.assigned_to:
+                sub_result = await session.execute(
+                    select(User).where(User.id == job.assigned_to)
+                )
+                sub = sub_result.scalar_one_or_none()
+                if sub:
+                    subcontractor_tg_id = sub.telegram_id
+            
             await session.commit()
+    
+    # Notify subcontractor of the rating
+    if subcontractor_tg_id:
+        import src.bot.main as main_module
+        bot = main_module.bot
+        if bot:
+            try:
+                stars = "⭐" * rating
+                comment_text = f"\nComment: {comment}" if comment else ""
+                await bot.send_message(
+                    subcontractor_tg_id,
+                    f"🎉 *Job Completed & Rated!*\n\n"
+                    f"Job #{job_id}: {job_title}\n\n"
+                    f"Your rating: {stars} ({rating}/5){comment_text}\n\n"
+                    f"Thank you for your work!",
+                    parse_mode="Markdown"
+                )
+            except Exception as e:
+                logger.error(f"Failed to notify subcontractor {subcontractor_tg_id} of rating: {e}")
             
     await message.answer(f"Thank you! Rating of {rating} ⭐ saved for Job #{job_id}.")
     await state.clear()
