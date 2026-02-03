@@ -762,8 +762,6 @@ async def show_team_hierarchy(message: Message, user_team_id: int = None, is_sup
                     text += f"  {role_emojis.get(role, '👤')} *{role.value.replace('_', ' ').title()}s:*\n"
                     for u in role_users:
                         name = u.first_name or "Unknown"
-                        if u.last_name:
-                            name += f" {u.last_name}"
                         text += f"    • {name}\n"
         else:
             text += "  _No members_\n"
@@ -776,8 +774,6 @@ async def show_team_hierarchy(message: Message, user_team_id: int = None, is_sup
         for u in unassigned:
             role_emoji = "🦸" if u.role == UserRole.SUPER_ADMIN else "👤"
             name = u.first_name or "Unknown"
-            if u.last_name:
-                name += f" {u.last_name}"
             text += f"  {role_emoji} {name} ({u.role.value.replace('_', ' ').title()})\n"
     
     await message.answer(text, parse_mode="Markdown")

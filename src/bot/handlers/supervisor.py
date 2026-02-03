@@ -160,6 +160,10 @@ async def skip_address(callback: CallbackQuery, state: FSMContext):
 
 @router.message(StateFilter(NewJobStates.waiting_for_address))
 async def process_job_address(message: Message, state: FSMContext):
+    if not message.text:
+        await message.answer("Please enter a text address or location:")
+        return
+    
     if message.text.startswith("/"):
         await message.answer("Job creation cancelled.")
         await state.clear()
@@ -168,7 +172,13 @@ async def process_job_address(message: Message, state: FSMContext):
     await state.update_data(address=message.text.strip())
     data = await state.get_data()
     
-    if data['job_type'] == JobType.PRESET_PRICE:
+    job_type = data.get('job_type')
+    if not job_type:
+        await message.answer("Session expired. Please start over with /start")
+        await state.clear()
+        return
+    
+    if job_type == JobType.PRESET_PRICE:
         await ask_for_price(message, state, edit=False)
     else:
         await show_subcontractor_selection(message, state, message.from_user.id, edit=False)
