@@ -188,10 +188,15 @@ async def accept_job_callback(callback: CallbackQuery, state: FSMContext):
 
 @router.message(StateFilter(AcceptJobStates.waiting_for_company_name))
 async def process_company_name_for_accept(message: Message, state: FSMContext):
+    if message.text.strip().lower() == "/cancel":
+        await state.clear()
+        await message.answer("Job acceptance cancelled.")
+        return
+    
     company_name = message.text.strip()
     
     if len(company_name) < 2:
-        await message.answer("Please enter a valid company name (at least 2 characters):")
+        await message.answer("Please enter a valid company name (at least 2 characters) or /cancel:")
         return
     
     data = await state.get_data()
@@ -352,6 +357,11 @@ async def start_job_submission(callback: CallbackQuery, state: FSMContext, job_i
 
 @router.message(StateFilter(SubmissionStates.waiting_for_notes))
 async def process_submission_notes(message: Message, state: FSMContext):
+    if message.text.strip().lower() == "/cancel":
+        await state.clear()
+        await message.answer("Job submission cancelled.")
+        return
+    
     notes = None if message.text.strip().lower() == "/skip" else message.text.strip()
     await state.update_data(submission_notes=notes, submission_photos=[])
     
@@ -434,10 +444,15 @@ async def finish_photo_submission(message: Message, state: FSMContext):
 
 @router.message(StateFilter(SubmissionStates.waiting_for_photo))
 async def process_submission_photo(message: Message, state: FSMContext):
+    if message.text and message.text.strip().lower() == "/cancel":
+        await state.clear()
+        await message.answer("Job submission cancelled.")
+        return
+    
     if not message.photo:
         await message.answer(
             "Please send a photo as proof of completed work.\n"
-            "When you're done adding photos, type /done to submit."
+            "Type /done when finished or /cancel to cancel."
         )
         return
     

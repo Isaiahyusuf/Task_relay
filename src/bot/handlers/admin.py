@@ -840,7 +840,9 @@ async def show_users_by_role(message: Message, role: UserRole, role_name: str):
             name = u.first_name or "Unknown"
             avg_rating, count = await JobService.get_subcontractor_average_rating(u.id)
             if avg_rating:
-                stars = "★" * int(avg_rating) + "☆" * (5 - int(avg_rating))
+                # Use round() for proper star display
+                full_stars = round(avg_rating)
+                stars = "★" * full_stars + "☆" * (5 - full_stars)
                 text += f"• {name} - {stars} ({avg_rating}/5 from {count} jobs)\n"
             else:
                 text += f"• {name} - No ratings yet\n"
@@ -1068,15 +1070,20 @@ async def handle_manage_user(callback: CallbackQuery):
     if user_role == UserRole.SUBCONTRACTOR:
         avg_rating, count = await JobService.get_subcontractor_average_rating(stored_user_id)
         if avg_rating:
-            stars = "★" * int(avg_rating) + "☆" * (5 - int(avg_rating))
+            # Use round() for proper star display
+            full_stars = round(avg_rating)
+            stars = "★" * full_stars + "☆" * (5 - full_stars)
             rating_text = f"*Rating:* {stars} ({avg_rating}/5 from {count} jobs)\n"
         else:
             rating_text = "*Rating:* No ratings yet\n"
     
+    # Handle username display - don't show @ for N/A
+    username_display = f"@{username}" if username and username != 'N/A' else "Not set"
+    
     await callback.message.edit_text(
         f"*User Details*\n\n"
         f"*Name:* {name}\n"
-        f"*Username:* @{username}\n"
+        f"*Username:* {username_display}\n"
         f"*Role:* {role_text}\n"
         f"{rating_text}"
         f"*Status:* {'Active' if is_active else 'Inactive'}\n"

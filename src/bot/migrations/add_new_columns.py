@@ -110,12 +110,21 @@ async def run_migration():
         
         # Update existing teams and create if they don't exist
         try:
+            # Update by team_type first
             await conn.execute(text(
                 "UPDATE teams SET name = 'North/West subcontractors' WHERE team_type = 'northwest'"
             ))
             await conn.execute(text(
                 "UPDATE teams SET name = 'South/East subcontractors' WHERE team_type = 'southeast'"
             ))
+            # Also update by legacy names (in case team_type is NULL)
+            await conn.execute(text(
+                "UPDATE teams SET name = 'North/West subcontractors', team_type = 'northwest' WHERE name ILIKE '%northwest%'"
+            ))
+            await conn.execute(text(
+                "UPDATE teams SET name = 'South/East subcontractors', team_type = 'southeast' WHERE name ILIKE '%southeast%'"
+            ))
+            # Create new teams if they don't exist
             await conn.execute(text(
                 "INSERT INTO teams (name, team_type) VALUES ('North/West subcontractors', 'northwest') "
                 "ON CONFLICT DO NOTHING"

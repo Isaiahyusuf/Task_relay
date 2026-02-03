@@ -64,7 +64,8 @@ class JobService:
                 if not subcontractor:
                     return False, "Subcontractor not found"
                 
-                if subcontractor.availability_status != AvailabilityStatus.AVAILABLE:
+                # Treat NULL availability as AVAILABLE (for legacy data compatibility)
+                if subcontractor.availability_status is not None and subcontractor.availability_status != AvailabilityStatus.AVAILABLE:
                     return False, "Subcontractor is not available"
                 
                 job.subcontractor_id = subcontractor_id
