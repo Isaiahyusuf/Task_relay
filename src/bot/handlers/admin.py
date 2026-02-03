@@ -6,7 +6,7 @@ from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKe
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy import select
 from src.bot.database import async_session, User, Job
-from src.bot.database.models import UserRole, JobStatus, JobType
+from src.bot.database.models import UserRole, JobStatus, JobType, TeamType, Team
 from src.bot.services.jobs import JobService
 from src.bot.services.archive import ArchiveService
 from src.bot.services.access_codes import AccessCodeService
