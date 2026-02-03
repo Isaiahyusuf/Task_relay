@@ -322,16 +322,26 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
                         team_label = send_option.title()
                 
                 available_subs = list(result.scalars().all())
-                logger.info(f"Found {len(available_subs)} available subcontractors to notify")
+                logger.info(f"=== JOB NOTIFICATION START ===")
+                logger.info(f"Job ID: {job.id}, Title: {job.title}")
+                logger.info(f"Send option: {send_option}")
+                logger.info(f"Found {len(available_subs)} subcontractors to notify")
+                
+                if len(available_subs) == 0:
+                    logger.warning("NO SUBCONTRACTORS FOUND! Check if any users have role=SUBCONTRACTOR in the database.")
                 
                 import src.bot.main as main_module
                 bot = main_module.bot
                 if not bot:
-                    logger.error("Bot instance is None, cannot send notifications")
+                    logger.error("CRITICAL: Bot instance is None, cannot send notifications!")
+                else:
+                    logger.info(f"Bot instance OK: {bot}")
+                
                 notified_count = 0
+                failed_count = 0
                 for sub in available_subs:
                     try:
-                        logger.info(f"Sending job notification to subcontractor {sub.id} (telegram_id={sub.telegram_id})")
+                        logger.info(f"[NOTIFY] Sending to subcontractor id={sub.id}, telegram_id={sub.telegram_id}, name={sub.first_name}")
                         await bot.send_message(
                             sub.telegram_id,
                             f"🆕 *New Job Available*\n\n"
@@ -342,9 +352,13 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
                             parse_mode="Markdown"
                         )
                         notified_count += 1
-                        logger.info(f"Successfully notified subcontractor {sub.telegram_id}")
+                        logger.info(f"[NOTIFY SUCCESS] Notified subcontractor telegram_id={sub.telegram_id}")
                     except Exception as e:
-                        logger.error(f"Failed to notify subcontractor {sub.telegram_id}: {e}", exc_info=True)
+                        failed_count += 1
+                        logger.error(f"[NOTIFY FAILED] subcontractor telegram_id={sub.telegram_id}: {e}", exc_info=True)
+                
+                logger.info(f"=== JOB NOTIFICATION COMPLETE ===")
+                logger.info(f"Total: {len(available_subs)}, Success: {notified_count}, Failed: {failed_count}")
                 
                 # Notify super admins, admins, and supervisors only for bot-wide jobs
                 if send_option == "all":
