@@ -335,7 +335,10 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
                 available_subs = list(result.scalars().all())
                 logger.info(f"Found {len(available_subs)} available subcontractors to notify")
                 
-                from src.bot.main import bot
+                import src.bot.main as main_module
+                bot = main_module.bot
+                if not bot:
+                    logger.error("Bot instance is None, cannot send notifications")
                 notified_count = 0
                 for sub in available_subs:
                     try:
@@ -649,7 +652,8 @@ async def view_submission(callback: CallbackQuery):
         return
     
     if job.photos:
-        from src.bot.main import bot
+        import src.bot.main as main_module
+        bot = main_module.bot
         photo_ids = job.photos.split(",")
         
         try:

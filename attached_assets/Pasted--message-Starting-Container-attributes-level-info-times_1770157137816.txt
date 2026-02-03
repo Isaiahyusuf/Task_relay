@@ -1,0 +1,41 @@
+{"message":"Starting Container","attributes":{"level":"info"},"timestamp":"2026-02-03T22:13:53.000000000Z"}
+{"message":"2026-02-03 22:13:54,992 - src.bot.middleware.error_handler - INFO - Error handlers registered","attributes":{"level":"info"},"timestamp":"2026-02-03T22:13:55.111911629Z"}
+{"message":"2026-02-03 22:13:54,992 - __main__ - INFO - Starting bot polling...","attributes":{"level":"info"},"timestamp":"2026-02-03T22:13:55.111918159Z"}
+{"message":"2026-02-03 22:13:54,992 - __main__ - INFO - Environment: development","attributes":{"level":"info"},"timestamp":"2026-02-03T22:13:55.111922109Z"}
+{"message":"2026-02-03 22:13:54,992 - __main__ - INFO - Reminder hours: 24","attributes":{"level":"info"},"timestamp":"2026-02-03T22:13:55.111925629Z"}
+{"message":"2026-02-03 22:13:54,602 - __main__ - INFO - Running database migrations...","attributes":{"level":"info"},"timestamp":"2026-02-03T22:13:55.111934759Z"}
+{"message":"2026-02-03 22:13:54,992 - __main__ - INFO - Auto-close hours: 72","attributes":{"level":"info"},"timestamp":"2026-02-03T22:13:55.111937359Z"}
+{"message":"Added company_name column to jobs table","attributes":{"level":"info"},"timestamp":"2026-02-03T22:13:55.111940259Z"}
+{"message":"2026-02-03 22:13:54,992 - aiogram.dispatcher - INFO - Start polling","attributes":{"level":"info"},"timestamp":"2026-02-03T22:13:55.111940989Z"}
+{"message":"2026-02-03 22:13:54,992 - src.bot.services.scheduler - INFO - Starting background scheduler","attributes":{"level":"info"},"timestamp":"2026-02-03T22:13:55.111944669Z"}
+{"message":"Added super_admin_code column to users table","attributes":{"level":"info"},"timestamp":"2026-02-03T22:13:55.111944719Z"}
+{"message":"2026-02-03 22:13:55,004 - aiogram.dispatcher - INFO - Run polling for bot @ChatTaskerBot id=8282935648 - 'TaskRelayBot'","attributes":{"level":"info"},"timestamp":"2026-02-03T22:13:55.111947879Z"}
+{"message":"Added SUBMITTED to jobstatus enum","attributes":{"level":"info"},"timestamp":"2026-02-03T22:13:55.111948869Z"}
+{"message":"Added SUPER_ADMIN to userrole enum","attributes":{"level":"info"},"timestamp":"2026-02-03T22:13:55.111952599Z"}
+{"message":"Created availabilitystatus enum","attributes":{"level":"info"},"timestamp":"2026-02-03T22:13:55.111956259Z"}
+{"message":"Added availability_status column to users table","attributes":{"level":"info"},"timestamp":"2026-02-03T22:13:55.111960619Z"}
+{"message":"Updated NULL availability_status to AVAILABLE","attributes":{"level":"info"},"timestamp":"2026-02-03T22:13:55.111964429Z"}
+{"message":"Created teamtype enum","attributes":{"level":"info"},"timestamp":"2026-02-03T22:13:55.111968019Z"}
+{"message":"Added team_type column to teams table","attributes":{"level":"info"},"timestamp":"2026-02-03T22:13:55.111971789Z"}
+{"message":"Updated/created teams (North/West and South/East)","attributes":{"level":"info"},"timestamp":"2026-02-03T22:13:55.111975989Z"}
+{"message":"Migration completed!","attributes":{"level":"info"},"timestamp":"2026-02-03T22:13:55.111979649Z"}
+{"message":"2026-02-03 22:13:54,875 - __main__ - INFO - Database migrations completed","attributes":{"level":"info"},"timestamp":"2026-02-03T22:13:55.111982999Z"}
+{"message":"2026-02-03 22:13:54,875 - __main__ - INFO - Initializing database...","attributes":{"level":"info"},"timestamp":"2026-02-03T22:13:55.111986929Z"}
+{"message":"2026-02-03 22:13:54,944 - __main__ - INFO - Database initialized successfully","attributes":{"level":"info"},"timestamp":"2026-02-03T22:13:55.111991089Z"}
+{"message":"2026-02-03 22:13:54,944 - __main__ - INFO - Setting up bootstrap admin codes...","attributes":{"level":"info"},"timestamp":"2026-02-03T22:13:55.111995039Z"}
+{"message":"2026-02-03 22:13:54,987 - __main__ - INFO - Initializing bot...","attributes":{"level":"info"},"timestamp":"2026-02-03T22:13:55.111998399Z"}
+{"message":"2026-02-03 22:13:59,020 - aiogram.dispatcher - ERROR - Failed to fetch updates - TelegramConflictError: Telegram server says - Conflict: terminated by other getUpdates request; make sure that only one bot instance is running","attributes":{"level":"info"},"timestamp":"2026-02-03T22:13:59.021405639Z"}
+{"message":"2026-02-03 22:13:59,020 - aiogram.dispatcher - WARNING - Sleep for 1.000000 seconds and try again... (tryings = 0, bot id = 8282935648)","attributes":{"level":"info"},"timestamp":"2026-02-03T22:13:59.021410699Z"}
+{"message":"2026-02-03 22:14:10,025 - aiogram.dispatcher - INFO - Connection established (tryings = 1, bot id = 8282935648)","attributes":{"level":"info"},"timestamp":"2026-02-03T22:14:19.032485012Z"}
+{"message":"2026-02-03 22:14:32,330 - aiogram.event - INFO - Update id=625578251 is handled. Duration 215 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T22:14:39.031961260Z"}
+{"message":"2026-02-03 22:14:45,952 - aiogram.event - INFO - Update id=625578252 is handled. Duration 200 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T22:14:45.954503712Z"}
+{"message":"2026-02-03 22:14:48,850 - aiogram.event - INFO - Update id=625578253 is handled. Duration 192 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T22:14:48.928125457Z"}
+{"message":"2026-02-03 22:14:51,849 - aiogram.event - INFO - Update id=625578254 is handled. Duration 196 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T22:14:51.860635861Z"}
+{"message":"2026-02-03 22:14:55,117 - aiogram.event - INFO - Update id=625578255 is handled. Duration 368 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T22:14:55.120021459Z"}
+{"message":"2026-02-03 22:14:59,348 - src.bot.handlers.supervisor - ERROR - Failed to send photo: 'NoneType' object has no attribute 'send_photo'","attributes":{"level":"info"},"timestamp":"2026-02-03T22:14:59.377608585Z"}
+{"message":"2026-02-03 22:14:59,518 - aiogram.event - INFO - Update id=625578256 is handled. Duration 179 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T22:14:59.522430349Z"}
+{"message":"2026-02-03 22:15:02,438 - src.bot.handlers.supervisor - ERROR - Failed to send photo: 'NoneType' object has no attribute 'send_photo'","attributes":{"level":"info"},"timestamp":"2026-02-03T22:15:02.465676795Z"}
+{"message":"2026-02-03 22:15:02,611 - aiogram.event - INFO - Update id=625578257 is handled. Duration 181 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T22:15:02.627429149Z"}
+{"message":"2026-02-03 22:15:09,741 - aiogram.event - INFO - Update id=625578258 is handled. Duration 375 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T22:15:09.746114042Z"}
+{"message":"2026-02-03 22:15:12,291 - aiogram.event - INFO - Update id=625578259 is handled. Duration 356 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T22:15:12.296463438Z"}
+{"message":"2026-02-03 22:15:20,308 - aiogram.event - INFO - Update id=625578260 is handled. Duration 190 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T22:15:20.315202125Z"}

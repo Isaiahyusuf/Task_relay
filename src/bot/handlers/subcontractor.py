@@ -223,17 +223,21 @@ async def process_company_name_for_accept(message: Message, state: FSMContext):
         
         # Notify Supervisor
         if supervisor_tg_id:
-            from src.bot.main import bot
-            try:
-                await bot.send_message(
-                    supervisor_tg_id,
-                    f"✅ *Job Accepted*\n\n"
-                    f"Job #{job_id} ({job_title}) has been accepted by *{sub_name}*.\n"
-                    f"Company: *{company_name}*",
-                    parse_mode="Markdown"
-                )
-            except Exception as e:
-                logger.error(f"Failed to notify supervisor {supervisor_tg_id}: {e}")
+            import src.bot.main as main_module
+            bot = main_module.bot
+            if bot:
+                try:
+                    await bot.send_message(
+                        supervisor_tg_id,
+                        f"✅ *Job Accepted*\n\n"
+                        f"Job #{job_id} ({job_title}) has been accepted by *{sub_name}*.\n"
+                        f"Company: *{company_name}*",
+                        parse_mode="Markdown"
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to notify supervisor {supervisor_tg_id}: {e}")
+            else:
+                logger.error("Bot instance is None, cannot notify supervisor")
     else:
         await message.answer(f"Error: {msg}")
     
@@ -289,17 +293,21 @@ async def mark_job_done_callback(callback: CallbackQuery):
             sub_name = sub.first_name or sub.username or "A subcontractor"
 
         if supervisor_tg_id:
-            from src.bot.main import bot
-            try:
-                await bot.send_message(
-                    supervisor_tg_id,
-                    f"🔔 *Job Marked Done*\n\n"
-                    f"Job #{job_id} ({job.title}) has been marked as done by *{sub_name}*.\n\n"
-                    f"Please investigate and mark as completed if satisfied.",
-                    parse_mode="Markdown"
-                )
-            except Exception as e:
-                logger.error(f"Failed to notify supervisor {supervisor_tg_id}: {e}")
+            import src.bot.main as main_module
+            bot = main_module.bot
+            if bot:
+                try:
+                    await bot.send_message(
+                        supervisor_tg_id,
+                        f"🔔 *Job Marked Done*\n\n"
+                        f"Job #{job_id} ({job.title}) has been marked as done by *{sub_name}*.\n\n"
+                        f"Please investigate and mark as completed if satisfied.",
+                        parse_mode="Markdown"
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to notify supervisor {supervisor_tg_id}: {e}")
+            else:
+                logger.error("Bot instance is None, cannot notify supervisor")
     else:
         await callback.answer(msg, show_alert=True)
 
@@ -406,47 +414,51 @@ async def finish_photo_submission(message: Message, state: FSMContext):
         logger.info(f"Attempting to notify supervisor. supervisor_tg_id={supervisor_tg_id}")
         
         if supervisor_tg_id:
-            from src.bot.main import bot
+            import src.bot.main as main_module
             from aiogram.types import InputMediaPhoto
+            bot = main_module.bot
             
-            async with async_session() as session:
-                result = await session.execute(
-                    select(User).where(User.telegram_id == message.from_user.id)
-                )
-                sub = result.scalar_one_or_none()
-                sub_name = sub.first_name or sub.username or "A subcontractor" if sub else "A subcontractor"
-                company_name = ""
-                job_obj = await JobService.get_job_by_id(job_id)
-                if job_obj and job_obj.company_name:
-                    company_name = f"\nCompany: {job_obj.company_name}"
-            
-            try:
-                job = await JobService.get_job_by_id(job_id)
-                notes_text = f"\nNotes: {notes}" if notes else ""
+            if not bot:
+                logger.error("Bot instance is None, cannot notify supervisor")
+            else:
+                async with async_session() as session:
+                    result = await session.execute(
+                        select(User).where(User.telegram_id == message.from_user.id)
+                    )
+                    sub = result.scalar_one_or_none()
+                    sub_name = sub.first_name or sub.username or "A subcontractor" if sub else "A subcontractor"
+                    company_name = ""
+                    job_obj = await JobService.get_job_by_id(job_id)
+                    if job_obj and job_obj.company_name:
+                        company_name = f"\nCompany: {job_obj.company_name}"
                 
-                logger.info(f"Sending notification message to supervisor {supervisor_tg_id}")
-                await bot.send_message(
-                    supervisor_tg_id,
-                    f"📋 *Job Submitted for Review*\n\n"
-                    f"Job #{job_id}: {job.title if job else 'Unknown'}\n"
-                    f"Submitted by: *{sub_name}*{company_name}{notes_text}\n\n"
-                    f"📸 Photos ({len(photos)}) attached below.\n"
-                    f"Please review and mark as completed if satisfied.",
-                    parse_mode="Markdown"
-                )
-                
-                logger.info(f"Sending {len(photos)} photos to supervisor {supervisor_tg_id}")
-                if photos:
-                    if len(photos) == 1:
-                        await bot.send_photo(supervisor_tg_id, photos[0])
-                    else:
-                        media_group = [InputMediaPhoto(media=photo_id) for photo_id in photos]
-                        await bot.send_media_group(supervisor_tg_id, media_group)
-                
-                logger.info(f"Successfully notified supervisor {supervisor_tg_id} with photos")
-                        
-            except Exception as e:
-                logger.error(f"Failed to notify supervisor {supervisor_tg_id}: {e}", exc_info=True)
+                try:
+                    job = await JobService.get_job_by_id(job_id)
+                    notes_text = f"\nNotes: {notes}" if notes else ""
+                    
+                    logger.info(f"Sending notification message to supervisor {supervisor_tg_id}")
+                    await bot.send_message(
+                        supervisor_tg_id,
+                        f"📋 *Job Submitted for Review*\n\n"
+                        f"Job #{job_id}: {job.title if job else 'Unknown'}\n"
+                        f"Submitted by: *{sub_name}*{company_name}{notes_text}\n\n"
+                        f"📸 Photos ({len(photos)}) attached below.\n"
+                        f"Please review and mark as completed if satisfied.",
+                        parse_mode="Markdown"
+                    )
+                    
+                    logger.info(f"Sending {len(photos)} photos to supervisor {supervisor_tg_id}")
+                    if photos:
+                        if len(photos) == 1:
+                            await bot.send_photo(supervisor_tg_id, photos[0])
+                        else:
+                            media_group = [InputMediaPhoto(media=photo_id) for photo_id in photos]
+                            await bot.send_media_group(supervisor_tg_id, media_group)
+                    
+                    logger.info(f"Successfully notified supervisor {supervisor_tg_id} with photos")
+                            
+                except Exception as e:
+                    logger.error(f"Failed to notify supervisor {supervisor_tg_id}: {e}", exc_info=True)
         else:
             logger.warning(f"No supervisor_tg_id returned for job {job_id}, cannot send notification")
     else:
