@@ -12,7 +12,7 @@ from src.bot.services.access_codes import AccessCodeService
 from src.bot.handlers.admin import CreateCodeStates
 from src.bot.utils.permissions import require_role
 from src.bot.utils.keyboards import (
-    get_job_type_keyboard, get_skip_keyboard, get_subcontractor_selection_keyboard,
+    get_job_type_keyboard, get_skip_keyboard,
     get_confirmation_keyboard, get_job_list_keyboard, get_main_menu_keyboard, 
     get_back_keyboard, get_supervisor_job_actions_keyboard, get_quotes_keyboard,
     get_quote_detail_keyboard
@@ -155,7 +155,7 @@ async def skip_address(callback: CallbackQuery, state: FSMContext):
     if data['job_type'] == JobType.PRESET_PRICE:
         await ask_for_price(callback.message, state, edit=True)
     else:
-        await show_subcontractor_selection(callback.message, state, callback.from_user.id, edit=True)
+        await show_team_selection(callback.message, state, callback.from_user.id, edit=True)
     await callback.answer()
 
 @router.message(StateFilter(NewJobStates.waiting_for_address))
@@ -181,7 +181,7 @@ async def process_job_address(message: Message, state: FSMContext):
     if job_type == JobType.PRESET_PRICE:
         await ask_for_price(message, state, edit=False)
     else:
-        await show_subcontractor_selection(message, state, message.from_user.id, edit=False)
+        await show_team_selection(message, state, message.from_user.id, edit=False)
 
 async def ask_for_price(message: Message, state: FSMContext, edit: bool = False):
     text = (
