@@ -1,0 +1,76 @@
+{"message":"Starting Container","attributes":{"level":"info"},"timestamp":"2026-02-03T23:06:08.000000000Z"}
+{"message":"Created teamtype enum","attributes":{"level":"info"},"timestamp":"2026-02-03T23:06:20.029809909Z"}
+{"message":"Added team_type column to teams table","attributes":{"level":"info"},"timestamp":"2026-02-03T23:06:20.029818946Z"}
+{"message":"Updated/created teams (North/West and South/East)","attributes":{"level":"info"},"timestamp":"2026-02-03T23:06:20.029824337Z"}
+{"message":"Migration completed!","attributes":{"level":"info"},"timestamp":"2026-02-03T23:06:20.029829008Z"}
+{"message":"2026-02-03 23:06:19,863 - __main__ - INFO - Database migrations completed","attributes":{"level":"info"},"timestamp":"2026-02-03T23:06:20.029834942Z"}
+{"message":"2026-02-03 23:06:19,863 - __main__ - INFO - Initializing database...","attributes":{"level":"info"},"timestamp":"2026-02-03T23:06:20.029840346Z"}
+{"message":"2026-02-03 23:06:19,332 - __main__ - INFO - Running database migrations...","attributes":{"level":"info"},"timestamp":"2026-02-03T23:06:20.029881543Z"}
+{"message":"Added company_name column to jobs table","attributes":{"level":"info"},"timestamp":"2026-02-03T23:06:20.029885551Z"}
+{"message":"Added super_admin_code column to users table","attributes":{"level":"info"},"timestamp":"2026-02-03T23:06:20.029889965Z"}
+{"message":"Added SUBMITTED to jobstatus enum","attributes":{"level":"info"},"timestamp":"2026-02-03T23:06:20.029894499Z"}
+{"message":"Added SUPER_ADMIN to userrole enum","attributes":{"level":"info"},"timestamp":"2026-02-03T23:06:20.029898648Z"}
+{"message":"Created availabilitystatus enum","attributes":{"level":"info"},"timestamp":"2026-02-03T23:06:20.029902260Z"}
+{"message":"Added availability_status column to users table","attributes":{"level":"info"},"timestamp":"2026-02-03T23:06:20.029906466Z"}
+{"message":"Updated NULL availability_status to AVAILABLE","attributes":{"level":"info"},"timestamp":"2026-02-03T23:06:20.029911594Z"}
+{"message":"2026-02-03 23:06:20,254 - __main__ - INFO - Database initialized successfully","attributes":{"level":"info"},"timestamp":"2026-02-03T23:06:20.256692746Z"}
+{"message":"2026-02-03 23:06:20,254 - __main__ - INFO - Setting up bootstrap admin codes...","attributes":{"level":"info"},"timestamp":"2026-02-03T23:06:20.256698159Z"}
+{"message":"2026-02-03 23:06:20,428 - __main__ - INFO - Initializing bot...","attributes":{"level":"info"},"timestamp":"2026-02-03T23:06:20.431213319Z"}
+{"message":"2026-02-03 23:06:20,619 - src.bot.middleware.error_handler - INFO - Error handlers registered","attributes":{"level":"info"},"timestamp":"2026-02-03T23:06:20.621456093Z"}
+{"message":"2026-02-03 23:06:20,619 - __main__ - INFO - Starting bot polling...","attributes":{"level":"info"},"timestamp":"2026-02-03T23:06:20.621467066Z"}
+{"message":"2026-02-03 23:06:20,620 - __main__ - INFO - Environment: development","attributes":{"level":"info"},"timestamp":"2026-02-03T23:06:20.621474868Z"}
+{"message":"2026-02-03 23:06:20,620 - __main__ - INFO - Reminder hours: 24","attributes":{"level":"info"},"timestamp":"2026-02-03T23:06:20.621482548Z"}
+{"message":"2026-02-03 23:06:20,620 - __main__ - INFO - Auto-close hours: 72","attributes":{"level":"info"},"timestamp":"2026-02-03T23:06:20.621490316Z"}
+{"message":"2026-02-03 23:06:20,620 - aiogram.dispatcher - INFO - Start polling","attributes":{"level":"info"},"timestamp":"2026-02-03T23:06:20.621498235Z"}
+{"message":"2026-02-03 23:06:20,620 - src.bot.services.scheduler - INFO - Starting background scheduler","attributes":{"level":"info"},"timestamp":"2026-02-03T23:06:20.621506081Z"}
+{"message":"2026-02-03 23:06:20,646 - aiogram.dispatcher - INFO - Run polling for bot @ChatTaskerBot id=8282935648 - 'TaskRelayBot'","attributes":{"level":"info"},"timestamp":"2026-02-03T23:06:20.655396821Z"}
+{"message":"           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.882853266Z"}
+{"message":"  File \"/opt/venv/lib/python3.12/site-packages/aiogram/dispatcher/event/handler.py\", line 71, in call","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.882866212Z"}
+{"message":"    return await wrapped()","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.882872789Z"}
+{"message":"           ^^^^^^^^^^^^^^^","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.882878851Z"}
+{"message":"  File \"/opt/venv/lib/python3.12/site-packages/aiogram/dispatcher/dispatcher.py\", line 283, in _listen_update","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.882884458Z"}
+{"message":"2026-02-03 23:07:54,054 - aiogram.event - INFO - Update id=625578328 is handled. Duration 248 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.882932222Z"}
+{"message":"2026-02-03 23:07:56,362 - src.bot.middleware.error_handler - ERROR - Error handling update: name 'InlineKeyboardBuilder' is not defined","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.882939614Z"}
+{"message":"Traceback (most recent call last):","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.882946560Z"}
+{"message":"  File \"/opt/venv/lib/python3.12/site-packages/aiogram/dispatcher/middlewares/error.py\", line 27, in __call__","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.882953173Z"}
+{"message":"    return await handler(event, data)","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.882959828Z"}
+{"message":"           ^^^^^^^^^^^^^^^^^^^^^^^^^^","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.882966335Z"}
+{"message":"  File \"/opt/venv/lib/python3.12/site-packages/aiogram/dispatcher/middlewares/user_context.py\", line 58, in __call__","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.882973105Z"}
+{"message":"    return await handler(event, data)","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.882979520Z"}
+{"message":"           ^^^^^^^^^^^^^^^^^^^^^^^^^^","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.882986078Z"}
+{"message":"  File \"/opt/venv/lib/python3.12/site-packages/aiogram/fsm/middleware.py\", line 43, in __call__","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.882992936Z"}
+{"message":"    return await handler(event, data)","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.882999945Z"}
+{"message":"           ^^^^^^^^^^^^^^^^^^^^^^^^^^","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.883007026Z"}
+{"message":"  File \"/opt/venv/lib/python3.12/site-packages/aiogram/dispatcher/event/telegram.py\", line 126, in trigger","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.883013873Z"}
+{"message":"    return await wrapped_inner(event, kwargs)","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.883020223Z"}
+{"message":"    return await self.propagate_event(update_type=update_type, event=event, **kwargs)","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.883286525Z"}
+{"message":"           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.883293974Z"}
+{"message":"  File \"/opt/venv/lib/python3.12/site-packages/aiogram/dispatcher/router.py\", line 161, in propagate_event","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.883300784Z"}
+{"message":"    return await observer.wrap_outer_middleware(_wrapped, event=event, data=kwargs)","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.883307154Z"}
+{"message":"           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.883314121Z"}
+{"message":"  File \"/opt/venv/lib/python3.12/site-packages/aiogram/dispatcher/router.py\", line 153, in _wrapped","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.883320130Z"}
+{"message":"    return await self._propagate_event(","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.883326809Z"}
+{"message":"           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.883333048Z"}
+{"message":"  File \"/opt/venv/lib/python3.12/site-packages/aiogram/dispatcher/router.py\", line 189, in _propagate_event","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.883339086Z"}
+{"message":"    response = await router.propagate_event(update_type=update_type, event=event, **kwargs)","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.883345736Z"}
+{"message":"               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.883352213Z"}
+{"message":"  File \"/opt/venv/lib/python3.12/site-packages/aiogram/dispatcher/router.py\", line 161, in propagate_event","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.883358773Z"}
+{"message":"    return await observer.wrap_outer_middleware(_wrapped, event=event, data=kwargs)","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.883364779Z"}
+{"message":"           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.883370778Z"}
+{"message":"  File \"/opt/venv/lib/python3.12/site-packages/aiogram/dispatcher/router.py\", line 153, in _wrapped","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.883376809Z"}
+{"message":"    return await self._propagate_event(","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.883383218Z"}
+{"message":"           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.883389453Z"}
+{"message":"  File \"/opt/venv/lib/python3.12/site-packages/aiogram/dispatcher/router.py\", line 181, in _propagate_event","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.884151549Z"}
+{"message":"    response = await observer.trigger(event, **kwargs)","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.884163249Z"}
+{"message":"               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.884172068Z"}
+{"message":"  File \"/opt/venv/lib/python3.12/site-packages/aiogram/dispatcher/event/telegram.py\", line 126, in trigger","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.884179784Z"}
+{"message":"    return await wrapped_inner(event, kwargs)","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.884186132Z"}
+{"message":"           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.884192161Z"}
+{"message":"  File \"/opt/venv/lib/python3.12/site-packages/aiogram/dispatcher/event/handler.py\", line 71, in call","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.884198205Z"}
+{"message":"    return await wrapped()","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.884205728Z"}
+{"message":"           ^^^^^^^^^^^^^^^","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.884211360Z"}
+{"message":"  File \"/app/src/bot/handlers/admin.py\", line 967, in handle_super_admin_switch","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.884217359Z"}
+{"message":"    kb = InlineKeyboardBuilder()","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.884222963Z"}
+{"message":"         ^^^^^^^^^^^^^^^^^^^^^","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.884228651Z"}
+{"message":"NameError: name 'InlineKeyboardBuilder' is not defined. Did you mean: 'InlineKeyboardButton'?","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.884234134Z"}
+{"message":"2026-02-03 23:07:56,547 - aiogram.event - INFO - Update id=625578329 is handled. Duration 236 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T23:08:00.884239404Z"}
