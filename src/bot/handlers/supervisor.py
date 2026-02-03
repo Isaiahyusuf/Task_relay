@@ -288,7 +288,7 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
                     result = await session.execute(
                         select(User).where(User.role == UserRole.SUBCONTRACTOR)
                     )
-                    team_label = "all teams"
+                    team_label = "all subcontractors (bot-wide)"
                 else:
                     # Get team by type
                     team_type = TeamType.NORTHWEST if send_option == "northwest" else TeamType.SOUTHEAST
@@ -367,7 +367,7 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
                 f"*Job Created & Sent!*\n\n"
                 f"Job #{job.id}: {job.title}\n"
                 f"Sent to: {team_label}\n\n"
-                f"📢 Notified {notified_count} available subcontractor(s).\n"
+                f"📢 Notified {notified_count} subcontractor(s).\n"
                 "First one to accept will get the job!",
                 parse_mode="Markdown"
             )
