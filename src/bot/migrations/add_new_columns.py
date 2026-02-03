@@ -108,17 +108,23 @@ async def run_migration():
         except Exception as e:
             print(f"team_type column may already exist: {e}")
         
-        # Create default teams if they don't exist
+        # Update existing teams and create if they don't exist
         try:
             await conn.execute(text(
-                "INSERT INTO teams (name, team_type) VALUES ('Northwest Team', 'northwest') "
-                "ON CONFLICT (name) DO UPDATE SET team_type = 'northwest'"
+                "UPDATE teams SET name = 'North/West subcontractors' WHERE team_type = 'northwest'"
             ))
             await conn.execute(text(
-                "INSERT INTO teams (name, team_type) VALUES ('Southeast Team', 'southeast') "
-                "ON CONFLICT (name) DO UPDATE SET team_type = 'southeast'"
+                "UPDATE teams SET name = 'South/East subcontractors' WHERE team_type = 'southeast'"
             ))
-            print("Created default teams (Northwest and Southeast)")
+            await conn.execute(text(
+                "INSERT INTO teams (name, team_type) VALUES ('North/West subcontractors', 'northwest') "
+                "ON CONFLICT DO NOTHING"
+            ))
+            await conn.execute(text(
+                "INSERT INTO teams (name, team_type) VALUES ('South/East subcontractors', 'southeast') "
+                "ON CONFLICT DO NOTHING"
+            ))
+            print("Updated/created teams (North/West and South/East)")
         except Exception as e:
             print(f"Error creating default teams: {e}")
     

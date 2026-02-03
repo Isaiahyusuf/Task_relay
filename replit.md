@@ -110,8 +110,8 @@ Uses PostgreSQL with SQLAlchemy async ORM. Supports Railway PostgreSQL with SSL.
 
 ## Teams
 Subcontractors are organized into two teams:
-- **Northwest Team** - 🌲 Subcontractors in the Northwest region
-- **Southeast Team** - ☀️ Subcontractors in the Southeast region
+- **North/West subcontractors** - Subcontractors in the North/West region
+- **South/East subcontractors** - Subcontractors in the South/East region
 
 ### Team Assignment
 - When creating access codes for Admins, Supervisors, or Subcontractors, the creator must select which team they will belong to
@@ -122,12 +122,23 @@ Subcontractors are organized into two teams:
 ### Job Sending Options
 When supervisors create jobs, they can choose:
 - **Bot-Wide** - Send to ALL available subcontractors from both teams
-- **Northwest Team Only** - Send only to Northwest Team members
-- **Southeast Team Only** - Send only to Southeast Team members
+- **North/West Only** - Send only to North/West subcontractors
+- **South/East Only** - Send only to South/East subcontractors
 - **Save as Draft** - Save without sending
 
+## Star Rating System
+- When supervisors mark a job as complete, they rate the subcontractor (1-5 stars)
+- Optional comment can be added with the rating
+- Average ratings displayed on subcontractor profiles and in the subcontractors list
+- Ratings show format: "★★★★☆ (4.2/5 from 8 jobs)"
+
 ## Recent Changes
-- 2026-01-30: Added team system - Northwest and Southeast teams
+- 2026-01-30: Renamed teams to "North/West subcontractors" and "South/East subcontractors" (no emojis)
+- 2026-01-30: Added star rating system - supervisors rate subcontractors when marking jobs complete
+- 2026-01-30: Star ratings now displayed on subcontractor profiles and lists
+- 2026-01-30: Fixed job submission - photos and notes now sent to supervisors
+- 2026-01-30: Fixed subcontractor notifications - now includes users with NULL is_active/availability
+- 2026-01-30: Added team system - North/West and South/East teams
 - 2026-01-30: Supervisors can now send jobs to specific teams or bot-wide
 - 2026-01-30: Access codes for subcontractors require team selection
 - 2026-01-29: Subcontractors must provide company name when accepting jobs

@@ -394,23 +394,39 @@ async def finish_photo_submission(message: Message, state: FSMContext):
         
         if supervisor_tg_id:
             from src.bot.main import bot
+            from aiogram.types import InputMediaPhoto
             async with async_session() as session:
                 result = await session.execute(
                     select(User).where(User.telegram_id == message.from_user.id)
                 )
                 sub = result.scalar_one_or_none()
                 sub_name = sub.first_name or sub.username or "A subcontractor"
+                company_name = ""
+                job_obj = await JobService.get_job_by_id(job_id)
+                if job_obj and job_obj.company_name:
+                    company_name = f"\nCompany: {job_obj.company_name}"
             
             try:
                 job = await JobService.get_job_by_id(job_id)
+                notes_text = f"\nNotes: {notes}" if notes else ""
+                
                 await bot.send_message(
                     supervisor_tg_id,
-                    f"📥 *Job Submitted for Review*\n\n"
-                    f"Job #{job_id} ({job.title if job else 'Unknown'}) has been submitted by *{sub_name}*.\n"
-                    f"Photos attached: {len(photos)}\n\n"
-                    f"Please review the submission and mark as completed if satisfied.",
+                    f"*Job Submitted for Review*\n\n"
+                    f"Job #{job_id}: {job.title if job else 'Unknown'}\n"
+                    f"Submitted by: *{sub_name}*{company_name}{notes_text}\n\n"
+                    f"Photos ({len(photos)}) attached below.\n"
+                    f"Please review and mark as completed if satisfied.",
                     parse_mode="Markdown"
                 )
+                
+                if photos:
+                    if len(photos) == 1:
+                        await bot.send_photo(supervisor_tg_id, photos[0])
+                    else:
+                        media_group = [InputMediaPhoto(media=photo_id) for photo_id in photos]
+                        await bot.send_media_group(supervisor_tg_id, media_group)
+                        
             except Exception as e:
                 logger.error(f"Failed to notify supervisor {supervisor_tg_id}: {e}")
     else:

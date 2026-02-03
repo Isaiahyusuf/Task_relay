@@ -66,18 +66,18 @@ def get_confirmation_keyboard(action: str, item_id: int = 0) -> InlineKeyboardMa
 def get_team_selection_keyboard(for_code: bool = False) -> InlineKeyboardMarkup:
     prefix = "code_team" if for_code else "job_team"
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🌲 Northwest Team", callback_data=f"{prefix}:northwest")],
-        [InlineKeyboardButton(text="☀️ Southeast Team", callback_data=f"{prefix}:southeast")],
-        [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_code" if for_code else "job_cancel")]
+        [InlineKeyboardButton(text="North/West subcontractors", callback_data=f"{prefix}:northwest")],
+        [InlineKeyboardButton(text="South/East subcontractors", callback_data=f"{prefix}:southeast")],
+        [InlineKeyboardButton(text="Cancel", callback_data="cancel_code" if for_code else "job_cancel")]
     ])
 
 def get_job_team_selection_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📢 Send Bot-Wide (All Teams)", callback_data="job_send:all")],
-        [InlineKeyboardButton(text="🌲 Northwest Team Only", callback_data="job_send:northwest")],
-        [InlineKeyboardButton(text="☀️ Southeast Team Only", callback_data="job_send:southeast")],
-        [InlineKeyboardButton(text="💾 Save as Draft", callback_data="job_send:draft")],
-        [InlineKeyboardButton(text="❌ Cancel", callback_data="job_cancel")]
+        [InlineKeyboardButton(text="Send Bot-Wide (All Teams)", callback_data="job_send:all")],
+        [InlineKeyboardButton(text="North/West Only", callback_data="job_send:northwest")],
+        [InlineKeyboardButton(text="South/East Only", callback_data="job_send:southeast")],
+        [InlineKeyboardButton(text="Save as Draft", callback_data="job_send:draft")],
+        [InlineKeyboardButton(text="Cancel", callback_data="job_cancel")]
     ])
 
 def get_subcontractor_selection_keyboard(subcontractors: list, include_skip: bool = True) -> InlineKeyboardMarkup:

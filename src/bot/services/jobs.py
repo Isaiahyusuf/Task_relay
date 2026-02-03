@@ -461,3 +461,26 @@ class JobService:
         async with async_session() as session:
             result = await session.execute(select(Job).where(Job.id == job_id))
             return result.scalar_one_or_none()
+    
+    @staticmethod
+    async def get_subcontractor_average_rating(subcontractor_id: int) -> tuple[float | None, int]:
+        """Get average rating and total rated jobs for a subcontractor."""
+        if not async_session:
+            return None, 0
+        
+        async with async_session() as session:
+            from sqlalchemy import func
+            result = await session.execute(
+                select(
+                    func.avg(Job.rating).label('avg_rating'),
+                    func.count(Job.rating).label('rating_count')
+                ).where(
+                    Job.subcontractor_id == subcontractor_id,
+                    Job.rating != None
+                )
+            )
+            row = result.one_or_none()
+            if row and row.rating_count > 0:
+                avg = round(float(row.avg_rating), 1) if row.avg_rating else None
+                return avg, row.rating_count
+            return None, 0

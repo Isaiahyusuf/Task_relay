@@ -743,8 +743,7 @@ async def show_team_hierarchy(message: Message, user_team_id: int = None, is_sup
     
     # Display each team
     for team in teams:
-        team_emoji = "🌲" if team.team_type and team.team_type.value == "northwest" else "☀️"
-        text += f"{team_emoji} *{team.name}*\n"
+        text += f"*{team.name}*\n"
         
         users_in_team = team_users.get(team.id, [])
         
@@ -819,6 +818,8 @@ async def btn_all_users_v2(message: Message, state: FSMContext):
     await show_user_list(message, is_super_admin=True)
 
 async def show_users_by_role(message: Message, role: UserRole, role_name: str):
+    from src.bot.services.jobs import JobService
+    
     async with async_session() as session:
         result = await session.execute(
             select(User).where(User.is_active == True, User.role == role).order_by(User.first_name)
@@ -833,12 +834,29 @@ async def show_users_by_role(message: Message, role: UserRole, role_name: str):
         )
         return
     
-    await message.answer(
-        f"*{role_name}* ({len(users)} total)\n\n"
-        "Select a user to manage:",
-        reply_markup=get_user_list_keyboard(users, is_super_admin=True),
-        parse_mode="Markdown"
-    )
+    if role == UserRole.SUBCONTRACTOR:
+        text = f"*{role_name}* ({len(users)} total)\n\n"
+        for u in users:
+            name = u.first_name or "Unknown"
+            avg_rating, count = await JobService.get_subcontractor_average_rating(u.id)
+            if avg_rating:
+                stars = "★" * int(avg_rating) + "☆" * (5 - int(avg_rating))
+                text += f"• {name} - {stars} ({avg_rating}/5 from {count} jobs)\n"
+            else:
+                text += f"• {name} - No ratings yet\n"
+        text += "\nSelect a user to manage:"
+        await message.answer(
+            text,
+            reply_markup=get_user_list_keyboard(users, is_super_admin=True),
+            parse_mode="Markdown"
+        )
+    else:
+        await message.answer(
+            f"*{role_name}* ({len(users)} total)\n\n"
+            "Select a user to manage:",
+            reply_markup=get_user_list_keyboard(users, is_super_admin=True),
+            parse_mode="Markdown"
+        )
 
 @router.message(F.text == "🔄 Switch Role")
 async def btn_switch_role_super_admin(message: Message, state: FSMContext):
@@ -1015,6 +1033,8 @@ async def show_user_list(message: Message, is_super_admin: bool = False):
 
 @router.callback_query(F.data.startswith("manage_user:"))
 async def handle_manage_user(callback: CallbackQuery):
+    from src.bot.services.jobs import JobService
+    
     user_id = int(callback.data.split(":")[1])
     
     async with async_session() as session:
@@ -1041,15 +1061,27 @@ async def handle_manage_user(callback: CallbackQuery):
         username = user.username or 'N/A'
         is_active = user.is_active
         created_date = user.created_at.strftime('%Y-%m-%d') if user.created_at else 'Unknown'
+        user_role = user.role
+        stored_user_id = user.id
+    
+    rating_text = ""
+    if user_role == UserRole.SUBCONTRACTOR:
+        avg_rating, count = await JobService.get_subcontractor_average_rating(stored_user_id)
+        if avg_rating:
+            stars = "★" * int(avg_rating) + "☆" * (5 - int(avg_rating))
+            rating_text = f"*Rating:* {stars} ({avg_rating}/5 from {count} jobs)\n"
+        else:
+            rating_text = "*Rating:* No ratings yet\n"
     
     await callback.message.edit_text(
         f"*User Details*\n\n"
         f"*Name:* {name}\n"
         f"*Username:* @{username}\n"
         f"*Role:* {role_text}\n"
+        f"{rating_text}"
         f"*Status:* {'Active' if is_active else 'Inactive'}\n"
         f"*Joined:* {created_date}\n\n"
-        f"{'⚠️ This is your own account.' if is_self else ''}",
+        f"{'This is your own account.' if is_self else ''}",
         reply_markup=get_user_actions_keyboard(user_id, is_self),
         parse_mode="Markdown"
     )

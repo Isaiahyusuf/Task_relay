@@ -215,9 +215,9 @@ async def show_team_selection(message: Message, state: FSMContext, telegram_id: 
     text = (
         "*Creating a New Job*\n\n"
         "Final step: Where do you want to send this job?\n\n"
-        "🌐 *Bot-Wide* - All available subcontractors\n"
-        "🌲 *Northwest* - Northwest Team only\n"
-        "☀️ *Southeast* - Southeast Team only"
+        "*Bot-Wide* - All available subcontractors\n"
+        "*North/West* - North/West subcontractors only\n"
+        "*South/East* - South/East subcontractors only"
     )
     keyboard = get_job_team_selection_keyboard()
     
@@ -267,15 +267,6 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
             # Determine which subcontractors to notify
             async with async_session() as session:
                 from sqlalchemy import or_
-                
-                # Debug: Check all subcontractors first
-                all_subs_result = await session.execute(
-                    select(User).where(User.role == UserRole.SUBCONTRACTOR)
-                )
-                all_subs = list(all_subs_result.scalars().all())
-                logger.info(f"Total subcontractors in DB: {len(all_subs)}")
-                for s in all_subs:
-                    logger.info(f"  Sub: {s.first_name}, is_active={s.is_active}, availability={s.availability_status}, team_id={s.team_id}")
                 
                 if send_option == "all":
                     # All available subcontractors (AVAILABLE or NULL status, is_active True or NULL)
