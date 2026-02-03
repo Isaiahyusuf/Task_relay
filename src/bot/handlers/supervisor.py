@@ -750,9 +750,9 @@ async def process_rating_comment(message: Message, state: FSMContext):
             job_title = job.title
             
             # Get subcontractor's telegram_id
-            if job.assigned_to:
+            if job.subcontractor_id:
                 sub_result = await session.execute(
-                    select(User).where(User.id == job.assigned_to)
+                    select(User).where(User.id == job.subcontractor_id)
                 )
                 sub = sub_result.scalar_one_or_none()
                 if sub:
