@@ -223,8 +223,7 @@ async def process_company_name_for_accept(message: Message, state: FSMContext):
         
         # Notify Supervisor
         if supervisor_tg_id:
-            import src.bot.main as main_module
-            bot = main_module.bot
+            bot = message.bot
             if bot:
                 try:
                     await bot.send_message(
@@ -293,8 +292,7 @@ async def mark_job_done_callback(callback: CallbackQuery):
             sub_name = sub.first_name or sub.username or "A subcontractor"
 
         if supervisor_tg_id:
-            import src.bot.main as main_module
-            bot = main_module.bot
+            bot = callback.bot
             if bot:
                 try:
                     await bot.send_message(
@@ -414,9 +412,8 @@ async def finish_photo_submission(message: Message, state: FSMContext):
         logger.info(f"Attempting to notify supervisor. supervisor_tg_id={supervisor_tg_id}")
         
         if supervisor_tg_id:
-            import src.bot.main as main_module
             from aiogram.types import InputMediaPhoto
-            bot = main_module.bot
+            bot = message.bot
             
             if not bot:
                 logger.error("Bot instance is None, cannot notify supervisor")

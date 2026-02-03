@@ -1,0 +1,75 @@
+message":"Starting Container","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:04.000000000Z"}
+{"message":"2026-02-03 23:24:05,744 - __main__ - INFO - Running database migrations...","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:05.858414383Z"}
+{"message":"Added company_name column to jobs table","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:05.946323997Z"}
+{"message":"Added super_admin_code column to users table","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:05.946327857Z"}
+{"message":"Added SUBMITTED to jobstatus enum","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:05.946331457Z"}
+{"message":"Added SUPER_ADMIN to userrole enum","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:05.946339757Z"}
+{"message":"Created availabilitystatus enum","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:05.950460616Z"}
+{"message":"Added availability_status column to users table","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:05.954116481Z"}
+{"message":"Updated NULL availability_status to AVAILABLE","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:05.957918134Z"}
+{"message":"Created teamtype enum","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:05.961348873Z"}
+{"message":"Added team_type column to teams table","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:05.965088507Z"}
+{"message":"Updated/created teams (North/West and South/East)","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:05.983560280Z"}
+{"message":"Migration completed!","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:05.983564150Z"}
+{"message":"2026-02-03 23:24:05,982 - __main__ - INFO - Database migrations completed","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:05.983567290Z"}
+{"message":"2026-02-03 23:24:05,982 - __main__ - INFO - Initializing database...","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:05.983570470Z"}
+{"message":"2026-02-03 23:24:06,079 - __main__ - INFO - Database initialized successfully","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:06.089767319Z"}
+{"message":"2026-02-03 23:24:06,079 - __main__ - INFO - Setting up bootstrap admin codes...","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:06.089773039Z"}
+{"message":"2026-02-03 23:24:06,156 - aiogram.dispatcher - INFO - Run polling for bot @ChatTaskerBot id=8282935648 - 'TaskRelayBot'","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:06.160563252Z"}
+{"message":"2026-02-03 23:24:06,145 - __main__ - INFO - Reminder hours: 24","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:06.160573502Z"}
+{"message":"2026-02-03 23:24:06,145 - __main__ - INFO - Auto-close hours: 72","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:06.160577172Z"}
+{"message":"2026-02-03 23:24:06,145 - aiogram.dispatcher - INFO - Start polling","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:06.160581392Z"}
+{"message":"2026-02-03 23:24:06,145 - src.bot.services.scheduler - INFO - Starting background scheduler","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:06.160584482Z"}
+{"message":"2026-02-03 23:24:06,140 - __main__ - INFO - Initializing bot...","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:06.160601542Z"}
+{"message":"2026-02-03 23:24:06,144 - src.bot.middleware.error_handler - INFO - Error handlers registered","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:06.160605802Z"}
+{"message":"2026-02-03 23:24:06,145 - __main__ - INFO - Starting bot polling...","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:06.160610002Z"}
+{"message":"2026-02-03 23:24:06,145 - __main__ - INFO - Environment: development","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:06.160613732Z"}
+{"message":"2026-02-03 23:24:10,177 - aiogram.dispatcher - ERROR - Failed to fetch updates - TelegramConflictError: Telegram server says - Conflict: terminated by other getUpdates request; make sure that only one bot instance is running","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:10.178575771Z"}
+{"message":"2026-02-03 23:24:10,177 - aiogram.dispatcher - WARNING - Sleep for 1.000000 seconds and try again... (tryings = 0, bot id = 8282935648)","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:10.178579961Z"}
+{"message":"2026-02-03 23:24:21,183 - aiogram.dispatcher - INFO - Connection established (tryings = 1, bot id = 8282935648)","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:30.182028825Z"}
+{"message":"2026-02-03 23:24:28,470 - aiogram.event - INFO - Update id=625578343 is handled. Duration 205 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:30.182045105Z"}
+{"message":"2026-02-03 23:24:34,231 - aiogram.event - INFO - Update id=625578344 is handled. Duration 198 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:34.234705809Z"}
+{"message":"2026-02-03 23:24:36,740 - aiogram.event - INFO - Update id=625578345 is handled. Duration 375 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:36.746660546Z"}
+{"message":"2026-02-03 23:24:40,314 - aiogram.event - INFO - Update id=625578346 is handled. Duration 648 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T23:24:40.319427119Z"}
+{"message":"2026-02-03 23:24:52,702 - aiogram.event - INFO - Update id=625578347 is handled. Duration 204 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T23:25:00.316592979Z"}
+{"message":"2026-02-03 23:27:18,479 - aiogram.event - INFO - Update id=625578348 is handled. Duration 206 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T23:27:20.553556910Z"}
+{"message":"2026-02-03 23:30:19,349 - aiogram.event - INFO - Update id=625578349 is handled. Duration 194 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T23:30:20.732185143Z"}
+{"message":"2026-02-03 23:30:28,633 - aiogram.event - INFO - Update id=625578350 is handled. Duration 214 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T23:30:28.652172121Z"}
+{"message":"2026-02-03 23:30:38,609 - aiogram.event - INFO - Update id=625578351 is handled. Duration 192 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T23:30:38.614038125Z"}
+{"message":"2026-02-03 23:30:42,160 - aiogram.event - INFO - Update id=625578352 is handled. Duration 573 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T23:30:42.168578090Z"}
+{"message":"2026-02-03 23:31:01,299 - aiogram.event - INFO - Update id=625578353 is handled. Duration 194 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T23:31:02.173160467Z"}
+{"message":"2026-02-03 23:31:10,171 - aiogram.event - INFO - Update id=625578354 is handled. Duration 196 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T23:31:10.172699549Z"}
+{"message":"2026-02-03 23:31:16,257 - aiogram.event - INFO - Update id=625578355 is handled. Duration 179 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T23:31:16.263137199Z"}
+{"message":"2026-02-03 23:31:19,626 - aiogram.event - INFO - Update id=625578356 is handled. Duration 353 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T23:31:19.669117905Z"}
+{"message":"2026-02-03 23:31:24,546 - aiogram.event - INFO - Update id=625578357 is handled. Duration 197 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T23:31:24.550788352Z"}
+{"message":"2026-02-03 23:31:26,780 - aiogram.event - INFO - Update id=625578358 is handled. Duration 185 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T23:31:26.781553385Z"}
+{"message":"2026-02-03 23:31:32,023 - aiogram.event - INFO - Update id=625578359 is handled. Duration 194 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T23:31:32.025159618Z"}
+{"message":"2026-02-03 23:31:35,131 - src.bot.handlers.supervisor - INFO - Starting notification process. send_option=all","attributes":{"level":"info"},"timestamp":"2026-02-03T23:31:35.134528507Z"}
+{"message":"2026-02-03 23:31:35,136 - src.bot.handlers.supervisor - INFO - Total users in database: 3","attributes":{"level":"info"},"timestamp":"2026-02-03T23:31:35.138293861Z"}
+{"message":"2026-02-03 23:31:35,136 - src.bot.handlers.supervisor - INFO -   User 2: role=UserRole.SUPER_ADMIN, telegram_id=8539068656, team_id=None","attributes":{"level":"info"},"timestamp":"2026-02-03T23:31:35.138297881Z"}
+{"message":"2026-02-03 23:31:35,136 - src.bot.handlers.supervisor - INFO -   User 1: role=UserRole.SUBCONTRACTOR, telegram_id=8435563121, team_id=2","attributes":{"level":"info"},"timestamp":"2026-02-03T23:31:35.138301051Z"}
+{"message":"2026-02-03 23:31:35,136 - src.bot.handlers.supervisor - INFO -   User 3: role=UserRole.SUPERVISOR, telegram_id=7199141799, team_id=None","attributes":{"level":"info"},"timestamp":"2026-02-03T23:31:35.138304251Z"}
+{"message":"2026-02-03 23:31:35,136 - src.bot.handlers.supervisor - INFO - Querying for ALL subcontractors (bot-wide)","attributes":{"level":"info"},"timestamp":"2026-02-03T23:31:35.138306861Z"}
+{"message":"2026-02-03 23:31:35,139 - src.bot.handlers.supervisor - INFO - === JOB NOTIFICATION START ===","attributes":{"level":"info"},"timestamp":"2026-02-03T23:31:35.143012323Z"}
+{"message":"2026-02-03 23:31:35,139 - src.bot.handlers.supervisor - INFO - Job ID: 1, Title: Ffjsjdjd","attributes":{"level":"info"},"timestamp":"2026-02-03T23:31:35.143017633Z"}
+{"message":"2026-02-03 23:31:35,139 - src.bot.handlers.supervisor - INFO - Send option: all","attributes":{"level":"info"},"timestamp":"2026-02-03T23:31:35.143020493Z"}
+{"message":"2026-02-03 23:31:35,139 - src.bot.handlers.supervisor - INFO - Found 1 subcontractors to notify","attributes":{"level":"info"},"timestamp":"2026-02-03T23:31:35.143022923Z"}
+{"message":"2026-02-03 23:31:35,139 - src.bot.handlers.supervisor - ERROR - CRITICAL: Bot instance is None, cannot send notifications!","attributes":{"level":"info"},"timestamp":"2026-02-03T23:31:35.143025523Z"}
+{"message":"2026-02-03 23:31:35,139 - src.bot.handlers.supervisor - INFO - [NOTIFY] Sending to subcontractor id=1, telegram_id=8435563121, name=Centurion","attributes":{"level":"info"},"timestamp":"2026-02-03T23:31:35.143027693Z"}
+{"message":"2026-02-03 23:31:35,139 - src.bot.handlers.supervisor - ERROR - [NOTIFY FAILED] subcontractor telegram_id=8435563121: 'NoneType' object has no attribute 'send_message'","attributes":{"level":"info"},"timestamp":"2026-02-03T23:31:35.143029963Z"}
+{"message":"Traceback (most recent call last):","attributes":{"level":"info"},"timestamp":"2026-02-03T23:31:35.143032353Z"}
+{"message":"  File \"/app/src/bot/handlers/supervisor.py\", line 345, in process_team_send","attributes":{"level":"info"},"timestamp":"2026-02-03T23:31:35.143035263Z"}
+{"message":"    await bot.send_message(","attributes":{"level":"info"},"timestamp":"2026-02-03T23:31:35.143039213Z"}
+{"message":"          ^^^^^^^^^^^^^^^^","attributes":{"level":"info"},"timestamp":"2026-02-03T23:31:35.143042213Z"}
+{"message":"AttributeError: 'NoneType' object has no attribute 'send_message'","attributes":{"level":"info"},"timestamp":"2026-02-03T23:31:35.143044703Z"}
+{"message":"2026-02-03 23:31:35,140 - src.bot.handlers.supervisor - INFO - === JOB NOTIFICATION COMPLETE ===","attributes":{"level":"info"},"timestamp":"2026-02-03T23:31:35.143047143Z"}
+{"message":"2026-02-03 23:31:35,140 - src.bot.handlers.supervisor - INFO - Total: 1, Success: 0, Failed: 1","attributes":{"level":"info"},"timestamp":"2026-02-03T23:31:35.143049733Z"}
+{"message":"2026-02-03 23:31:35,144 - src.bot.handlers.supervisor - ERROR - Failed to notify management user 8539068656: 'NoneType' object has no attribute 'send_message'","attributes":{"level":"info"},"timestamp":"2026-02-03T23:31:35.146624860Z"}
+{"message":"2026-02-03 23:31:35,523 - aiogram.event - INFO - Update id=625578360 is handled. Duration 420 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T23:31:35.528069296Z"}
+{"message":"2026-02-03 23:32:29,568 - aiogram.event - INFO - Update id=625578361 is handled. Duration 408 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T23:32:35.581849420Z"}
+{"message":"2026-02-03 23:32:34,724 - aiogram.event - INFO - Update id=625578362 is handled. Duration 368 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T23:32:35.581854820Z"}
+{"message":"2026-02-03 23:32:40,476 - src.bot.handlers.subcontractor - ERROR - Bot instance is None, cannot notify supervisor","attributes":{"level":"info"},"timestamp":"2026-02-03T23:32:40.477444390Z"}
+{"message":"2026-02-03 23:32:40,476 - aiogram.event - INFO - Update id=625578363 is handled. Duration 264 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T23:32:40.477449850Z"}
+{"message":"2026-02-03 23:32:59,826 - aiogram.event - INFO - Update id=625578364 is handled. Duration 201 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T23:33:00.474907956Z"}
+{"message":"2026-02-03 23:33:02,669 - aiogram.event - INFO - Update id=625578365 is handled. Duration 202 ms by bot id=8282935648","attributes":{"level":"info"},"timestamp":"2026-02-03T23:33:02.670999019Z"}
+{"message":"2026-02-03 23:33:10,348 - aiogram.event - INFO - Update id=625578366 is handled. Duration 357 ms by bot id=8282935648",

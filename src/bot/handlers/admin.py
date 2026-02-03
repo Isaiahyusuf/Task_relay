@@ -959,10 +959,6 @@ async def handle_super_admin_switch(callback: CallbackQuery):
             
             # For subcontractor, ask for team selection first
             if role_str == "subcontractor":
-                from aiogram.fsm.context import FSMContext
-                from aiogram import Bot
-                # Get state from dispatcher
-                import src.bot.main as main_module
                 
                 # Store the pending role change and ask for team
                 kb = InlineKeyboardBuilder()

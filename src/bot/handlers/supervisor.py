@@ -330,12 +330,9 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
                 if len(available_subs) == 0:
                     logger.warning("NO SUBCONTRACTORS FOUND! Check if any users have role=SUBCONTRACTOR in the database.")
                 
-                import src.bot.main as main_module
-                bot = main_module.bot
-                if not bot:
-                    logger.error("CRITICAL: Bot instance is None, cannot send notifications!")
-                else:
-                    logger.info(f"Bot instance OK: {bot}")
+                # Use callback.bot - the correct aiogram 3.x way to get the bot instance
+                bot = callback.bot
+                logger.info(f"Bot instance from callback: {bot}")
                 
                 notified_count = 0
                 failed_count = 0
@@ -655,8 +652,7 @@ async def view_submission(callback: CallbackQuery):
         return
     
     if job.photos:
-        import src.bot.main as main_module
-        bot = main_module.bot
+        bot = callback.bot
         photo_ids = job.photos.split(",")
         
         try:
@@ -766,8 +762,7 @@ async def process_rating_comment(message: Message, state: FSMContext):
     
     # Notify subcontractor of the rating
     if subcontractor_tg_id:
-        import src.bot.main as main_module
-        bot = main_module.bot
+        bot = message.bot
         if bot:
             try:
                 stars = "⭐" * rating
