@@ -284,6 +284,15 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
                 from sqlalchemy import or_
                 
                 if send_option == "all":
+                    # First, check total subcontractors for debugging
+                    all_subs_result = await session.execute(
+                        select(User).where(User.role == UserRole.SUBCONTRACTOR)
+                    )
+                    all_subs = list(all_subs_result.scalars().all())
+                    logger.info(f"Total subcontractors in DB: {len(all_subs)}")
+                    for s in all_subs:
+                        logger.info(f"  Sub {s.id}: is_active={s.is_active}, availability={s.availability_status}")
+                    
                     # All available subcontractors (AVAILABLE or NULL status, is_active True or NULL)
                     result = await session.execute(
                         select(User).where(
