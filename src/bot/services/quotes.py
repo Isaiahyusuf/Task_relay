@@ -78,9 +78,13 @@ class QuoteService:
             return list(result.all())
     
     @staticmethod
-    async def accept_quote(quote_id: int, supervisor_telegram_id: int) -> tuple[bool, str, int]:
+    async def accept_quote(quote_id: int, supervisor_telegram_id: int) -> tuple[bool, str, int, int, str, str]:
+        """
+        Accept a quote and assign job to subcontractor.
+        Returns: (success, message, subcontractor_telegram_id, job_id, job_title, quote_amount)
+        """
         if not async_session:
-            return False, "Database not available", 0
+            return False, "Database not available", 0, 0, "", ""
         
         async with async_session() as session:
             quote_result = await session.execute(
@@ -89,19 +93,19 @@ class QuoteService:
             quote = quote_result.scalar_one_or_none()
             
             if not quote:
-                return False, "Quote not found", 0
+                return False, "Quote not found", 0, 0, "", ""
             
             job_result = await session.execute(select(Job).where(Job.id == quote.job_id))
             job = job_result.scalar_one_or_none()
             
             if not job:
-                return False, "Job not found", 0
+                return False, "Job not found", 0, 0, "", ""
             
             if job.status == JobStatus.ARCHIVED:
-                return False, "Cannot modify archived job", 0
+                return False, "Cannot modify archived job", 0, 0, "", ""
             
             if job.status not in [JobStatus.SENT]:
-                return False, f"Job is not accepting quotes (status: {job.status.value})", 0
+                return False, f"Job is not accepting quotes (status: {job.status.value})", 0, 0, "", ""
             
             sup_result = await session.execute(
                 select(User).where(User.telegram_id == supervisor_telegram_id)
@@ -109,7 +113,14 @@ class QuoteService:
             supervisor = sup_result.scalar_one_or_none()
             
             if not supervisor or job.supervisor_id != supervisor.id:
-                return False, "You don't have permission to accept quotes for this job", 0
+                return False, "You don't have permission to accept quotes for this job", 0, 0, "", ""
+            
+            # Get subcontractor telegram_id
+            sub_result = await session.execute(
+                select(User).where(User.id == quote.subcontractor_id)
+            )
+            subcontractor = sub_result.scalar_one_or_none()
+            sub_telegram_id = subcontractor.telegram_id if subcontractor else 0
             
             quote.is_accepted = True
             job.status = JobStatus.ACCEPTED
@@ -119,7 +130,7 @@ class QuoteService:
             
             await session.commit()
             
-            return True, f"Quote accepted! Job assigned to subcontractor.", quote.subcontractor_id
+            return True, f"Quote accepted! Job assigned to subcontractor.", sub_telegram_id, job.id, job.title, quote.amount
     
     @staticmethod
     async def get_other_quote_subcontractors(job_id: int, accepted_subcontractor_id: int) -> list[int]:

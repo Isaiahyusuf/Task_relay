@@ -606,16 +606,34 @@ async def view_quote_detail(callback: CallbackQuery):
 async def accept_quote(callback: CallbackQuery):
     quote_id = int(callback.data.split(":")[1])
     
-    success, msg, sub_id = await QuoteService.accept_quote(quote_id, callback.from_user.id)
+    success, msg, sub_telegram_id, job_id, job_title, quote_amount = await QuoteService.accept_quote(quote_id, callback.from_user.id)
     
     if success:
         await callback.message.edit_text(
             f"*Quote Accepted!*\n\n"
-            f"{msg}\n\n"
+            f"Job #{job_id}: {job_title}\n"
+            f"Accepted Quote: *{quote_amount}*\n\n"
             "The winning subcontractor has been notified.",
             parse_mode="Markdown"
         )
         await callback.answer("Quote accepted!")
+        
+        # Notify the winning subcontractor
+        if sub_telegram_id:
+            bot = callback.bot
+            if bot:
+                try:
+                    await bot.send_message(
+                        sub_telegram_id,
+                        f"🎉 *Your Quote Was Accepted!*\n\n"
+                        f"Job #{job_id}: {job_title}\n"
+                        f"Your Quote: *{quote_amount}*\n\n"
+                        f"Congratulations! The job is now assigned to you.\n"
+                        f"Check 'My Active Jobs' to start working on it.",
+                        parse_mode="Markdown"
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to notify subcontractor {sub_telegram_id} of quote acceptance: {e}")
     else:
         await callback.answer(msg, show_alert=True)
 
