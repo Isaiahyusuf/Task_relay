@@ -142,6 +142,7 @@ def get_supervisor_job_actions_keyboard(job_id: int, job_status: str, job_type: 
     if job_status == "SUBMITTED":
         buttons.append([InlineKeyboardButton(text="📸 View Submission", callback_data=f"view_submission:{job_id}")])
         buttons.append([InlineKeyboardButton(text="✔️ Mark Complete", callback_data=f"sup_complete:{job_id}")])
+        buttons.append([InlineKeyboardButton(text="❌ Not Satisfied", callback_data=f"sup_not_satisfied:{job_id}")])
     
     back_callback = "back:history" if is_admin else "back:sup"
     buttons.append([InlineKeyboardButton(text="⬅️ Back", callback_data=back_callback)])

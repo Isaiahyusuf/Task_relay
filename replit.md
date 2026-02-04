@@ -162,6 +162,7 @@ When supervisors create jobs, they can choose:
 - Supervisors with active jobs are automatically notified
 
 ## Recent Changes
+- 2026-02-04: Added "Not Satisfied" button for supervisors to request revision with feedback
 - 2026-02-04: Added weekly availability survey system (automatic Saturday surveys)
 - 2026-02-04: Added job deadlines with 24-hour reminder notifications
 - 2026-02-04: Supervisors can attach photos when creating jobs

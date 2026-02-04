@@ -40,6 +40,9 @@ class RatingStates(StatesGroup):
 class DeclineQuoteStates(StatesGroup):
     waiting_for_reason = State()
 
+class NotSatisfiedStates(StatesGroup):
+    waiting_for_reason = State()
+
 @router.message(Command("newjob"))
 @require_role(UserRole.SUPERVISOR)
 async def cmd_new_job(message: Message, state: FSMContext):
@@ -999,3 +1002,80 @@ async def handle_supervisor_pagination(callback: CallbackQuery):
         reply_markup=get_job_list_keyboard(jobs, page=page, context="sup")
     )
     await callback.answer()
+
+# ============= NOT SATISFIED FLOW =============
+
+@router.callback_query(F.data.startswith("sup_not_satisfied:"))
+async def supervisor_not_satisfied(callback: CallbackQuery, state: FSMContext):
+    job_id = int(callback.data.split(":")[1])
+    
+    job = await JobService.get_job_by_id(job_id)
+    if not job:
+        await callback.answer("Job not found", show_alert=True)
+        return
+    
+    await state.update_data(not_satisfied_job_id=job_id)
+    await state.set_state(NotSatisfiedStates.waiting_for_reason)
+    
+    await callback.message.edit_text(
+        f"*Not Satisfied with Job #{job_id}*\n\n"
+        f"Job: {job.title}\n\n"
+        "Please explain why you are not satisfied with this work.\n"
+        "This feedback will be sent to the subcontractor:",
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+@router.message(StateFilter(NotSatisfiedStates.waiting_for_reason))
+async def process_not_satisfied_reason(message: Message, state: FSMContext):
+    data = await state.get_data()
+    job_id = data.get('not_satisfied_job_id')
+    reason = message.text.strip()
+    
+    if not reason:
+        await message.answer("Please provide a reason for your dissatisfaction:")
+        return
+    
+    async with async_session() as session:
+        # Get job details
+        result = await session.execute(select(Job).where(Job.id == job_id))
+        job = result.scalar_one_or_none()
+        
+        if not job:
+            await message.answer("Job not found.")
+            await state.clear()
+            return
+        
+        # Get subcontractor
+        sub_result = await session.execute(
+            select(User).where(User.id == job.subcontractor_id)
+        )
+        subcontractor = sub_result.scalar_one_or_none()
+        
+        # Update job status back to IN_PROGRESS so subcontractor can resubmit
+        job.status = JobStatus.IN_PROGRESS
+        job.notes = f"Revision requested: {reason}"
+        await session.commit()
+        
+        # Notify subcontractor
+        if subcontractor:
+            try:
+                bot = message.bot
+                await bot.send_message(
+                    subcontractor.telegram_id,
+                    f"⚠️ *Revision Requested*\n\n"
+                    f"Job #{job_id}: {job.title}\n\n"
+                    f"*Supervisor Feedback:*\n{reason}\n\n"
+                    "Please address the issues and resubmit your work.",
+                    parse_mode="Markdown"
+                )
+            except Exception as e:
+                logger.error(f"Failed to notify subcontractor: {e}")
+    
+    await message.answer(
+        f"*Feedback Sent*\n\n"
+        f"Job #{job_id} has been sent back to the subcontractor for revision.\n\n"
+        f"Your feedback:\n_{reason}_",
+        parse_mode="Markdown"
+    )
+    await state.clear()
