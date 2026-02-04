@@ -855,8 +855,17 @@ async def process_unavailability_dates(message: Message, state: FSMContext):
         
         from src.bot.utils.keyboards import get_unavailability_response_keyboard
         
+        # Build dates text once
+        dates_text = ""
+        if start_date and end_date:
+            dates_text = f"\nDates: {start_date.strftime('%d/%m/%Y')} - {end_date.strftime('%d/%m/%Y')}"
+        elif start_date:
+            dates_text = f"\nDate: {start_date.strftime('%d/%m/%Y')}"
+        
+        notified_users = []
+        
         if job_id:
-            # Specific job unavailability
+            # Specific job unavailability - notify job's supervisor
             job = await JobService.get_job(job_id)
             if job:
                 sup_result = await session.execute(
@@ -866,12 +875,6 @@ async def process_unavailability_dates(message: Message, state: FSMContext):
                 
                 if supervisor and bot:
                     try:
-                        dates_text = ""
-                        if start_date and end_date:
-                            dates_text = f"\nDates: {start_date.strftime('%d/%m/%Y')} - {end_date.strftime('%d/%m/%Y')}"
-                        elif start_date:
-                            dates_text = f"\nDate: {start_date.strftime('%d/%m/%Y')}"
-                        
                         await bot.send_message(
                             supervisor.telegram_id,
                             f"⚠️ *Unavailability Notice*\n\n"
@@ -881,7 +884,7 @@ async def process_unavailability_dates(message: Message, state: FSMContext):
                             reply_markup=get_unavailability_response_keyboard(notice.id, sub.id),
                             parse_mode="Markdown"
                         )
-                        notified_supervisors.append(supervisor.id)
+                        notified_users.append(supervisor.id)
                     except Exception as e:
                         logger.error(f"Failed to notify supervisor: {e}")
         else:
@@ -900,12 +903,6 @@ async def process_unavailability_dates(message: Message, state: FSMContext):
                 
                 if supervisor and bot:
                     try:
-                        dates_text = ""
-                        if start_date and end_date:
-                            dates_text = f"\nDates: {start_date.strftime('%d/%m/%Y')} - {end_date.strftime('%d/%m/%Y')}"
-                        elif start_date:
-                            dates_text = f"\nDate: {start_date.strftime('%d/%m/%Y')}"
-                        
                         await bot.send_message(
                             supervisor.telegram_id,
                             f"⚠️ *Unavailability Notice*\n\n"
@@ -914,18 +911,47 @@ async def process_unavailability_dates(message: Message, state: FSMContext):
                             reply_markup=get_unavailability_response_keyboard(notice.id, sub.id),
                             parse_mode="Markdown"
                         )
-                        notified_supervisors.append(supervisor.id)
+                        notified_users.append(supervisor.id)
                     except Exception as e:
                         logger.error(f"Failed to notify supervisor: {e}")
         
-        # Update the notice with notified supervisors
-        notice.notified_supervisor_ids = ",".join(map(str, notified_supervisors))
+        # Also notify all admins and super admins
+        admin_result = await session.execute(
+            select(User).where(User.role.in_([UserRole.ADMIN, UserRole.SUPER_ADMIN]))
+        )
+        admins = admin_result.scalars().all()
+        
+        for admin in admins:
+            if admin.id in notified_users:
+                continue  # Don't notify twice if admin is also the supervisor
+            try:
+                job_info = ""
+                if job_id:
+                    job = await JobService.get_job(job_id)
+                    if job:
+                        job_info = f"Job #{job.id}: {job.title}\n"
+                
+                await bot.send_message(
+                    admin.telegram_id,
+                    f"⚠️ *Unavailability Notice*\n\n"
+                    f"*{sub_name}* has reported {'job-specific' if job_id else 'general'} unavailability.\n\n"
+                    f"{job_info}"
+                    f"Reason: {reason}{dates_text}",
+                    reply_markup=get_unavailability_response_keyboard(notice.id, sub.id),
+                    parse_mode="Markdown"
+                )
+                notified_users.append(admin.id)
+            except Exception as e:
+                logger.error(f"Failed to notify admin {admin.telegram_id}: {e}")
+        
+        # Update the notice with notified users
+        notice.notified_supervisor_ids = ",".join(map(str, notified_users))
         await session.commit()
     
-    if notified_supervisors:
+    if notified_users:
         await message.answer(
             f"✅ *Unavailability Reported*\n\n"
-            f"Your supervisors have been notified ({len(notified_supervisors)} supervisor(s)).\n\n"
+            f"Supervisors and admins have been notified ({len(notified_users)} user(s)).\n\n"
             f"Reason: {reason}",
             parse_mode="Markdown"
         )
@@ -933,7 +959,7 @@ async def process_unavailability_dates(message: Message, state: FSMContext):
         await message.answer(
             f"✅ *Unavailability Reported*\n\n"
             f"Your unavailability has been recorded.\n"
-            f"(No active supervisors to notify)",
+            f"(No supervisors or admins to notify)",
             parse_mode="Markdown"
         )
     
