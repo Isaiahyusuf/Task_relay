@@ -154,6 +154,86 @@ async def run_migration():
             print("Added decline_reason column to quotes table")
         except Exception as e:
             print(f"decline_reason column may already exist: {e}")
+        
+        # Add supervisor_photos column to jobs table
+        try:
+            await conn.execute(text(
+                "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS supervisor_photos TEXT"
+            ))
+            print("Added supervisor_photos column to jobs table")
+        except Exception as e:
+            print(f"supervisor_photos column may already exist: {e}")
+        
+        # Add deadline column to jobs table
+        try:
+            await conn.execute(text(
+                "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS deadline TIMESTAMP"
+            ))
+            print("Added deadline column to jobs table")
+        except Exception as e:
+            print(f"deadline column may already exist: {e}")
+        
+        # Add deadline_reminder_sent column to jobs table
+        try:
+            await conn.execute(text(
+                "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS deadline_reminder_sent BOOLEAN DEFAULT FALSE"
+            ))
+            print("Added deadline_reminder_sent column to jobs table")
+        except Exception as e:
+            print(f"deadline_reminder_sent column may already exist: {e}")
+        
+        # Create weekly_availability table
+        try:
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS weekly_availability (
+                    id SERIAL PRIMARY KEY,
+                    subcontractor_id INTEGER REFERENCES users(id),
+                    week_start TIMESTAMP NOT NULL,
+                    wednesday_available BOOLEAN,
+                    thursday_available BOOLEAN,
+                    notes TEXT,
+                    responded_at TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            print("Created weekly_availability table")
+        except Exception as e:
+            print(f"weekly_availability table may already exist: {e}")
+        
+        # Create unavailability_notices table
+        try:
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS unavailability_notices (
+                    id SERIAL PRIMARY KEY,
+                    subcontractor_id INTEGER REFERENCES users(id),
+                    job_id INTEGER REFERENCES jobs(id),
+                    reason TEXT NOT NULL,
+                    start_date TIMESTAMP,
+                    end_date TIMESTAMP,
+                    notified_supervisor_ids TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            print("Created unavailability_notices table")
+        except Exception as e:
+            print(f"unavailability_notices table may already exist: {e}")
+        
+        # Create broadcast_messages table
+        try:
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS broadcast_messages (
+                    id SERIAL PRIMARY KEY,
+                    sender_id INTEGER REFERENCES users(id),
+                    message TEXT NOT NULL,
+                    target_role VARCHAR(50),
+                    target_team_id INTEGER REFERENCES teams(id),
+                    recipient_ids TEXT,
+                    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            print("Created broadcast_messages table")
+        except Exception as e:
+            print(f"broadcast_messages table may already exist: {e}")
     
     await engine.dispose()
     print("Migration completed!")

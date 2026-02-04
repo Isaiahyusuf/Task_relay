@@ -99,8 +99,12 @@ class Job(Base):
     accepted_quote_id = Column(Integer, ForeignKey("quotes.id"), nullable=True)
     
     photos = Column(Text, nullable=True)
+    supervisor_photos = Column(Text, nullable=True)  # Photos attached by supervisor when creating job
     decline_reason = Column(Text, nullable=True)
     company_name = Column(String(200), nullable=True)
+    
+    deadline = Column(DateTime, nullable=True)  # Job deadline
+    deadline_reminder_sent = Column(Boolean, default=False)  # If deadline reminder was sent
     
     rating = Column(Integer, nullable=True)
     rating_comment = Column(Text, nullable=True)
@@ -137,3 +141,46 @@ class Quote(Base):
     
     job = relationship("Job", back_populates="quotes", foreign_keys=[job_id])
     subcontractor = relationship("User", back_populates="quotes")
+
+class WeeklyAvailability(Base):
+    __tablename__ = "weekly_availability"
+    
+    id = Column(Integer, primary_key=True)
+    subcontractor_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    week_start = Column(DateTime, nullable=False)  # Monday of the week being asked about
+    wednesday_available = Column(Boolean, nullable=True)
+    thursday_available = Column(Boolean, nullable=True)
+    notes = Column(Text, nullable=True)
+    responded_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    subcontractor = relationship("User")
+
+class UnavailabilityNotice(Base):
+    __tablename__ = "unavailability_notices"
+    
+    id = Column(Integer, primary_key=True)
+    subcontractor_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    job_id = Column(Integer, ForeignKey("jobs.id"), nullable=True)
+    reason = Column(Text, nullable=False)
+    start_date = Column(DateTime, nullable=True)
+    end_date = Column(DateTime, nullable=True)
+    notified_supervisor_ids = Column(Text, nullable=True)  # Comma-separated supervisor IDs
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    subcontractor = relationship("User")
+    job = relationship("Job")
+
+class BroadcastMessage(Base):
+    __tablename__ = "broadcast_messages"
+    
+    id = Column(Integer, primary_key=True)
+    sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    message = Column(Text, nullable=False)
+    target_role = Column(String(50), nullable=True)  # null = all, or specific role
+    target_team_id = Column(Integer, ForeignKey("teams.id"), nullable=True)
+    recipient_ids = Column(Text, nullable=True)  # Comma-separated for selected users
+    sent_at = Column(DateTime, default=datetime.utcnow)
+    
+    sender = relationship("User")
+    target_team = relationship("Team")

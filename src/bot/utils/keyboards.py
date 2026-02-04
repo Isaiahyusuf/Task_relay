@@ -5,6 +5,8 @@ def get_main_menu_keyboard(role: UserRole) -> ReplyKeyboardMarkup:
     if role == UserRole.SUPER_ADMIN:
         buttons = [
             [KeyboardButton(text="📊 Job History"), KeyboardButton(text="📦 Archive Jobs")],
+            [KeyboardButton(text="➕ New Job"), KeyboardButton(text="📨 Send Message")],
+            [KeyboardButton(text="📅 Weekly Availability")],
             [KeyboardButton(text="🔑 All Access Codes")],
             [KeyboardButton(text="👑 Create Admin Code"), KeyboardButton(text="👔 Create Supervisor Code")],
             [KeyboardButton(text="🔧 Create Subcontractor Code")],
@@ -17,6 +19,8 @@ def get_main_menu_keyboard(role: UserRole) -> ReplyKeyboardMarkup:
     elif role == UserRole.ADMIN:
         buttons = [
             [KeyboardButton(text="📊 Job History"), KeyboardButton(text="📦 Archive Jobs")],
+            [KeyboardButton(text="➕ New Job"), KeyboardButton(text="📨 Send Message")],
+            [KeyboardButton(text="📅 Weekly Availability")],
             [KeyboardButton(text="🔑 Create Access Code"), KeyboardButton(text="📋 View Archived")],
             [KeyboardButton(text="🏢 View By Teams"), KeyboardButton(text="👥 Manage Users")],
             [KeyboardButton(text="🔄 Switch Role")],
@@ -35,6 +39,7 @@ def get_main_menu_keyboard(role: UserRole) -> ReplyKeyboardMarkup:
         buttons = [
             [KeyboardButton(text="📋 Available Jobs"), KeyboardButton(text="🔄 My Active Jobs")],
             [KeyboardButton(text="📤 Submit Job")],
+            [KeyboardButton(text="⚠️ Report Unavailability")],
             [KeyboardButton(text="🟢 Available"), KeyboardButton(text="🟡 Busy"), KeyboardButton(text="🔴 Away")],
             [KeyboardButton(text="ℹ️ Help"), KeyboardButton(text="📘 About")],
             [KeyboardButton(text="🗑️ Delete My Account")]
@@ -318,4 +323,65 @@ def get_availability_keyboard() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="🟢 Available", callback_data="avail:available")],
         [InlineKeyboardButton(text="🟡 Busy", callback_data="avail:busy")],
         [InlineKeyboardButton(text="🔴 Away", callback_data="avail:away")]
+    ])
+
+def get_weekly_availability_keyboard(week_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✅ Both Days Available", callback_data=f"weekly_avail:{week_id}:both")],
+        [InlineKeyboardButton(text="📅 Wednesday Only", callback_data=f"weekly_avail:{week_id}:wed")],
+        [InlineKeyboardButton(text="📅 Thursday Only", callback_data=f"weekly_avail:{week_id}:thu")],
+        [InlineKeyboardButton(text="❌ Neither Day", callback_data=f"weekly_avail:{week_id}:none")],
+        [InlineKeyboardButton(text="📝 Add Notes", callback_data=f"weekly_avail:{week_id}:notes")]
+    ])
+
+def get_message_target_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📢 All Subcontractors", callback_data="msg_target:all_subs")],
+        [InlineKeyboardButton(text="🏢 North/West Team", callback_data="msg_target:northwest")],
+        [InlineKeyboardButton(text="🏢 South/East Team", callback_data="msg_target:southeast")],
+        [InlineKeyboardButton(text="👤 Select Specific Users", callback_data="msg_target:select")],
+        [InlineKeyboardButton(text="❌ Cancel", callback_data="msg_cancel")]
+    ])
+
+def get_subcontractor_select_keyboard(subcontractors: list, selected_ids: list = None) -> InlineKeyboardMarkup:
+    selected_ids = selected_ids or []
+    buttons = []
+    
+    for sub in subcontractors:
+        name = sub.first_name or sub.username or f"User {sub.telegram_id}"
+        check = "✅ " if sub.id in selected_ids else ""
+        buttons.append([InlineKeyboardButton(
+            text=f"{check}{name}",
+            callback_data=f"msg_select:{sub.id}"
+        )])
+    
+    buttons.append([InlineKeyboardButton(text="📤 Send Message", callback_data="msg_send")])
+    buttons.append([InlineKeyboardButton(text="❌ Cancel", callback_data="msg_cancel")])
+    
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+def get_unavailability_job_keyboard(jobs: list) -> InlineKeyboardMarkup:
+    buttons = []
+    
+    for job in jobs:
+        buttons.append([InlineKeyboardButton(
+            text=f"#{job.id}: {job.title[:30]}",
+            callback_data=f"unavail_job:{job.id}"
+        )])
+    
+    buttons.append([InlineKeyboardButton(text="🌐 General Unavailability", callback_data="unavail_job:general")])
+    buttons.append([InlineKeyboardButton(text="❌ Cancel", callback_data="unavail_cancel")])
+    
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+def get_skip_photos_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⏭️ Skip Photos", callback_data="skip:photos")],
+        [InlineKeyboardButton(text="❌ Cancel", callback_data="job_cancel")]
+    ])
+
+def get_skip_deadline_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⏭️ No Deadline", callback_data="skip:deadline")],
+        [InlineKeyboardButton(text="❌ Cancel", callback_data="job_cancel")]
     ])

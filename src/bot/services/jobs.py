@@ -15,7 +15,9 @@ class JobService:
         description: str = None,
         address: str = None,
         preset_price: str = None,
-        team_id: int = None
+        team_id: int = None,
+        supervisor_photos: str = None,
+        deadline: datetime = None
     ) -> Job | None:
         if not async_session:
             return None
@@ -29,6 +31,8 @@ class JobService:
                 preset_price=preset_price,
                 supervisor_id=supervisor_id,
                 team_id=team_id,
+                supervisor_photos=supervisor_photos,
+                deadline=deadline,
                 status=JobStatus.CREATED,
                 created_at=datetime.utcnow()
             )

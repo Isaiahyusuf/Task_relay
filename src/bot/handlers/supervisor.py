@@ -15,7 +15,7 @@ from src.bot.utils.keyboards import (
     get_job_type_keyboard, get_skip_keyboard,
     get_confirmation_keyboard, get_job_list_keyboard, get_main_menu_keyboard, 
     get_back_keyboard, get_supervisor_job_actions_keyboard, get_quotes_keyboard,
-    get_quote_detail_keyboard
+    get_quote_detail_keyboard, get_skip_photos_keyboard, get_skip_deadline_keyboard
 )
 import logging
 
@@ -28,6 +28,8 @@ class NewJobStates(StatesGroup):
     waiting_for_description = State()
     waiting_for_address = State()
     waiting_for_price = State()
+    waiting_for_photos = State()
+    waiting_for_deadline = State()
     waiting_for_subcontractor = State()
     confirming = State()
 
@@ -158,7 +160,7 @@ async def skip_address(callback: CallbackQuery, state: FSMContext):
     if data['job_type'] == JobType.PRESET_PRICE:
         await ask_for_price(callback.message, state, edit=True)
     else:
-        await show_team_selection(callback.message, state, callback.from_user.id, edit=True)
+        await ask_for_photos(callback.message, state, edit=True)
     await callback.answer()
 
 @router.message(StateFilter(NewJobStates.waiting_for_address))
@@ -184,7 +186,7 @@ async def process_job_address(message: Message, state: FSMContext):
     if job_type == JobType.PRESET_PRICE:
         await ask_for_price(message, state, edit=False)
     else:
-        await show_team_selection(message, state, message.from_user.id, edit=False)
+        await ask_for_photos(message, state, edit=False)
 
 async def ask_for_price(message: Message, state: FSMContext, edit: bool = False):
     text = (
@@ -208,7 +210,98 @@ async def process_job_price(message: Message, state: FSMContext):
         return
         
     await state.update_data(preset_price=message.text.strip())
-    await show_team_selection(message, state, message.from_user.id, edit=False)
+    await ask_for_photos(message, state, edit=False)
+
+async def ask_for_photos(message: Message, state: FSMContext, edit: bool = False):
+    text = (
+        "*Creating a New Job*\n\n"
+        "Step 5/7: Attach repair photos (optional)\n\n"
+        "Send photos of the repair work, or skip."
+    )
+    keyboard = get_skip_photos_keyboard()
+    await state.update_data(supervisor_photos=[])
+    
+    if edit:
+        await message.edit_text(text, reply_markup=keyboard, parse_mode="Markdown")
+    else:
+        await message.answer(text, reply_markup=keyboard, parse_mode="Markdown")
+    
+    await state.set_state(NewJobStates.waiting_for_photos)
+
+@router.callback_query(F.data == "skip:photos", StateFilter(NewJobStates.waiting_for_photos))
+async def skip_photos(callback: CallbackQuery, state: FSMContext):
+    await state.update_data(supervisor_photos=[])
+    await ask_for_deadline(callback.message, state, edit=True)
+    await callback.answer()
+
+@router.message(StateFilter(NewJobStates.waiting_for_photos))
+async def process_supervisor_photo(message: Message, state: FSMContext):
+    if message.text and message.text.startswith("/done"):
+        await ask_for_deadline(message, state, edit=False)
+        return
+    
+    if message.text and message.text.startswith("/"):
+        await message.answer("Job creation cancelled.")
+        await state.clear()
+        return
+    
+    if not message.photo:
+        await message.answer(
+            "Please send a photo, or use the Skip button.\n"
+            "Type /done when finished adding photos."
+        )
+        return
+    
+    photo = message.photo[-1]
+    data = await state.get_data()
+    photos = data.get('supervisor_photos', [])
+    photos.append(photo.file_id)
+    await state.update_data(supervisor_photos=photos)
+    
+    await message.answer(
+        f"Photo {len(photos)} added.\n\n"
+        f"Send more photos or type /done to continue."
+    )
+
+async def ask_for_deadline(message: Message, state: FSMContext, edit: bool = False):
+    text = (
+        "*Creating a New Job*\n\n"
+        "Step 6/7: Set a deadline (optional)\n\n"
+        "Enter deadline date in format: DD/MM/YYYY\n"
+        "Example: 15/02/2026"
+    )
+    keyboard = get_skip_deadline_keyboard()
+    
+    if edit:
+        await message.edit_text(text, reply_markup=keyboard, parse_mode="Markdown")
+    else:
+        await message.answer(text, reply_markup=keyboard, parse_mode="Markdown")
+    
+    await state.set_state(NewJobStates.waiting_for_deadline)
+
+@router.callback_query(F.data == "skip:deadline", StateFilter(NewJobStates.waiting_for_deadline))
+async def skip_deadline(callback: CallbackQuery, state: FSMContext):
+    await state.update_data(deadline=None)
+    await show_team_selection(callback.message, state, callback.from_user.id, edit=True)
+    await callback.answer()
+
+@router.message(StateFilter(NewJobStates.waiting_for_deadline))
+async def process_job_deadline(message: Message, state: FSMContext):
+    if message.text and message.text.startswith("/"):
+        await message.answer("Job creation cancelled.")
+        await state.clear()
+        return
+    
+    from datetime import datetime
+    try:
+        deadline = datetime.strptime(message.text.strip(), "%d/%m/%Y")
+        if deadline < datetime.now():
+            await message.answer("Deadline cannot be in the past. Please enter a future date (DD/MM/YYYY):")
+            return
+        await state.update_data(deadline=deadline)
+        await show_team_selection(message, state, message.from_user.id, edit=False)
+    except ValueError:
+        await message.answer("Invalid date format. Please use DD/MM/YYYY (e.g., 15/02/2026):")
 
 async def show_team_selection(message: Message, state: FSMContext, telegram_id: int, edit: bool = False):
     if not async_session:
@@ -253,6 +346,10 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     send_option = callback.data.split(":")[1]
     
+    # Prepare supervisor photos
+    sup_photos = data.get('supervisor_photos', [])
+    photos_str = ",".join(sup_photos) if sup_photos else None
+    
     job = await JobService.create_job(
         supervisor_id=data['supervisor_id'],
         title=data['title'],
@@ -260,7 +357,9 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
         description=data.get('description'),
         address=data.get('address'),
         preset_price=data.get('preset_price'),
-        team_id=data.get('team_id')
+        team_id=data.get('team_id'),
+        supervisor_photos=photos_str,
+        deadline=data.get('deadline')
     )
     
     if not job:
@@ -383,6 +482,10 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
 async def confirm_save_pending(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     
+    # Prepare supervisor photos
+    sup_photos = data.get('supervisor_photos', [])
+    photos_str = ",".join(sup_photos) if sup_photos else None
+    
     job = await JobService.create_job(
         supervisor_id=data['supervisor_id'],
         title=data['title'],
@@ -390,7 +493,9 @@ async def confirm_save_pending(callback: CallbackQuery, state: FSMContext):
         description=data.get('description'),
         address=data.get('address'),
         preset_price=data.get('preset_price'),
-        team_id=data.get('team_id')
+        team_id=data.get('team_id'),
+        supervisor_photos=photos_str,
+        deadline=data.get('deadline')
     )
     
     if job:
