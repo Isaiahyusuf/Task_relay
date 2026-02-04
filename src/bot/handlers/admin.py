@@ -6,7 +6,7 @@ from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKe
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy import select
 from src.bot.database import async_session, User, Job
-from src.bot.database.models import UserRole, JobStatus, JobType, TeamType, Team
+from src.bot.database.models import UserRole, JobStatus, JobType, TeamType, Team, BroadcastMessage
 from src.bot.services.jobs import JobService
 from src.bot.services.archive import ArchiveService
 from src.bot.services.access_codes import AccessCodeService
@@ -1555,12 +1555,20 @@ async def send_broadcast_message(message: Message, state: FSMContext):
             else:
                 recipients = []
         
+        # Determine team_id for storage
+        team_id = None
+        if target_type not in ["select", "all_subs"]:
+            try:
+                team_id = team.id if team else None
+            except:
+                team_id = None
+        
         # Save the broadcast message to database
         broadcast = BroadcastMessage(
             sender_id=sender.id if sender else None,
             message=message.text,
             target_role="SUBCONTRACTOR",
-            target_team_id=team.id if target_type not in ["select", "all_subs"] and 'team' in dir() else None,
+            target_team_id=team_id,
             recipient_ids=",".join(map(str, [r.id for r in recipients]))
         )
         session.add(broadcast)
