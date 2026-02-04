@@ -88,6 +88,8 @@ class AccessCodeService:
                 existing_user.is_active = True
                 existing_user.role = access_code.role
                 existing_user.team_id = access_code.team_id
+                existing_user.region_id = access_code.region_id
+                existing_user.custom_role_id = access_code.custom_role_id
                 existing_user.access_code_id = access_code.id
                 existing_user.username = username
                 existing_user.first_name = first_name
@@ -98,6 +100,8 @@ class AccessCodeService:
                     first_name=first_name,
                     role=access_code.role,
                     team_id=access_code.team_id,
+                    region_id=access_code.region_id,
+                    custom_role_id=access_code.custom_role_id,
                     access_code_id=access_code.id
                 )
                 session.add(user)
@@ -143,7 +147,14 @@ class AccessCodeService:
             await session.commit()
     
     @staticmethod
-    async def create_access_code(code: str, role: UserRole, team_id: int | None = None, max_uses: int = 1) -> bool:
+    async def create_access_code(
+        code: str, 
+        role: UserRole, 
+        team_id: int | None = None, 
+        region_id: int | None = None,
+        custom_role_id: int | None = None,
+        max_uses: int = 1
+    ) -> bool:
         if not async_session:
             return False
         
@@ -158,6 +169,8 @@ class AccessCodeService:
                 code=code,
                 role=role,
                 team_id=team_id,
+                region_id=region_id,
+                custom_role_id=custom_role_id,
                 max_uses=max_uses,
                 is_active=True
             )

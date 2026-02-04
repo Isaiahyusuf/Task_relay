@@ -29,6 +29,7 @@ class CreateCodeStates(StatesGroup):
     waiting_for_code = State()
     waiting_for_role = State()
     waiting_for_team = State()
+    waiting_for_region = State()
     confirming = State()
 
 class SwitchRoleStates(StatesGroup):
@@ -407,7 +408,7 @@ async def process_team_selection(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 async def create_code_with_team(callback: CallbackQuery, state: FSMContext, team_type: str = None):
-    from src.bot.database.models import TeamType, Team
+    from src.bot.database.models import TeamType, Team, Region
     
     data = await state.get_data()
     code = data.get('code')
@@ -428,19 +429,82 @@ async def create_code_with_team(callback: CallbackQuery, state: FSMContext, team
                 team_id = team.id
                 team_name = team.name
     
+    await state.update_data(team_id=team_id, team_name=team_name)
+    
+    # Check if there are any regions available
+    async with async_session() as session:
+        region_result = await session.execute(
+            select(Region).where(Region.is_active == True).order_by(Region.name)
+        )
+        regions = list(region_result.scalars().all())
+    
+    if regions:
+        # Show region selection
+        keyboard = InlineKeyboardBuilder()
+        for region in regions:
+            keyboard.row(InlineKeyboardButton(
+                text=f"🌍 {region.name}",
+                callback_data=f"code_region:{region.id}"
+            ))
+        keyboard.row(InlineKeyboardButton(text="⏭️ Skip (No Region)", callback_data="code_region:skip"))
+        keyboard.row(InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_code"))
+        
+        await callback.message.edit_text(
+            f"*Select Region (Optional)*\n\n"
+            f"Code: `{code}`\n"
+            f"Role: {role_str.title()}\n"
+            f"Team: {team_name or 'None'}\n\n"
+            "Select a region for this access code:",
+            reply_markup=keyboard.as_markup(),
+            parse_mode="Markdown"
+        )
+        await state.set_state(CreateCodeStates.waiting_for_region)
+    else:
+        # No regions, create code immediately
+        await finalize_code_creation(callback, state, region_id=None)
+
+@router.callback_query(F.data.startswith("code_region:"), StateFilter(CreateCodeStates.waiting_for_region))
+async def process_region_selection_for_code(callback: CallbackQuery, state: FSMContext):
+    region_value = callback.data.split(":")[1]
+    region_id = None if region_value == "skip" else int(region_value)
+    await finalize_code_creation(callback, state, region_id=region_id)
+    await callback.answer()
+
+async def finalize_code_creation(callback: CallbackQuery, state: FSMContext, region_id: int = None):
+    from src.bot.database.models import Region
+    
+    data = await state.get_data()
+    code = data.get('code')
+    role = data.get('role')
+    role_str = data.get('role_str')
+    team_id = data.get('team_id')
+    team_name = data.get('team_name')
+    
+    region_name = None
+    if region_id:
+        async with async_session() as session:
+            result = await session.execute(
+                select(Region).where(Region.id == region_id)
+            )
+            region = result.scalar_one_or_none()
+            if region:
+                region_name = region.name
+    
     success = await AccessCodeService.create_access_code(
         code=code,
         role=role,
-        team_id=team_id
+        team_id=team_id,
+        region_id=region_id
     )
     
     if success:
         team_info = f"Team: {team_name}\n" if team_name else ""
+        region_info = f"Region: {region_name}\n" if region_name else ""
         await callback.message.edit_text(
             f"*Access Code Created!*\n\n"
             f"Code: `{code}`\n"
             f"Role: {role_str.title()}\n"
-            f"{team_info}\n"
+            f"{team_info}{region_info}\n"
             "Share this code privately with the intended user.\n"
             "They can use it with /start to register.",
             parse_mode="Markdown"
