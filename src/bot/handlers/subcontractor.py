@@ -539,6 +539,40 @@ async def process_quote_notes(message: Message, state: FSMContext):
             "The supervisor will review your quote and notify you if accepted.",
             parse_mode="Markdown"
         )
+        
+        # Notify the supervisor who created the job
+        job = await JobService.get_job_by_id(job_id)
+        if job and job.supervisor_id:
+            async with async_session() as session:
+                # Get supervisor's telegram_id
+                sup_result = await session.execute(
+                    select(User).where(User.id == job.supervisor_id)
+                )
+                supervisor = sup_result.scalar_one_or_none()
+                
+                # Get subcontractor's name
+                sub_result = await session.execute(
+                    select(User).where(User.telegram_id == message.from_user.id)
+                )
+                subcontractor = sub_result.scalar_one_or_none()
+                sub_name = subcontractor.first_name or subcontractor.username or "A subcontractor" if subcontractor else "A subcontractor"
+                
+                if supervisor and supervisor.telegram_id:
+                    bot = message.bot
+                    if bot:
+                        try:
+                            notes_text = f"\nNotes: {notes}" if notes else ""
+                            await bot.send_message(
+                                supervisor.telegram_id,
+                                f"💰 *New Quote Received!*\n\n"
+                                f"Job #{job_id}: {job.title}\n"
+                                f"From: *{sub_name}*\n"
+                                f"Quote Amount: *{amount}*{notes_text}\n\n"
+                                f"Use 'View Quotes' to review all quotes for this job.",
+                                parse_mode="Markdown"
+                            )
+                        except Exception as e:
+                            logger.error(f"Failed to notify supervisor {supervisor.telegram_id} of quote: {e}")
     else:
         await message.answer(f"Error: {msg}")
     
