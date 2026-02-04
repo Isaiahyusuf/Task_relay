@@ -382,6 +382,12 @@ class JobService:
     
     @staticmethod
     async def get_pending_jobs_for_subcontractor(telegram_id: int) -> list:
+        """Get jobs available for a subcontractor to accept or quote on.
+        
+        Only shows jobs that are:
+        - Status is SENT (not yet accepted by anyone)
+        - Either unassigned (broadcast to all) or specifically assigned to this user
+        """
         if not async_session:
             return []
         
@@ -394,13 +400,15 @@ class JobService:
             if not user:
                 return []
             
+            # Only show jobs that are still in SENT status (not accepted, completed, etc.)
+            # AND either assigned to this user specifically or broadcast (NULL subcontractor_id)
             result = await session.execute(
                 select(Job).where(
+                    Job.status == JobStatus.SENT,
                     or_(
                         Job.subcontractor_id == user.id,
                         Job.subcontractor_id == None
-                    ),
-                    Job.status == JobStatus.SENT
+                    )
                 ).order_by(Job.created_at.desc())
             )
             return list(result.scalars().all())
