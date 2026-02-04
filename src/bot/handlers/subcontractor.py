@@ -112,7 +112,7 @@ async def btn_my_availability(message: Message):
         # Check for existing availability record this week
         avail_result = await session.execute(
             select(WeeklyAvailability).where(
-                WeeklyAvailability.user_id == user.id,
+                WeeklyAvailability.subcontractor_id == user.id,
                 WeeklyAvailability.week_start == week_start
             )
         )
@@ -121,7 +121,7 @@ async def btn_my_availability(message: Message):
         if not availability:
             # Create a new availability record for this week
             availability = WeeklyAvailability(
-                user_id=user.id,
+                subcontractor_id=user.id,
                 week_start=week_start,
                 monday_available=False,
                 tuesday_available=False,
