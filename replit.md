@@ -132,7 +132,43 @@ When supervisors create jobs, they can choose:
 - Average ratings displayed on subcontractor profiles and in the subcontractors list
 - Ratings show format: "★★★★☆ (4.2/5 from 8 jobs)"
 
+## Weekly Availability Survey
+- Scheduler sends availability survey to all subcontractors on Saturdays
+- Subcontractors report their Wednesday/Thursday availability for the following week
+- Admins can view availability summary via "Weekly Availability" menu
+- Admins receive automatic reports when responses are collected
+
+## Job Deadlines
+- Supervisors can set optional deadlines when creating jobs (DD/MM/YYYY format)
+- Scheduler sends reminder to subcontractor 24 hours before deadline
+- Deadline displayed on job details
+
+## Supervisor Job Photos
+- Supervisors can attach repair photos when creating jobs
+- Photos are sent to subcontractors when job is distributed
+- Supports multiple photos per job
+
+## Admin Features
+- Admins can create and post jobs (same flow as supervisors)
+- "Send Message" feature allows admins to message:
+  - All subcontractors
+  - Specific team (North/West or South/East)
+  - Select specific subcontractors
+
+## Subcontractor Unavailability
+- Subcontractors can report unavailability via "Report Unavailability" button
+- Can report for specific job or general unavailability
+- Includes reason and optional date range
+- Supervisors with active jobs are automatically notified
+
 ## Recent Changes
+- 2026-02-04: Added weekly availability survey system (automatic Saturday surveys)
+- 2026-02-04: Added job deadlines with 24-hour reminder notifications
+- 2026-02-04: Supervisors can attach photos when creating jobs
+- 2026-02-04: Admins can now create and post jobs
+- 2026-02-04: Added admin messaging to subcontractors (all/team/selected)
+- 2026-02-04: Subcontractors can report unavailability to supervisors
+- 2026-02-04: Added quote accept/decline workflow with notifications
 - 2026-01-30: Renamed teams to "North/West subcontractors" and "South/East subcontractors" (no emojis)
 - 2026-01-30: Added star rating system - supervisors rate subcontractors when marking jobs complete
 - 2026-01-30: Star ratings now displayed on subcontractor profiles and lists

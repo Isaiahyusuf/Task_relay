@@ -1,8 +1,8 @@
 import asyncio
 from datetime import datetime, timedelta
 from sqlalchemy import select, and_
-from src.bot.database import async_session, Job, User
-from src.bot.database.models import JobStatus
+from src.bot.database import async_session, Job, User, WeeklyAvailability
+from src.bot.database.models import JobStatus, UserRole
 from src.bot.config import config
 import logging
 
@@ -22,7 +22,9 @@ class SchedulerService:
             try:
                 await cls.check_reminders()
                 await cls.check_auto_close()
-                await asyncio.sleep(1800)
+                await cls.check_deadline_reminders()
+                await cls.check_weekly_availability_survey()
+                await asyncio.sleep(1800)  # Run every 30 minutes
             except asyncio.CancelledError:
                 logger.info("Scheduler cancelled")
                 break
@@ -110,3 +112,182 @@ class SchedulerService:
                     logger.error(f"Failed to auto-close job {job.id}: {e}")
             
             await session.commit()
+    
+    @classmethod
+    async def check_deadline_reminders(cls):
+        """Send reminders for jobs approaching their deadline (within 24 hours)"""
+        if not async_session or not cls.bot:
+            return
+        
+        reminder_window = datetime.utcnow() + timedelta(hours=24)
+        
+        async with async_session() as session:
+            # Find jobs with deadlines within the next 24 hours that haven't had a reminder
+            result = await session.execute(
+                select(Job, User).join(
+                    User, Job.subcontractor_id == User.id
+                ).where(
+                    and_(
+                        Job.status.in_([JobStatus.ACCEPTED, JobStatus.IN_PROGRESS]),
+                        Job.deadline != None,
+                        Job.deadline <= reminder_window,
+                        Job.deadline > datetime.utcnow(),
+                        Job.deadline_reminder_sent == False
+                    )
+                )
+            )
+            jobs_with_users = result.all()
+            
+            for job, user in jobs_with_users:
+                try:
+                    deadline_str = job.deadline.strftime("%d/%m/%Y") if job.deadline else "Unknown"
+                    await cls.bot.send_message(
+                        user.telegram_id,
+                        f"⏰ *Deadline Reminder*\n\n"
+                        f"Job #{job.id}: {job.title}\n"
+                        f"Deadline: *{deadline_str}*\n\n"
+                        f"This job is due soon. Please complete it on time.",
+                        parse_mode="Markdown"
+                    )
+                    
+                    job.deadline_reminder_sent = True
+                    logger.info(f"Sent deadline reminder for job {job.id} to user {user.telegram_id}")
+                except Exception as e:
+                    logger.error(f"Failed to send deadline reminder for job {job.id}: {e}")
+            
+            await session.commit()
+    
+    @classmethod
+    async def check_weekly_availability_survey(cls):
+        """Send weekly availability survey on Saturdays for the following Wed/Thu"""
+        if not async_session or not cls.bot:
+            return
+        
+        today = datetime.utcnow().date()
+        
+        # Only send on Saturdays (weekday 5)
+        if today.weekday() != 5:
+            return
+        
+        # Calculate next week's Monday
+        days_until_monday = 7 - today.weekday() + 0  # Next Monday
+        next_week_monday = datetime.combine(today + timedelta(days=days_until_monday), datetime.min.time())
+        
+        async with async_session() as session:
+            # Get all subcontractors
+            result = await session.execute(
+                select(User).where(User.role == UserRole.SUBCONTRACTOR)
+            )
+            subcontractors = result.scalars().all()
+            
+            for sub in subcontractors:
+                try:
+                    # Check if we already created a survey for this week
+                    existing = await session.execute(
+                        select(WeeklyAvailability).where(
+                            and_(
+                                WeeklyAvailability.subcontractor_id == sub.id,
+                                WeeklyAvailability.week_start == next_week_monday
+                            )
+                        )
+                    )
+                    if existing.scalar_one_or_none():
+                        continue
+                    
+                    # Create availability record
+                    availability = WeeklyAvailability(
+                        subcontractor_id=sub.id,
+                        week_start=next_week_monday,
+                        created_at=datetime.utcnow()
+                    )
+                    session.add(availability)
+                    await session.flush()
+                    
+                    # Send survey message
+                    from src.bot.utils.keyboards import get_weekly_availability_keyboard
+                    wed_date = (next_week_monday + timedelta(days=2)).strftime("%d/%m")
+                    thu_date = (next_week_monday + timedelta(days=3)).strftime("%d/%m")
+                    
+                    await cls.bot.send_message(
+                        sub.telegram_id,
+                        f"📅 *Weekly Availability Survey*\n\n"
+                        f"Please confirm your availability for next week:\n\n"
+                        f"*Wednesday {wed_date}*\n"
+                        f"*Thursday {thu_date}*",
+                        reply_markup=get_weekly_availability_keyboard(availability.id),
+                        parse_mode="Markdown"
+                    )
+                    
+                    logger.info(f"Sent weekly availability survey to user {sub.telegram_id}")
+                except Exception as e:
+                    logger.error(f"Failed to send weekly survey to user {sub.telegram_id}: {e}")
+            
+            await session.commit()
+    
+    @classmethod
+    async def notify_admins_of_availability(cls, week_start: datetime):
+        """Notify admins of subcontractor availability for the week"""
+        if not async_session or not cls.bot:
+            return
+        
+        async with async_session() as session:
+            # Get all availability responses for this week
+            result = await session.execute(
+                select(WeeklyAvailability, User).join(
+                    User, WeeklyAvailability.subcontractor_id == User.id
+                ).where(WeeklyAvailability.week_start == week_start)
+            )
+            responses = result.all()
+            
+            wed_available = []
+            thu_available = []
+            wed_unavailable = []
+            thu_unavailable = []
+            no_response = []
+            
+            for avail, user in responses:
+                name = user.first_name or user.username or f"User {user.telegram_id}"
+                if avail.responded_at is None:
+                    no_response.append(name)
+                    continue
+                if avail.wednesday_available:
+                    wed_available.append(name)
+                else:
+                    wed_unavailable.append(name)
+                if avail.thursday_available:
+                    thu_available.append(name)
+                else:
+                    thu_unavailable.append(name)
+            
+            wed_date = (week_start + timedelta(days=2)).strftime("%d/%m/%Y")
+            thu_date = (week_start + timedelta(days=3)).strftime("%d/%m/%Y")
+            
+            message = (
+                f"📊 *Weekly Availability Report*\n"
+                f"Week of {week_start.strftime('%d/%m/%Y')}\n\n"
+                f"*Wednesday {wed_date}:*\n"
+                f"✅ Available: {', '.join(wed_available) if wed_available else 'None'}\n"
+                f"❌ Unavailable: {', '.join(wed_unavailable) if wed_unavailable else 'None'}\n\n"
+                f"*Thursday {thu_date}:*\n"
+                f"✅ Available: {', '.join(thu_available) if thu_available else 'None'}\n"
+                f"❌ Unavailable: {', '.join(thu_unavailable) if thu_unavailable else 'None'}\n\n"
+            )
+            
+            if no_response:
+                message += f"⚠️ *No Response:* {', '.join(no_response)}"
+            
+            # Get all admins and super admins
+            admin_result = await session.execute(
+                select(User).where(User.role.in_([UserRole.ADMIN, UserRole.SUPER_ADMIN]))
+            )
+            admins = admin_result.scalars().all()
+            
+            for admin in admins:
+                try:
+                    await cls.bot.send_message(
+                        admin.telegram_id,
+                        message,
+                        parse_mode="Markdown"
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to notify admin {admin.telegram_id} of availability: {e}")

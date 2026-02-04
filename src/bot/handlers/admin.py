@@ -15,8 +15,10 @@ from src.bot.utils.keyboards import (
     get_role_selection_keyboard, get_job_list_keyboard, get_back_keyboard,
     get_user_list_keyboard, get_user_actions_keyboard, get_switch_role_keyboard,
     get_confirm_delete_keyboard, get_main_menu_keyboard, get_supervisor_job_actions_keyboard,
-    get_confirm_job_delete_keyboard, get_team_selection_keyboard
+    get_confirm_job_delete_keyboard, get_team_selection_keyboard, get_message_target_keyboard,
+    get_subcontractor_select_keyboard
 )
+from src.bot.database import WeeklyAvailability
 import logging
 import sqlalchemy
 
@@ -31,6 +33,14 @@ class CreateCodeStates(StatesGroup):
 
 class SwitchRoleStates(StatesGroup):
     waiting_for_team = State()
+
+class MessageStates(StatesGroup):
+    selecting_target = State()
+    selecting_users = State()
+    composing_message = State()
+
+class WeeklyAvailabilityNotes(StatesGroup):
+    waiting_for_notes = State()
 
 @router.message(Command("history"))
 @require_role(UserRole.ADMIN)
@@ -1362,3 +1372,272 @@ async def handle_switch_role(callback: CallbackQuery):
         reply_markup=keyboard
     )
     await callback.answer()
+
+# ============= ADMIN/SUPER ADMIN JOB CREATION =============
+
+@router.message(F.text == "➕ New Job")
+async def btn_admin_new_job(message: Message, state: FSMContext):
+    """Allow admins to create jobs (shared with supervisor flow)"""
+    if not async_session:
+        await message.answer("Database not available.")
+        return
+    
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == message.from_user.id)
+        )
+        user = result.scalar_one_or_none()
+        if not user or user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.SUPERVISOR]:
+            await message.answer("You don't have permission to create jobs.")
+            return
+    
+    # Import and use supervisor's job creation flow
+    from src.bot.handlers.supervisor import start_new_job
+    await start_new_job(message, state)
+
+# ============= ADMIN MESSAGING =============
+
+@router.message(F.text == "📨 Send Message")
+async def btn_send_message(message: Message, state: FSMContext):
+    """Start the messaging flow for admins"""
+    if not await check_admin(message):
+        return
+    
+    await message.answer(
+        "*Send Message*\n\n"
+        "Choose who you want to send a message to:",
+        reply_markup=get_message_target_keyboard(),
+        parse_mode="Markdown"
+    )
+    await state.set_state(MessageStates.selecting_target)
+
+@router.callback_query(F.data == "msg_cancel")
+async def cancel_message(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
+    await callback.message.edit_text("Message cancelled.")
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("msg_target:"), StateFilter(MessageStates.selecting_target))
+async def process_message_target(callback: CallbackQuery, state: FSMContext):
+    target = callback.data.split(":")[1]
+    
+    if target == "select":
+        # Show list of subcontractors to select
+        async with async_session() as session:
+            result = await session.execute(
+                select(User).where(User.role == UserRole.SUBCONTRACTOR)
+            )
+            subcontractors = list(result.scalars().all())
+        
+        if not subcontractors:
+            await callback.message.edit_text("No subcontractors found.")
+            await state.clear()
+            await callback.answer()
+            return
+        
+        await state.update_data(target_type="select", selected_ids=[])
+        await callback.message.edit_text(
+            "*Select Subcontractors*\n\n"
+            "Tap names to select/deselect:",
+            reply_markup=get_subcontractor_select_keyboard(subcontractors, []),
+            parse_mode="Markdown"
+        )
+        await state.set_state(MessageStates.selecting_users)
+    else:
+        # Direct target (all_subs, northwest, southeast)
+        await state.update_data(target_type=target)
+        await callback.message.edit_text(
+            "*Compose Message*\n\n"
+            "Type your message to send:",
+            parse_mode="Markdown"
+        )
+        await state.set_state(MessageStates.composing_message)
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("msg_select:"), StateFilter(MessageStates.selecting_users))
+async def toggle_user_selection(callback: CallbackQuery, state: FSMContext):
+    user_id = int(callback.data.split(":")[1])
+    data = await state.get_data()
+    selected_ids = data.get('selected_ids', [])
+    
+    if user_id in selected_ids:
+        selected_ids.remove(user_id)
+    else:
+        selected_ids.append(user_id)
+    
+    await state.update_data(selected_ids=selected_ids)
+    
+    # Refresh the keyboard
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.role == UserRole.SUBCONTRACTOR)
+        )
+        subcontractors = list(result.scalars().all())
+    
+    await callback.message.edit_reply_markup(
+        reply_markup=get_subcontractor_select_keyboard(subcontractors, selected_ids)
+    )
+    await callback.answer()
+
+@router.callback_query(F.data == "msg_send", StateFilter(MessageStates.selecting_users))
+async def proceed_to_compose(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    selected_ids = data.get('selected_ids', [])
+    
+    if not selected_ids:
+        await callback.answer("Please select at least one subcontractor", show_alert=True)
+        return
+    
+    await callback.message.edit_text(
+        f"*Compose Message*\n\n"
+        f"Selected: {len(selected_ids)} user(s)\n\n"
+        "Type your message to send:",
+        parse_mode="Markdown"
+    )
+    await state.set_state(MessageStates.composing_message)
+    await callback.answer()
+
+@router.message(StateFilter(MessageStates.composing_message))
+async def send_broadcast_message(message: Message, state: FSMContext):
+    if message.text.startswith("/"):
+        await message.answer("Message cancelled.")
+        await state.clear()
+        return
+    
+    data = await state.get_data()
+    target_type = data.get('target_type')
+    selected_ids = data.get('selected_ids', [])
+    
+    bot = message.bot
+    sent_count = 0
+    
+    async with async_session() as session:
+        # Get sender info
+        sender_result = await session.execute(
+            select(User).where(User.telegram_id == message.from_user.id)
+        )
+        sender = sender_result.scalar_one_or_none()
+        sender_name = sender.first_name or sender.username or "Admin" if sender else "Admin"
+        
+        # Determine recipients
+        if target_type == "select":
+            result = await session.execute(
+                select(User).where(User.id.in_(selected_ids))
+            )
+            recipients = list(result.scalars().all())
+        elif target_type == "all_subs":
+            result = await session.execute(
+                select(User).where(User.role == UserRole.SUBCONTRACTOR)
+            )
+            recipients = list(result.scalars().all())
+        else:
+            # Team-specific (northwest or southeast)
+            team_result = await session.execute(
+                select(Team).where(Team.team_type == TeamType(target_type))
+            )
+            team = team_result.scalar_one_or_none()
+            if team:
+                result = await session.execute(
+                    select(User).where(
+                        User.role == UserRole.SUBCONTRACTOR,
+                        User.team_id == team.id
+                    )
+                )
+                recipients = list(result.scalars().all())
+            else:
+                recipients = []
+        
+        for recipient in recipients:
+            try:
+                await bot.send_message(
+                    recipient.telegram_id,
+                    f"📢 *Message from {sender_name}*\n\n"
+                    f"{message.text}",
+                    parse_mode="Markdown"
+                )
+                sent_count += 1
+            except Exception as e:
+                logger.error(f"Failed to send message to {recipient.telegram_id}: {e}")
+    
+    await message.answer(
+        f"*Message Sent!*\n\n"
+        f"Delivered to {sent_count} recipient(s).",
+        parse_mode="Markdown"
+    )
+    await state.clear()
+
+# ============= WEEKLY AVAILABILITY VIEW =============
+
+@router.message(F.text == "📅 Weekly Availability")
+async def btn_weekly_availability(message: Message):
+    """View weekly availability responses"""
+    if not await check_admin(message):
+        return
+    
+    from datetime import datetime, timedelta
+    
+    # Get current/upcoming week's availability
+    today = datetime.utcnow().date()
+    # Find the Monday of this week or next week
+    days_since_monday = today.weekday()
+    this_monday = datetime.combine(today - timedelta(days=days_since_monday), datetime.min.time())
+    next_monday = this_monday + timedelta(days=7)
+    
+    async with async_session() as session:
+        # Check next week first, then current week
+        for week_start in [next_monday, this_monday]:
+            result = await session.execute(
+                select(WeeklyAvailability, User).join(
+                    User, WeeklyAvailability.subcontractor_id == User.id
+                ).where(WeeklyAvailability.week_start == week_start)
+            )
+            responses = list(result.all())
+            
+            if responses:
+                wed_date = (week_start + timedelta(days=2)).strftime("%d/%m")
+                thu_date = (week_start + timedelta(days=3)).strftime("%d/%m")
+                
+                wed_avail = []
+                thu_avail = []
+                wed_unavail = []
+                thu_unavail = []
+                pending = []
+                
+                for avail, user in responses:
+                    name = user.first_name or user.username or f"User {user.telegram_id}"
+                    if avail.responded_at is None:
+                        pending.append(name)
+                    else:
+                        if avail.wednesday_available:
+                            wed_avail.append(name)
+                        else:
+                            wed_unavail.append(name)
+                        if avail.thursday_available:
+                            thu_avail.append(name)
+                        else:
+                            thu_unavail.append(name)
+                
+                text = (
+                    f"📅 *Weekly Availability*\n"
+                    f"Week of {week_start.strftime('%d/%m/%Y')}\n\n"
+                    f"*Wednesday {wed_date}:*\n"
+                    f"✅ {', '.join(wed_avail) if wed_avail else 'None'}\n"
+                    f"❌ {', '.join(wed_unavail) if wed_unavail else 'None'}\n\n"
+                    f"*Thursday {thu_date}:*\n"
+                    f"✅ {', '.join(thu_avail) if thu_avail else 'None'}\n"
+                    f"❌ {', '.join(thu_unavail) if thu_unavail else 'None'}\n\n"
+                )
+                
+                if pending:
+                    text += f"⏳ *Pending Response:*\n{', '.join(pending)}"
+                
+                await message.answer(text, parse_mode="Markdown")
+                return
+        
+        await message.answer(
+            "📅 *Weekly Availability*\n\n"
+            "No availability surveys have been sent yet.\n"
+            "Surveys are automatically sent to subcontractors on Saturdays.",
+            parse_mode="Markdown"
+        )
+

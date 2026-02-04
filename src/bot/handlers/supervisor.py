@@ -438,6 +438,15 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
                 
                 notified_count = 0
                 failed_count = 0
+                
+                # Prepare deadline text
+                deadline_text = ""
+                if job.deadline:
+                    deadline_text = f"\nDeadline: {job.deadline.strftime('%d/%m/%Y')}"
+                
+                # Get supervisor photos
+                sup_photos = job.supervisor_photos.split(",") if job.supervisor_photos else []
+                
                 for sub in available_subs:
                     try:
                         logger.info(f"[NOTIFY] Sending to subcontractor id={sub.id}, telegram_id={sub.telegram_id}, name={sub.first_name}")
@@ -446,10 +455,21 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
                             f"🆕 *New Job Available*\n\n"
                             f"Job #{job.id}: {job.title}\n"
                             f"Location: {job.address or 'N/A'}\n"
-                            f"Price: {job.preset_price or 'N/A'}\n\n"
+                            f"Price: {job.preset_price or 'N/A'}{deadline_text}\n\n"
                             f"Check 'Available Jobs' to accept this job!",
                             parse_mode="Markdown"
                         )
+                        
+                        # Send supervisor photos if any
+                        if sup_photos:
+                            from aiogram.types import InputMediaPhoto
+                            if len(sup_photos) == 1:
+                                await bot.send_photo(sub.telegram_id, sup_photos[0], caption="📷 Repair photos for this job")
+                            else:
+                                media_group = [InputMediaPhoto(media=photo_id) for photo_id in sup_photos]
+                                media_group[0] = InputMediaPhoto(media=sup_photos[0], caption="📷 Repair photos for this job")
+                                await bot.send_media_group(sub.telegram_id, media_group)
+                        
                         notified_count += 1
                         logger.info(f"[NOTIFY SUCCESS] Notified subcontractor telegram_id={sub.telegram_id}")
                     except Exception as e:

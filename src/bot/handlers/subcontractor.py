@@ -12,8 +12,10 @@ from src.bot.services.availability import AvailabilityService
 from src.bot.utils.permissions import require_role
 from src.bot.utils.keyboards import (
     get_job_actions_keyboard, get_decline_reason_keyboard, get_back_keyboard,
-    get_job_list_keyboard
+    get_job_list_keyboard, get_unavailability_job_keyboard, get_weekly_availability_keyboard
 )
+from src.bot.database import UnavailabilityNotice, WeeklyAvailability
+from datetime import datetime
 import logging
 
 logger = logging.getLogger(__name__)
@@ -35,6 +37,14 @@ class SubmissionStates(StatesGroup):
 
 class AcceptJobStates(StatesGroup):
     waiting_for_company_name = State()
+
+class UnavailabilityStates(StatesGroup):
+    selecting_job = State()
+    waiting_for_reason = State()
+    waiting_for_dates = State()
+
+class WeeklyAvailabilityNotesStates(StatesGroup):
+    waiting_for_notes = State()
 
 @router.message(F.text == "📋 Available Jobs")
 async def btn_available_jobs(message: Message):
@@ -716,4 +726,304 @@ async def process_custom_decline_reason(message: Message, state: FSMContext):
     else:
         await message.answer(f"Error: {msg}")
     
+    await state.clear()
+
+# ============= UNAVAILABILITY NOTIFICATION =============
+
+@router.message(F.text == "⚠️ Report Unavailability")
+async def btn_report_unavailability(message: Message, state: FSMContext):
+    """Start the unavailability notification flow"""
+    if not await check_subcontractor(message):
+        return
+    
+    # Get subcontractor's active jobs
+    jobs = await JobService.get_subcontractor_active_jobs(message.from_user.id)
+    active_jobs = [j for j in jobs if j.status in [JobStatus.ACCEPTED, JobStatus.IN_PROGRESS]]
+    
+    await message.answer(
+        "⚠️ *Report Unavailability*\n\n"
+        "Is this about a specific job, or general unavailability?\n\n"
+        "Select a job or choose 'General Unavailability':",
+        reply_markup=get_unavailability_job_keyboard(active_jobs),
+        parse_mode="Markdown"
+    )
+    await state.set_state(UnavailabilityStates.selecting_job)
+
+@router.callback_query(F.data == "unavail_cancel")
+async def cancel_unavailability(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
+    await callback.message.edit_text("Unavailability report cancelled.")
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("unavail_job:"), StateFilter(UnavailabilityStates.selecting_job))
+async def select_unavailability_job(callback: CallbackQuery, state: FSMContext):
+    job_part = callback.data.split(":")[1]
+    
+    if job_part == "general":
+        await state.update_data(job_id=None, is_general=True)
+    else:
+        await state.update_data(job_id=int(job_part), is_general=False)
+    
+    await callback.message.edit_text(
+        "⚠️ *Report Unavailability*\n\n"
+        "Please explain the reason for your unavailability:\n"
+        "(e.g., religious holiday, illness, family emergency, etc.)",
+        parse_mode="Markdown"
+    )
+    await state.set_state(UnavailabilityStates.waiting_for_reason)
+    await callback.answer()
+
+@router.message(StateFilter(UnavailabilityStates.waiting_for_reason))
+async def process_unavailability_reason(message: Message, state: FSMContext):
+    if message.text and message.text.startswith("/cancel"):
+        await state.clear()
+        await message.answer("Unavailability report cancelled.")
+        return
+    
+    reason = message.text.strip()
+    if len(reason) < 5:
+        await message.answer("Please provide a more detailed reason (at least 5 characters):")
+        return
+    
+    await state.update_data(reason=reason)
+    
+    await message.answer(
+        "⚠️ *Report Unavailability*\n\n"
+        "Enter the date range (optional):\n"
+        "Format: DD/MM/YYYY - DD/MM/YYYY\n"
+        "Example: 15/02/2026 - 17/02/2026\n\n"
+        "Or type /skip if no specific dates.",
+        parse_mode="Markdown"
+    )
+    await state.set_state(UnavailabilityStates.waiting_for_dates)
+
+@router.message(StateFilter(UnavailabilityStates.waiting_for_dates))
+async def process_unavailability_dates(message: Message, state: FSMContext):
+    if message.text and message.text.startswith("/cancel"):
+        await state.clear()
+        await message.answer("Unavailability report cancelled.")
+        return
+    
+    from datetime import datetime
+    
+    data = await state.get_data()
+    job_id = data.get('job_id')
+    reason = data.get('reason')
+    is_general = data.get('is_general', False)
+    
+    start_date = None
+    end_date = None
+    
+    if not message.text.strip().startswith("/skip"):
+        try:
+            dates = message.text.strip().split(" - ")
+            if len(dates) == 2:
+                start_date = datetime.strptime(dates[0].strip(), "%d/%m/%Y")
+                end_date = datetime.strptime(dates[1].strip(), "%d/%m/%Y")
+            elif len(dates) == 1:
+                start_date = datetime.strptime(dates[0].strip(), "%d/%m/%Y")
+                end_date = start_date
+        except ValueError:
+            await message.answer(
+                "Invalid date format. Please use DD/MM/YYYY - DD/MM/YYYY\n"
+                "Or type /skip to continue without dates."
+            )
+            return
+    
+    bot = message.bot
+    notified_supervisors = []
+    
+    async with async_session() as session:
+        # Get subcontractor info
+        sub_result = await session.execute(
+            select(User).where(User.telegram_id == message.from_user.id)
+        )
+        sub = sub_result.scalar_one_or_none()
+        sub_name = sub.first_name or sub.username or "A subcontractor" if sub else "A subcontractor"
+        
+        if job_id and not is_general:
+            # Notify the specific job's supervisor
+            job_result = await session.execute(select(Job).where(Job.id == job_id))
+            job = job_result.scalar_one_or_none()
+            
+            if job:
+                sup_result = await session.execute(
+                    select(User).where(User.id == job.supervisor_id)
+                )
+                supervisor = sup_result.scalar_one_or_none()
+                
+                if supervisor and bot:
+                    try:
+                        dates_text = ""
+                        if start_date and end_date:
+                            dates_text = f"\nDates: {start_date.strftime('%d/%m/%Y')} - {end_date.strftime('%d/%m/%Y')}"
+                        elif start_date:
+                            dates_text = f"\nDate: {start_date.strftime('%d/%m/%Y')}"
+                        
+                        await bot.send_message(
+                            supervisor.telegram_id,
+                            f"⚠️ *Unavailability Notice*\n\n"
+                            f"*{sub_name}* has reported unavailability for:\n\n"
+                            f"Job #{job.id}: {job.title}\n"
+                            f"Reason: {reason}{dates_text}",
+                            parse_mode="Markdown"
+                        )
+                        notified_supervisors.append(supervisor.id)
+                    except Exception as e:
+                        logger.error(f"Failed to notify supervisor: {e}")
+        else:
+            # General unavailability - notify all supervisors the sub has active jobs with
+            active_jobs = await JobService.get_subcontractor_active_jobs(message.from_user.id)
+            supervisor_ids = set()
+            for job in active_jobs:
+                if job.status in [JobStatus.ACCEPTED, JobStatus.IN_PROGRESS]:
+                    supervisor_ids.add(job.supervisor_id)
+            
+            for sup_id in supervisor_ids:
+                sup_result = await session.execute(
+                    select(User).where(User.id == sup_id)
+                )
+                supervisor = sup_result.scalar_one_or_none()
+                
+                if supervisor and bot:
+                    try:
+                        dates_text = ""
+                        if start_date and end_date:
+                            dates_text = f"\nDates: {start_date.strftime('%d/%m/%Y')} - {end_date.strftime('%d/%m/%Y')}"
+                        elif start_date:
+                            dates_text = f"\nDate: {start_date.strftime('%d/%m/%Y')}"
+                        
+                        await bot.send_message(
+                            supervisor.telegram_id,
+                            f"⚠️ *Unavailability Notice*\n\n"
+                            f"*{sub_name}* has reported general unavailability.\n\n"
+                            f"Reason: {reason}{dates_text}",
+                            parse_mode="Markdown"
+                        )
+                        notified_supervisors.append(supervisor.id)
+                    except Exception as e:
+                        logger.error(f"Failed to notify supervisor: {e}")
+        
+        # Save the notice
+        notice = UnavailabilityNotice(
+            subcontractor_id=sub.id if sub else None,
+            job_id=job_id,
+            reason=reason,
+            start_date=start_date,
+            end_date=end_date,
+            notified_supervisor_ids=",".join(map(str, notified_supervisors))
+        )
+        session.add(notice)
+        await session.commit()
+    
+    if notified_supervisors:
+        await message.answer(
+            f"✅ *Unavailability Reported*\n\n"
+            f"Your supervisors have been notified ({len(notified_supervisors)} supervisor(s)).\n\n"
+            f"Reason: {reason}",
+            parse_mode="Markdown"
+        )
+    else:
+        await message.answer(
+            f"✅ *Unavailability Reported*\n\n"
+            f"Your unavailability has been recorded.\n"
+            f"(No active supervisors to notify)",
+            parse_mode="Markdown"
+        )
+    
+    await state.clear()
+
+# ============= WEEKLY AVAILABILITY RESPONSE HANDLERS =============
+
+@router.callback_query(F.data.startswith("weekly_avail:"))
+async def handle_weekly_availability_response(callback: CallbackQuery, state: FSMContext):
+    parts = callback.data.split(":")
+    if len(parts) < 3:
+        await callback.answer("Invalid data", show_alert=True)
+        return
+    
+    avail_id = int(parts[1])
+    response = parts[2]
+    
+    async with async_session() as session:
+        result = await session.execute(
+            select(WeeklyAvailability).where(WeeklyAvailability.id == avail_id)
+        )
+        availability = result.scalar_one_or_none()
+        
+        if not availability:
+            await callback.answer("Survey not found", show_alert=True)
+            return
+        
+        if response == "both":
+            availability.wednesday_available = True
+            availability.thursday_available = True
+            availability.responded_at = datetime.utcnow()
+            await session.commit()
+            await callback.message.edit_text(
+                "✅ *Response Recorded*\n\n"
+                "You are available on both Wednesday and Thursday.",
+                parse_mode="Markdown"
+            )
+        elif response == "wed":
+            availability.wednesday_available = True
+            availability.thursday_available = False
+            availability.responded_at = datetime.utcnow()
+            await session.commit()
+            await callback.message.edit_text(
+                "✅ *Response Recorded*\n\n"
+                "You are available on Wednesday only.",
+                parse_mode="Markdown"
+            )
+        elif response == "thu":
+            availability.wednesday_available = False
+            availability.thursday_available = True
+            availability.responded_at = datetime.utcnow()
+            await session.commit()
+            await callback.message.edit_text(
+                "✅ *Response Recorded*\n\n"
+                "You are available on Thursday only.",
+                parse_mode="Markdown"
+            )
+        elif response == "none":
+            availability.wednesday_available = False
+            availability.thursday_available = False
+            availability.responded_at = datetime.utcnow()
+            await session.commit()
+            await callback.message.edit_text(
+                "✅ *Response Recorded*\n\n"
+                "You are not available either day.",
+                parse_mode="Markdown"
+            )
+        elif response == "notes":
+            await state.update_data(avail_id=avail_id)
+            await state.set_state(WeeklyAvailabilityNotesStates.waiting_for_notes)
+            await callback.message.edit_text(
+                "📝 *Add Notes*\n\n"
+                "Please type any notes about your availability:",
+                parse_mode="Markdown"
+            )
+    
+    await callback.answer()
+
+@router.message(StateFilter(WeeklyAvailabilityNotesStates.waiting_for_notes))
+async def process_weekly_availability_notes(message: Message, state: FSMContext):
+    data = await state.get_data()
+    avail_id = data.get("avail_id")
+    
+    async with async_session() as session:
+        result = await session.execute(
+            select(WeeklyAvailability).where(WeeklyAvailability.id == avail_id)
+        )
+        availability = result.scalar_one_or_none()
+        
+        if availability:
+            availability.notes = message.text
+            await session.commit()
+    
+    await message.answer(
+        "✅ *Notes Saved*\n\n"
+        "Your notes have been added to your availability response.",
+        parse_mode="Markdown"
+    )
     await state.clear()
