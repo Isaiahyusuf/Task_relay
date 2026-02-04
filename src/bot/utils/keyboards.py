@@ -14,7 +14,7 @@ def get_main_menu_keyboard(role: UserRole) -> ReplyKeyboardMarkup:
             [KeyboardButton(text="👑 View Admins"), KeyboardButton(text="👔 View Supervisors")],
             [KeyboardButton(text="🔧 View Subcontractors"), KeyboardButton(text="👥 All Users")],
             [KeyboardButton(text="🔄 Switch Role"), KeyboardButton(text="📋 View Archived")],
-            [KeyboardButton(text="📘 About")]
+            [KeyboardButton(text="ℹ️ Help"), KeyboardButton(text="📘 About")]
         ]
     elif role == UserRole.ADMIN:
         buttons = [

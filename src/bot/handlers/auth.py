@@ -216,42 +216,140 @@ async def show_help(message: Message):
             )
             return
         
-        if user.role == UserRole.ADMIN:
+        if user.role == UserRole.SUPER_ADMIN:
             help_text = (
-                "*Admin Commands*\n\n"
-                "*Job History* - View all job records\n"
-                "*Archive Jobs* - Archive old completed jobs\n"
-                "*Create Access Code* - Generate new access codes\n"
-                "*View Archived* - Browse archived jobs"
+                "*SUPER ADMIN MANUAL*\n"
+                "━━━━━━━━━━━━━━━━━━━━\n\n"
+                
+                "*USER MANAGEMENT*\n"
+                "• *Create Admin Code* - Generate codes for new admins\n"
+                "• *Create Supervisor Code* - Generate codes for supervisors\n"
+                "• *Create Subcontractor Code* - Generate codes for workers\n"
+                "• *All Access Codes* - View all generated codes\n"
+                "• *View Admins/Supervisors/Subcontractors* - Manage users by role\n"
+                "• *All Users* - View complete user list\n"
+                "• *View By Teams* - See users grouped by team\n\n"
+                
+                "*JOB MANAGEMENT*\n"
+                "• *New Job* - Create and dispatch jobs\n"
+                "• *Job History* - View all job records\n"
+                "• *Archive Jobs* - Archive old completed jobs\n"
+                "• *View Archived* - Browse archived jobs\n\n"
+                
+                "*COMMUNICATION*\n"
+                "• *Send Message* - Message subcontractors (all/team/select)\n"
+                "• *Weekly Availability* - View subcontractor schedules\n\n"
+                
+                "*OTHER*\n"
+                "• *Switch Role* - Test other role views\n"
+                "• *About* - Bot information"
+            )
+        elif user.role == UserRole.ADMIN:
+            help_text = (
+                "*ADMIN MANUAL*\n"
+                "━━━━━━━━━━━━━━━━━━━━\n\n"
+                
+                "*USER MANAGEMENT*\n"
+                "• *Create Access Code* - Generate codes for supervisors and subcontractors\n"
+                "• *Manage Users* - View and manage all users\n"
+                "• *View By Teams* - See users grouped by team\n\n"
+                
+                "*JOB MANAGEMENT*\n"
+                "• *New Job* - Create and dispatch jobs to subcontractors\n"
+                "• *Job History* - View all job records\n"
+                "• *Archive Jobs* - Archive old completed jobs\n"
+                "• *View Archived* - Browse archived jobs\n\n"
+                
+                "*COMMUNICATION*\n"
+                "• *Send Message* - Message subcontractors (all/team/select)\n"
+                "• *Weekly Availability* - View subcontractor schedules\n\n"
+                
+                "*HOW TO CREATE A JOB*\n"
+                "1. Tap *New Job*\n"
+                "2. Choose job type (Quote or Preset Price)\n"
+                "3. Enter job title and description\n"
+                "4. Add optional photos and deadline\n"
+                "5. Select target team or send bot-wide\n\n"
+                
+                "*OTHER*\n"
+                "• *Switch Role* - Test other role views\n"
+                "• *About* - Bot information"
             )
         elif user.role == UserRole.SUPERVISOR:
             help_text = (
-                "*Supervisor Commands*\n\n"
-                "*New Job* - Create and send a new job\n"
-                "*My Jobs* - View all your jobs\n"
-                "*Pending Jobs* - View created/sent jobs\n"
-                "*Active Jobs* - View accepted/in-progress jobs\n\n"
-                "*Job Actions:*\n"
-                "- View Details\n"
-                "- View Quotes (for quote jobs)\n"
-                "- Cancel Job\n"
-                "- Mark Complete"
+                "*SUPERVISOR MANUAL*\n"
+                "━━━━━━━━━━━━━━━━━━━━\n\n"
+                
+                "*JOB CREATION*\n"
+                "• *New Job* - Create and dispatch jobs\n"
+                "  1. Choose: Quote Job or Preset Price\n"
+                "  2. Enter title, description, price (if preset)\n"
+                "  3. Add photos (optional) - repair images\n"
+                "  4. Set deadline (optional) - DD/MM/YYYY\n"
+                "  5. Select team or send bot-wide\n\n"
+                
+                "*JOB TRACKING*\n"
+                "• *My Jobs* - View all your jobs\n"
+                "• *Pending Jobs* - Jobs awaiting response\n"
+                "• *Active Jobs* - Jobs in progress\n"
+                "• *Submitted Jobs* - Jobs ready for review\n\n"
+                
+                "*JOB ACTIONS*\n"
+                "• *View Quotes* - Compare quotes from subcontractors\n"
+                "• *Accept Quote* - Select winning quote\n"
+                "• *Cancel Job* - Cancel unstarted jobs\n"
+                "• *Mark Complete* - Close job with star rating\n"
+                "• *Not Satisfied* - Request revision with feedback\n\n"
+                
+                "*COMMUNICATION*\n"
+                "• *Send Message* - Message subcontractors\n"
+                "• *View Availability* - Check subcontractor schedules\n"
+                "• *Create Subcontractor Code* - Add new workers\n\n"
+                
+                "*STAR RATINGS*\n"
+                "When marking complete, rate 1-5 stars.\n"
+                "Ratings help track subcontractor performance."
             )
-        else:
+        else:  # SUBCONTRACTOR
             help_text = (
-                "*Subcontractor Commands*\n\n"
-                "*Available Jobs* - View jobs waiting for response\n"
-                "*My Active Jobs* - View accepted/in-progress jobs\n\n"
-                "*Availability Status:*\n"
-                "- Available - Receive new jobs\n"
-                "- Busy - Temporarily unavailable\n"
-                "- Away - Not accepting jobs\n\n"
-                "*Job Actions:*\n"
-                "- Accept job\n"
-                "- Decline with reason\n"
-                "- Submit quote (for quote jobs)\n"
-                "- Start job\n"
-                "- Mark complete"
+                "*SUBCONTRACTOR MANUAL*\n"
+                "━━━━━━━━━━━━━━━━━━━━\n\n"
+                
+                "*FINDING JOBS*\n"
+                "• *Available Jobs* - View jobs waiting for you\n"
+                "• *My Active Jobs* - Jobs you're working on\n\n"
+                
+                "*RESPONDING TO JOBS*\n"
+                "• *Accept* - Take the job (enter company name)\n"
+                "• *Decline* - Reject with reason\n"
+                "• *Submit Quote* - For quote-type jobs, enter your price\n\n"
+                
+                "*COMPLETING JOBS*\n"
+                "• *Start Job* - Begin work on accepted job\n"
+                "• *Submit Job* - Finish with notes and photo proof\n"
+                "• Supervisor reviews and marks complete\n\n"
+                
+                "*AVAILABILITY STATUS*\n"
+                "Set your current status:\n"
+                "• *Available* (green) - Ready for new jobs\n"
+                "• *Busy* (yellow) - Temporarily unavailable\n"
+                "• *Away* (red) - Not accepting jobs\n\n"
+                
+                "*WEEKLY AVAILABILITY*\n"
+                "• *My Availability* - View/update weekly schedule\n"
+                "• Every Sunday: Tick days you can work (Mon-Fri)\n"
+                "• Add notes for specific days if needed\n\n"
+                
+                "*COMMUNICATION*\n"
+                "• *Report Unavailability* - Notify supervisors\n"
+                "• When you receive messages, tap:\n"
+                "  - *Acknowledge* - Confirm you've seen it\n"
+                "  - *Reply* - Send a response\n\n"
+                
+                "*TIPS*\n"
+                "• Submit jobs with clear photos\n"
+                "• Keep your availability updated\n"
+                "• Respond to jobs promptly"
             )
         
         await message.answer(help_text, parse_mode="Markdown")

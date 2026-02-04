@@ -173,6 +173,7 @@ When supervisors create jobs, they can choose:
 - Feedback is sent directly to the subcontractor who reported unavailability
 
 ## Recent Changes
+- 2026-02-04: Added comprehensive Help/Manual for all roles with detailed feature guides
 - 2026-02-04: Added message reaction system - subcontractors can acknowledge or reply to messages
 - 2026-02-04: Senders notified when subcontractors react to messages
 - 2026-02-04: Supervisors can now send messages to subcontractors (all/team/selected)
