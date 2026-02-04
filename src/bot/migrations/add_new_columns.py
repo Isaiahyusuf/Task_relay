@@ -289,6 +289,100 @@ async def run_migration():
             print("Created message_responses table")
         except Exception as e:
             print(f"message_responses table may already exist: {e}")
+        
+        # ============= CUSTOM ROLES & REGIONS SYSTEM =============
+        
+        # Create regions table
+        try:
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS regions (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(100) NOT NULL UNIQUE,
+                    description TEXT,
+                    created_by_id INTEGER REFERENCES users(id),
+                    is_active BOOLEAN DEFAULT TRUE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            print("Created regions table")
+        except Exception as e:
+            print(f"regions table may already exist: {e}")
+        
+        # Create custom_roles table
+        try:
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS custom_roles (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(100) NOT NULL UNIQUE,
+                    description TEXT,
+                    base_role userrole NOT NULL,
+                    created_by_id INTEGER REFERENCES users(id),
+                    is_active BOOLEAN DEFAULT TRUE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            print("Created custom_roles table")
+        except Exception as e:
+            print(f"custom_roles table may already exist: {e}")
+        
+        # Create role_permissions table
+        try:
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS role_permissions (
+                    id SERIAL PRIMARY KEY,
+                    custom_role_id INTEGER REFERENCES custom_roles(id) ON DELETE CASCADE,
+                    permission_key VARCHAR(50) NOT NULL,
+                    enabled BOOLEAN DEFAULT TRUE
+                )
+            """))
+            print("Created role_permissions table")
+        except Exception as e:
+            print(f"role_permissions table may already exist: {e}")
+        
+        # Add region_id to users table
+        try:
+            await conn.execute(text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS region_id INTEGER REFERENCES regions(id)"
+            ))
+            print("Added region_id column to users table")
+        except Exception as e:
+            print(f"region_id column may already exist: {e}")
+        
+        # Add custom_role_id to users table
+        try:
+            await conn.execute(text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS custom_role_id INTEGER REFERENCES custom_roles(id)"
+            ))
+            print("Added custom_role_id column to users table")
+        except Exception as e:
+            print(f"custom_role_id column may already exist: {e}")
+        
+        # Add region_id to access_codes table
+        try:
+            await conn.execute(text(
+                "ALTER TABLE access_codes ADD COLUMN IF NOT EXISTS region_id INTEGER REFERENCES regions(id)"
+            ))
+            print("Added region_id column to access_codes table")
+        except Exception as e:
+            print(f"region_id column may already exist in access_codes: {e}")
+        
+        # Add custom_role_id to access_codes table
+        try:
+            await conn.execute(text(
+                "ALTER TABLE access_codes ADD COLUMN IF NOT EXISTS custom_role_id INTEGER REFERENCES custom_roles(id)"
+            ))
+            print("Added custom_role_id column to access_codes table")
+        except Exception as e:
+            print(f"custom_role_id column may already exist in access_codes: {e}")
+        
+        # Add region_id to jobs table
+        try:
+            await conn.execute(text(
+                "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS region_id INTEGER REFERENCES regions(id)"
+            ))
+            print("Added region_id column to jobs table")
+        except Exception as e:
+            print(f"region_id column may already exist in jobs: {e}")
     
     await engine.dispose()
     print("Migration completed!")

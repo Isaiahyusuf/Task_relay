@@ -54,6 +54,8 @@ class User(Base):
     first_name = Column(String(100), nullable=True)
     role = Column(Enum(UserRole), nullable=False)
     team_id = Column(Integer, ForeignKey("teams.id"), nullable=True)
+    region_id = Column(Integer, ForeignKey("regions.id", use_alter=True), nullable=True)  # Geographic region
+    custom_role_id = Column(Integer, ForeignKey("custom_roles.id", use_alter=True), nullable=True)  # Custom role with permissions
     access_code_id = Column(Integer, ForeignKey("access_codes.id"), nullable=True)
     super_admin_code = Column(String(100), nullable=True)
     is_active = Column(Boolean, default=True)
@@ -73,6 +75,8 @@ class AccessCode(Base):
     code = Column(String(50), unique=True, nullable=False)
     role = Column(Enum(UserRole), nullable=False)
     team_id = Column(Integer, ForeignKey("teams.id"), nullable=True)
+    region_id = Column(Integer, ForeignKey("regions.id", use_alter=True), nullable=True)  # Region for this code
+    custom_role_id = Column(Integer, ForeignKey("custom_roles.id", use_alter=True), nullable=True)  # Custom role for this code
     is_active = Column(Boolean, default=True)
     max_uses = Column(Integer, default=1)
     current_uses = Column(Integer, default=0)
@@ -94,6 +98,7 @@ class Job(Base):
     status = Column(Enum(JobStatus), default=JobStatus.CREATED)
     
     team_id = Column(Integer, ForeignKey("teams.id"), nullable=True)
+    region_id = Column(Integer, ForeignKey("regions.id", use_alter=True), nullable=True)  # Target region for job
     supervisor_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     subcontractor_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     accepted_quote_id = Column(Integer, ForeignKey("quotes.id"), nullable=True)
@@ -200,3 +205,66 @@ class MessageResponse(Base):
     
     broadcast = relationship("BroadcastMessage")
     responder = relationship("User")
+
+# ============= CUSTOM ROLES & REGIONS SYSTEM =============
+
+# Available permissions that can be assigned to custom roles
+AVAILABLE_PERMISSIONS = [
+    ("create_jobs", "Create Jobs"),
+    ("view_own_jobs", "View Own Jobs"),
+    ("view_all_jobs", "View All Jobs"),
+    ("cancel_jobs", "Cancel Jobs"),
+    ("complete_jobs", "Mark Jobs Complete"),
+    ("send_messages", "Send Messages"),
+    ("view_availability", "View Subcontractor Availability"),
+    ("create_subcontractor_codes", "Create Subcontractor Codes"),
+    ("create_supervisor_codes", "Create Supervisor Codes"),
+    ("create_admin_codes", "Create Admin Codes"),
+    ("manage_users", "Manage Users"),
+    ("view_users", "View Users"),
+    ("archive_jobs", "Archive Jobs"),
+    ("view_archived", "View Archived Jobs"),
+    ("accept_jobs", "Accept Jobs"),
+    ("decline_jobs", "Decline Jobs"),
+    ("submit_quotes", "Submit Quotes"),
+    ("start_jobs", "Start Jobs"),
+    ("submit_jobs", "Submit Completed Jobs"),
+    ("set_availability", "Set Availability Status"),
+    ("report_unavailability", "Report Unavailability"),
+]
+
+class Region(Base):
+    __tablename__ = "regions"
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False, unique=True)
+    description = Column(Text, nullable=True)
+    created_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    created_by = relationship("User", foreign_keys=[created_by_id])
+
+class CustomRole(Base):
+    __tablename__ = "custom_roles"
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False, unique=True)
+    description = Column(Text, nullable=True)
+    base_role = Column(Enum(UserRole), nullable=False)  # Which base role this extends
+    created_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    created_by = relationship("User", foreign_keys=[created_by_id])
+    permissions = relationship("RolePermission", back_populates="custom_role", cascade="all, delete-orphan")
+
+class RolePermission(Base):
+    __tablename__ = "role_permissions"
+    
+    id = Column(Integer, primary_key=True)
+    custom_role_id = Column(Integer, ForeignKey("custom_roles.id"), nullable=False)
+    permission_key = Column(String(50), nullable=False)  # Key from AVAILABLE_PERMISSIONS
+    enabled = Column(Boolean, default=True)
+    
+    custom_role = relationship("CustomRole", back_populates="permissions")
