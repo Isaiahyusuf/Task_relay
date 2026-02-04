@@ -1399,9 +1399,15 @@ async def btn_admin_new_job(message: Message, state: FSMContext):
 
 @router.message(F.text == "📨 Send Message")
 async def btn_send_message(message: Message, state: FSMContext):
-    """Start the messaging flow for admins"""
-    if not await check_admin(message):
-        return
+    """Start the messaging flow for admins and supervisors"""
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == message.from_user.id)
+        )
+        user = result.scalar_one_or_none()
+        if not user or user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.SUPERVISOR]:
+            await message.answer("You don't have permission to send messages.")
+            return
     
     await message.answer(
         "*Send Message*\n\n"

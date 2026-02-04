@@ -152,7 +152,7 @@ When supervisors create jobs, they can choose:
 
 ## Admin Features
 - Admins can create and post jobs (same flow as supervisors)
-- "Send Message" feature allows admins to message:
+- "Send Message" feature allows admins and supervisors to message:
   - All subcontractors
   - Specific team (North/West or South/East)
   - Select specific subcontractors
@@ -161,11 +161,13 @@ When supervisors create jobs, they can choose:
 - Subcontractors can report unavailability via "Report Unavailability" button
 - Can report for specific job or general unavailability
 - Includes reason and optional date range
-- Supervisors with active jobs are automatically notified
-- Supervisors receive notification with "Send Feedback" and "Acknowledged" buttons
+- ALL supervisors and admins are automatically notified of unavailability reports
+- Supervisors and admins receive notification with "Send Feedback" and "Acknowledged" buttons
 - Feedback is sent directly to the subcontractor who reported unavailability
 
 ## Recent Changes
+- 2026-02-04: Supervisors can now send messages to subcontractors (all/team/selected)
+- 2026-02-04: Fixed unavailability notifications - ALL admins and supervisors now receive them
 - 2026-02-04: Added smart reminder for subcontractors who haven't submitted availability (Mon/Tue/Wed)
 - 2026-02-04: Replaced Wed/Thu availability with Monday-Friday daily availability system
 - 2026-02-04: Subcontractors receive availability survey every Sunday to tick available days
