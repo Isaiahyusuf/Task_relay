@@ -138,6 +138,7 @@ When supervisors create jobs, they can choose:
 - Supervisors can view individual subcontractor availability via "View Availability" button
 - Availability resets every Saturday when new week begins
 - Admins receive automatic reports when responses are collected
+- Smart reminders: Subcontractors who haven't responded get reminded on Mon/Tue/Wed (only once per day)
 
 ## Job Deadlines
 - Supervisors can set optional deadlines when creating jobs (DD/MM/YYYY format)
@@ -163,6 +164,7 @@ When supervisors create jobs, they can choose:
 - Supervisors with active jobs are automatically notified
 
 ## Recent Changes
+- 2026-02-04: Added smart reminder for subcontractors who haven't submitted availability (Mon/Tue/Wed)
 - 2026-02-04: Replaced Wed/Thu availability with Monday-Friday daily availability system
 - 2026-02-04: Subcontractors receive availability survey every Sunday to tick available days
 - 2026-02-04: Supervisors can view subcontractor availability via "View Availability" button
