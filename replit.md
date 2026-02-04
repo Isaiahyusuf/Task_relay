@@ -162,6 +162,8 @@ When supervisors create jobs, they can choose:
 - Can report for specific job or general unavailability
 - Includes reason and optional date range
 - Supervisors with active jobs are automatically notified
+- Supervisors receive notification with "Send Feedback" and "Acknowledged" buttons
+- Feedback is sent directly to the subcontractor who reported unavailability
 
 ## Recent Changes
 - 2026-02-04: Added smart reminder for subcontractors who haven't submitted availability (Mon/Tue/Wed)

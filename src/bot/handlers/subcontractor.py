@@ -841,11 +841,23 @@ async def process_unavailability_dates(message: Message, state: FSMContext):
         sub = sub_result.scalar_one_or_none()
         sub_name = sub.first_name or sub.username or "A subcontractor" if sub else "A subcontractor"
         
-        if job_id and not is_general:
-            # Notify the specific job's supervisor
-            job_result = await session.execute(select(Job).where(Job.id == job_id))
-            job = job_result.scalar_one_or_none()
-            
+        # Save the notice first to get the ID
+        notice = UnavailabilityNotice(
+            subcontractor_id=sub.id if sub else None,
+            job_id=job_id,
+            reason=reason,
+            start_date=start_date,
+            end_date=end_date,
+            notified_supervisor_ids=""
+        )
+        session.add(notice)
+        await session.flush()  # Get the notice ID
+        
+        from src.bot.utils.keyboards import get_unavailability_response_keyboard
+        
+        if job_id:
+            # Specific job unavailability
+            job = await JobService.get_job(job_id)
             if job:
                 sup_result = await session.execute(
                     select(User).where(User.id == job.supervisor_id)
@@ -866,6 +878,7 @@ async def process_unavailability_dates(message: Message, state: FSMContext):
                             f"*{sub_name}* has reported unavailability for:\n\n"
                             f"Job #{job.id}: {job.title}\n"
                             f"Reason: {reason}{dates_text}",
+                            reply_markup=get_unavailability_response_keyboard(notice.id, sub.id),
                             parse_mode="Markdown"
                         )
                         notified_supervisors.append(supervisor.id)
@@ -898,22 +911,15 @@ async def process_unavailability_dates(message: Message, state: FSMContext):
                             f"⚠️ *Unavailability Notice*\n\n"
                             f"*{sub_name}* has reported general unavailability.\n\n"
                             f"Reason: {reason}{dates_text}",
+                            reply_markup=get_unavailability_response_keyboard(notice.id, sub.id),
                             parse_mode="Markdown"
                         )
                         notified_supervisors.append(supervisor.id)
                     except Exception as e:
                         logger.error(f"Failed to notify supervisor: {e}")
         
-        # Save the notice
-        notice = UnavailabilityNotice(
-            subcontractor_id=sub.id if sub else None,
-            job_id=job_id,
-            reason=reason,
-            start_date=start_date,
-            end_date=end_date,
-            notified_supervisor_ids=",".join(map(str, notified_supervisors))
-        )
-        session.add(notice)
+        # Update the notice with notified supervisors
+        notice.notified_supervisor_ids = ",".join(map(str, notified_supervisors))
         await session.commit()
     
     if notified_supervisors:

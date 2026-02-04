@@ -403,3 +403,9 @@ def get_skip_deadline_keyboard() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="⏭️ No Deadline", callback_data="skip:deadline")],
         [InlineKeyboardButton(text="❌ Cancel", callback_data="job_cancel")]
     ])
+
+def get_unavailability_response_keyboard(notice_id: int, subcontractor_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="💬 Send Feedback", callback_data=f"unavail_feedback:{notice_id}:{subcontractor_id}")],
+        [InlineKeyboardButton(text="✅ Acknowledged", callback_data=f"unavail_ack:{notice_id}")]
+    ])

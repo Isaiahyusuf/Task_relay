@@ -1152,3 +1152,94 @@ async def show_subcontractor_availability(message: Message):
                 message_text += "\n"
         
         await message.answer(message_text, parse_mode="Markdown")
+
+# ============= UNAVAILABILITY FEEDBACK HANDLERS =============
+
+class UnavailabilityFeedbackStates(StatesGroup):
+    waiting_for_feedback = State()
+
+@router.callback_query(F.data.startswith("unavail_ack:"))
+async def acknowledge_unavailability(callback: CallbackQuery):
+    await callback.message.edit_text(
+        callback.message.text + "\n\n✅ _Acknowledged_",
+        parse_mode="Markdown"
+    )
+    await callback.answer("Acknowledged")
+
+@router.callback_query(F.data.startswith("unavail_feedback:"))
+async def start_unavailability_feedback(callback: CallbackQuery, state: FSMContext):
+    parts = callback.data.split(":")
+    if len(parts) < 3:
+        await callback.answer("Invalid data", show_alert=True)
+        return
+    
+    notice_id = int(parts[1])
+    subcontractor_id = int(parts[2])
+    
+    await state.update_data(notice_id=notice_id, subcontractor_id=subcontractor_id)
+    await state.set_state(UnavailabilityFeedbackStates.waiting_for_feedback)
+    
+    await callback.message.edit_text(
+        callback.message.text + "\n\n💬 _Sending feedback..._",
+        parse_mode="Markdown"
+    )
+    
+    await callback.message.answer(
+        "💬 *Send Feedback*\n\n"
+        "Please type your feedback for the subcontractor:",
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+@router.message(StateFilter(UnavailabilityFeedbackStates.waiting_for_feedback))
+async def process_unavailability_feedback(message: Message, state: FSMContext):
+    data = await state.get_data()
+    subcontractor_id = data.get("subcontractor_id")
+    feedback = message.text
+    
+    if not async_session:
+        await message.answer("Database not available.")
+        await state.clear()
+        return
+    
+    async with async_session() as session:
+        # Get the subcontractor
+        sub_result = await session.execute(
+            select(User).where(User.id == subcontractor_id)
+        )
+        subcontractor = sub_result.scalar_one_or_none()
+        
+        # Get the supervisor
+        sup_result = await session.execute(
+            select(User).where(User.telegram_id == message.from_user.id)
+        )
+        supervisor = sup_result.scalar_one_or_none()
+        
+        if subcontractor:
+            sup_name = supervisor.first_name or supervisor.username or "Your supervisor" if supervisor else "Your supervisor"
+            
+            try:
+                bot = message.bot
+                await bot.send_message(
+                    subcontractor.telegram_id,
+                    f"💬 *Supervisor Feedback*\n\n"
+                    f"*{sup_name}* has responded to your unavailability notice:\n\n"
+                    f"_{feedback}_",
+                    parse_mode="Markdown"
+                )
+                
+                await message.answer(
+                    "✅ *Feedback Sent*\n\n"
+                    "Your feedback has been sent to the subcontractor.",
+                    parse_mode="Markdown"
+                )
+            except Exception as e:
+                logger.error(f"Failed to send feedback: {e}")
+                await message.answer(
+                    "Failed to send feedback. The subcontractor may have blocked the bot.",
+                    parse_mode="Markdown"
+                )
+        else:
+            await message.answer("Subcontractor not found.")
+    
+    await state.clear()
