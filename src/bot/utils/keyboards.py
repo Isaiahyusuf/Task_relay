@@ -10,7 +10,9 @@ def get_main_menu_keyboard(role: UserRole) -> ReplyKeyboardMarkup:
             [KeyboardButton(text="🔑 All Access Codes")],
             [KeyboardButton(text="👑 Create Admin Code"), KeyboardButton(text="👔 Create Supervisor Code")],
             [KeyboardButton(text="🔧 Create Subcontractor Code")],
-            [KeyboardButton(text="🏢 View By Teams")],
+            [KeyboardButton(text="🏢 View By Teams"), KeyboardButton(text="🌍 View Regions")],
+            [KeyboardButton(text="🎭 Manage Roles"), KeyboardButton(text="🌐 Manage Regions")],
+            [KeyboardButton(text="🏢 Manage Teams")],
             [KeyboardButton(text="👑 View Admins"), KeyboardButton(text="👔 View Supervisors")],
             [KeyboardButton(text="🔧 View Subcontractors"), KeyboardButton(text="👥 All Users")],
             [KeyboardButton(text="🔄 Switch Role"), KeyboardButton(text="📋 View Archived")],
@@ -22,7 +24,9 @@ def get_main_menu_keyboard(role: UserRole) -> ReplyKeyboardMarkup:
             [KeyboardButton(text="➕ New Job"), KeyboardButton(text="📨 Send Message")],
             [KeyboardButton(text="📅 Weekly Availability")],
             [KeyboardButton(text="🔑 Create Access Code"), KeyboardButton(text="📋 View Archived")],
-            [KeyboardButton(text="🏢 View By Teams"), KeyboardButton(text="👥 Manage Users")],
+            [KeyboardButton(text="🏢 View By Teams"), KeyboardButton(text="🌍 View Regions")],
+            [KeyboardButton(text="🏢 Manage Teams"), KeyboardButton(text="🌐 Manage Regions")],
+            [KeyboardButton(text="👥 Manage Users")],
             [KeyboardButton(text="🔄 Switch Role")],
             [KeyboardButton(text="ℹ️ Help"), KeyboardButton(text="📘 About")]
         ]

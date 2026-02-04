@@ -1670,3 +1670,525 @@ async def btn_weekly_availability(message: Message):
         
         await message.answer(text, parse_mode="Markdown")
 
+# ============= CUSTOM ROLES MANAGEMENT =============
+
+class CreateRoleStates(StatesGroup):
+    waiting_for_name = State()
+    waiting_for_description = State()
+    waiting_for_base_role = State()
+    selecting_permissions = State()
+
+class CreateRegionStates(StatesGroup):
+    waiting_for_name = State()
+    waiting_for_description = State()
+
+class CreateTeamStates(StatesGroup):
+    waiting_for_name = State()
+
+from src.bot.database.models import Region, CustomRole, RolePermission, AVAILABLE_PERMISSIONS
+
+@router.message(F.text == "🎭 Manage Roles")
+@require_role([UserRole.SUPER_ADMIN])
+async def show_manage_roles(message: Message):
+    async with async_session() as session:
+        result = await session.execute(
+            select(CustomRole).where(CustomRole.is_active == True).order_by(CustomRole.name)
+        )
+        roles = list(result.scalars().all())
+    
+    keyboard = InlineKeyboardBuilder()
+    keyboard.row(InlineKeyboardButton(text="➕ Create New Role", callback_data="create_role"))
+    
+    for role in roles:
+        keyboard.row(InlineKeyboardButton(
+            text=f"🎭 {role.name}", 
+            callback_data=f"view_role:{role.id}"
+        ))
+    
+    await message.answer(
+        "*🎭 Manage Custom Roles*\n\n"
+        f"You have {len(roles)} custom role(s).\n\n"
+        "Custom roles let you define specific permissions for users.",
+        reply_markup=keyboard.as_markup(),
+        parse_mode="Markdown"
+    )
+
+@router.callback_query(F.data == "create_role")
+async def start_create_role(callback: CallbackQuery, state: FSMContext):
+    await callback.message.answer(
+        "*Create Custom Role*\n\n"
+        "Enter the name for this new role:",
+        parse_mode="Markdown"
+    )
+    await state.set_state(CreateRoleStates.waiting_for_name)
+    await callback.answer()
+
+@router.message(StateFilter(CreateRoleStates.waiting_for_name))
+async def process_role_name(message: Message, state: FSMContext):
+    await state.update_data(role_name=message.text.strip())
+    await message.answer(
+        "Enter a description for this role (or send /skip):",
+        parse_mode="Markdown"
+    )
+    await state.set_state(CreateRoleStates.waiting_for_description)
+
+@router.message(StateFilter(CreateRoleStates.waiting_for_description))
+async def process_role_description(message: Message, state: FSMContext):
+    description = None if message.text == "/skip" else message.text.strip()
+    await state.update_data(role_description=description)
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="👔 Supervisor-based", callback_data="base_role:supervisor")],
+        [InlineKeyboardButton(text="🔧 Subcontractor-based", callback_data="base_role:subcontractor")],
+        [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_role_create")]
+    ])
+    
+    await message.answer(
+        "*Select Base Role*\n\n"
+        "Choose which role type this custom role is based on:",
+        reply_markup=keyboard,
+        parse_mode="Markdown"
+    )
+    await state.set_state(CreateRoleStates.waiting_for_base_role)
+
+@router.callback_query(F.data.startswith("base_role:"))
+async def process_base_role(callback: CallbackQuery, state: FSMContext):
+    base = callback.data.split(":")[1]
+    base_role = UserRole.SUPERVISOR if base == "supervisor" else UserRole.SUBCONTRACTOR
+    await state.update_data(base_role=base_role.value, selected_permissions=[])
+    
+    keyboard = await build_permission_keyboard([])
+    
+    await callback.message.answer(
+        "*Select Permissions*\n\n"
+        "Tap permissions to toggle them on/off.\n"
+        "✅ = Enabled, ⬜ = Disabled\n\n"
+        "When done, tap *Save Role*.",
+        reply_markup=keyboard,
+        parse_mode="Markdown"
+    )
+    await state.set_state(CreateRoleStates.selecting_permissions)
+    await callback.answer()
+
+async def build_permission_keyboard(selected: list) -> InlineKeyboardMarkup:
+    keyboard = InlineKeyboardBuilder()
+    
+    for key, label in AVAILABLE_PERMISSIONS:
+        status = "✅" if key in selected else "⬜"
+        keyboard.row(InlineKeyboardButton(
+            text=f"{status} {label}",
+            callback_data=f"toggle_perm:{key}"
+        ))
+    
+    keyboard.row(
+        InlineKeyboardButton(text="💾 Save Role", callback_data="save_custom_role"),
+        InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_role_create")
+    )
+    
+    return keyboard.as_markup()
+
+@router.callback_query(F.data.startswith("toggle_perm:"))
+async def toggle_permission(callback: CallbackQuery, state: FSMContext):
+    perm_key = callback.data.split(":")[1]
+    data = await state.get_data()
+    selected = data.get("selected_permissions", [])
+    
+    if perm_key in selected:
+        selected.remove(perm_key)
+    else:
+        selected.append(perm_key)
+    
+    await state.update_data(selected_permissions=selected)
+    keyboard = await build_permission_keyboard(selected)
+    
+    await callback.message.edit_reply_markup(reply_markup=keyboard)
+    await callback.answer(f"Toggled {perm_key}")
+
+@router.callback_query(F.data == "save_custom_role")
+async def save_custom_role(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    role_name = data.get("role_name")
+    role_description = data.get("role_description")
+    base_role = UserRole(data.get("base_role"))
+    selected_permissions = data.get("selected_permissions", [])
+    
+    async with async_session() as session:
+        user_result = await session.execute(
+            select(User).where(User.telegram_id == callback.from_user.id)
+        )
+        user = user_result.scalar_one_or_none()
+        
+        custom_role = CustomRole(
+            name=role_name,
+            description=role_description,
+            base_role=base_role,
+            created_by_id=user.id if user else None
+        )
+        session.add(custom_role)
+        await session.flush()
+        
+        for perm_key in selected_permissions:
+            permission = RolePermission(
+                custom_role_id=custom_role.id,
+                permission_key=perm_key,
+                enabled=True
+            )
+            session.add(permission)
+        
+        await session.commit()
+    
+    await callback.message.answer(
+        f"*✅ Role Created!*\n\n"
+        f"*Name:* {role_name}\n"
+        f"*Base:* {base_role.value.title()}\n"
+        f"*Permissions:* {len(selected_permissions)} enabled\n\n"
+        "You can now create access codes with this custom role.",
+        parse_mode="Markdown"
+    )
+    await state.clear()
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("view_role:"))
+async def view_custom_role(callback: CallbackQuery):
+    role_id = int(callback.data.split(":")[1])
+    
+    async with async_session() as session:
+        result = await session.execute(
+            select(CustomRole).where(CustomRole.id == role_id)
+        )
+        role = result.scalar_one_or_none()
+        
+        if not role:
+            await callback.answer("Role not found.")
+            return
+        
+        perm_result = await session.execute(
+            select(RolePermission).where(
+                RolePermission.custom_role_id == role_id,
+                RolePermission.enabled == True
+            )
+        )
+        permissions = list(perm_result.scalars().all())
+    
+    perm_names = []
+    perm_dict = {k: v for k, v in AVAILABLE_PERMISSIONS}
+    for p in permissions:
+        if p.permission_key in perm_dict:
+            perm_names.append(perm_dict[p.permission_key])
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🗑️ Delete Role", callback_data=f"delete_role:{role_id}")],
+        [InlineKeyboardButton(text="◀️ Back", callback_data="back_to_roles")]
+    ])
+    
+    await callback.message.answer(
+        f"*🎭 {role.name}*\n\n"
+        f"*Base Role:* {role.base_role.value.title()}\n"
+        f"*Description:* {role.description or 'None'}\n\n"
+        f"*Enabled Permissions:*\n" + 
+        ("\n".join([f"• {p}" for p in perm_names]) if perm_names else "None"),
+        reply_markup=keyboard,
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("delete_role:"))
+async def delete_custom_role(callback: CallbackQuery):
+    role_id = int(callback.data.split(":")[1])
+    
+    async with async_session() as session:
+        result = await session.execute(
+            select(CustomRole).where(CustomRole.id == role_id)
+        )
+        role = result.scalar_one_or_none()
+        
+        if role:
+            role.is_active = False
+            await session.commit()
+    
+    await callback.message.answer("✅ Role deleted.")
+    await callback.answer()
+
+@router.callback_query(F.data == "cancel_role_create")
+async def cancel_role_create(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
+    await callback.message.answer("Role creation cancelled.")
+    await callback.answer()
+
+# ============= REGIONS MANAGEMENT =============
+
+@router.message(F.text == "🌐 Manage Regions")
+@require_role([UserRole.SUPER_ADMIN, UserRole.ADMIN])
+async def show_manage_regions(message: Message):
+    async with async_session() as session:
+        result = await session.execute(
+            select(Region).where(Region.is_active == True).order_by(Region.name)
+        )
+        regions = list(result.scalars().all())
+    
+    keyboard = InlineKeyboardBuilder()
+    keyboard.row(InlineKeyboardButton(text="➕ Create New Region", callback_data="create_region"))
+    
+    for region in regions:
+        keyboard.row(InlineKeyboardButton(
+            text=f"🌍 {region.name}", 
+            callback_data=f"view_region:{region.id}"
+        ))
+    
+    await message.answer(
+        "*🌐 Manage Regions*\n\n"
+        f"You have {len(regions)} region(s).\n\n"
+        "Regions let you organize users and jobs by geographic area.",
+        reply_markup=keyboard.as_markup(),
+        parse_mode="Markdown"
+    )
+
+@router.message(F.text == "🌍 View Regions")
+@require_role([UserRole.SUPER_ADMIN, UserRole.ADMIN])
+async def view_regions_list(message: Message):
+    async with async_session() as session:
+        result = await session.execute(
+            select(Region).where(Region.is_active == True).order_by(Region.name)
+        )
+        regions = list(result.scalars().all())
+        
+        if not regions:
+            await message.answer(
+                "*🌍 Regions*\n\n"
+                "No regions created yet.\n"
+                "Use *Manage Regions* to create regions.",
+                parse_mode="Markdown"
+            )
+            return
+        
+        text = "*🌍 All Regions*\n\n"
+        for region in regions:
+            user_count = await session.execute(
+                select(User).where(User.region_id == region.id, User.is_active == True)
+            )
+            count = len(list(user_count.scalars().all()))
+            text += f"• *{region.name}* - {count} user(s)\n"
+            if region.description:
+                text += f"  _{region.description}_\n"
+        
+        await message.answer(text, parse_mode="Markdown")
+
+@router.callback_query(F.data == "create_region")
+async def start_create_region(callback: CallbackQuery, state: FSMContext):
+    await callback.message.answer(
+        "*Create Region*\n\n"
+        "Enter the name for this region (e.g., London, Manchester):",
+        parse_mode="Markdown"
+    )
+    await state.set_state(CreateRegionStates.waiting_for_name)
+    await callback.answer()
+
+@router.message(StateFilter(CreateRegionStates.waiting_for_name))
+async def process_region_name(message: Message, state: FSMContext):
+    await state.update_data(region_name=message.text.strip())
+    await message.answer(
+        "Enter a description for this region (or send /skip):",
+        parse_mode="Markdown"
+    )
+    await state.set_state(CreateRegionStates.waiting_for_description)
+
+@router.message(StateFilter(CreateRegionStates.waiting_for_description))
+async def process_region_description(message: Message, state: FSMContext):
+    data = await state.get_data()
+    region_name = data.get("region_name")
+    description = None if message.text == "/skip" else message.text.strip()
+    
+    async with async_session() as session:
+        user_result = await session.execute(
+            select(User).where(User.telegram_id == message.from_user.id)
+        )
+        user = user_result.scalar_one_or_none()
+        
+        region = Region(
+            name=region_name,
+            description=description,
+            created_by_id=user.id if user else None
+        )
+        session.add(region)
+        await session.commit()
+    
+    await message.answer(
+        f"*✅ Region Created!*\n\n"
+        f"*Name:* {region_name}\n"
+        f"*Description:* {description or 'None'}\n\n"
+        "You can now assign users to this region when creating access codes.",
+        parse_mode="Markdown"
+    )
+    await state.clear()
+
+@router.callback_query(F.data.startswith("view_region:"))
+async def view_region(callback: CallbackQuery):
+    region_id = int(callback.data.split(":")[1])
+    
+    async with async_session() as session:
+        result = await session.execute(
+            select(Region).where(Region.id == region_id)
+        )
+        region = result.scalar_one_or_none()
+        
+        if not region:
+            await callback.answer("Region not found.")
+            return
+        
+        user_result = await session.execute(
+            select(User).where(User.region_id == region_id, User.is_active == True)
+        )
+        users = list(user_result.scalars().all())
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🗑️ Delete Region", callback_data=f"delete_region:{region_id}")],
+        [InlineKeyboardButton(text="◀️ Back", callback_data="back_to_regions")]
+    ])
+    
+    user_list = "\n".join([f"• {u.first_name or u.username or 'Unknown'} ({u.role.value})" for u in users[:10]])
+    if len(users) > 10:
+        user_list += f"\n... and {len(users) - 10} more"
+    
+    await callback.message.answer(
+        f"*🌍 {region.name}*\n\n"
+        f"*Description:* {region.description or 'None'}\n"
+        f"*Users:* {len(users)}\n\n"
+        f"*Users in this region:*\n{user_list or 'None'}",
+        reply_markup=keyboard,
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("delete_region:"))
+async def delete_region(callback: CallbackQuery):
+    region_id = int(callback.data.split(":")[1])
+    
+    async with async_session() as session:
+        result = await session.execute(
+            select(Region).where(Region.id == region_id)
+        )
+        region = result.scalar_one_or_none()
+        
+        if region:
+            region.is_active = False
+            await session.commit()
+    
+    await callback.message.answer("✅ Region deleted.")
+    await callback.answer()
+
+# ============= TEAMS MANAGEMENT =============
+
+@router.message(F.text == "🏢 Manage Teams")
+@require_role([UserRole.SUPER_ADMIN, UserRole.ADMIN])
+async def show_manage_teams(message: Message):
+    async with async_session() as session:
+        result = await session.execute(
+            select(Team).order_by(Team.name)
+        )
+        teams = list(result.scalars().all())
+    
+    keyboard = InlineKeyboardBuilder()
+    keyboard.row(InlineKeyboardButton(text="➕ Create New Team", callback_data="create_team"))
+    
+    for team in teams:
+        keyboard.row(InlineKeyboardButton(
+            text=f"🏢 {team.name}", 
+            callback_data=f"view_team:{team.id}"
+        ))
+    
+    await message.answer(
+        "*🏢 Manage Teams*\n\n"
+        f"You have {len(teams)} team(s).\n\n"
+        "Teams help organize subcontractors into groups.",
+        reply_markup=keyboard.as_markup(),
+        parse_mode="Markdown"
+    )
+
+@router.callback_query(F.data == "create_team")
+async def start_create_team(callback: CallbackQuery, state: FSMContext):
+    await callback.message.answer(
+        "*Create Team*\n\n"
+        "Enter the name for this team:",
+        parse_mode="Markdown"
+    )
+    await state.set_state(CreateTeamStates.waiting_for_name)
+    await callback.answer()
+
+@router.message(StateFilter(CreateTeamStates.waiting_for_name))
+async def process_team_name(message: Message, state: FSMContext):
+    team_name = message.text.strip()
+    
+    async with async_session() as session:
+        existing = await session.execute(
+            select(Team).where(Team.name == team_name)
+        )
+        if existing.scalar_one_or_none():
+            await message.answer("A team with this name already exists. Please choose a different name.")
+            return
+        
+        team = Team(name=team_name)
+        session.add(team)
+        await session.commit()
+    
+    await message.answer(
+        f"*✅ Team Created!*\n\n"
+        f"*Name:* {team_name}\n\n"
+        "You can now assign users to this team when creating access codes.",
+        parse_mode="Markdown"
+    )
+    await state.clear()
+
+@router.callback_query(F.data.startswith("view_team:"))
+async def view_team_details(callback: CallbackQuery):
+    team_id = int(callback.data.split(":")[1])
+    
+    async with async_session() as session:
+        result = await session.execute(
+            select(Team).where(Team.id == team_id)
+        )
+        team = result.scalar_one_or_none()
+        
+        if not team:
+            await callback.answer("Team not found.")
+            return
+        
+        user_result = await session.execute(
+            select(User).where(User.team_id == team_id, User.is_active == True)
+        )
+        users = list(user_result.scalars().all())
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🗑️ Delete Team", callback_data=f"delete_team:{team_id}")],
+        [InlineKeyboardButton(text="◀️ Back", callback_data="back_to_teams")]
+    ])
+    
+    user_list = "\n".join([f"• {u.first_name or u.username or 'Unknown'} ({u.role.value})" for u in users[:10]])
+    if len(users) > 10:
+        user_list += f"\n... and {len(users) - 10} more"
+    
+    await callback.message.answer(
+        f"*🏢 {team.name}*\n\n"
+        f"*Users:* {len(users)}\n\n"
+        f"*Members:*\n{user_list or 'None'}",
+        reply_markup=keyboard,
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("delete_team:"))
+async def delete_team(callback: CallbackQuery):
+    team_id = int(callback.data.split(":")[1])
+    
+    async with async_session() as session:
+        result = await session.execute(
+            select(Team).where(Team.id == team_id)
+        )
+        team = result.scalar_one_or_none()
+        
+        if team:
+            await session.delete(team)
+            await session.commit()
+    
+    await callback.message.answer("✅ Team deleted.")
+    await callback.answer()
+
