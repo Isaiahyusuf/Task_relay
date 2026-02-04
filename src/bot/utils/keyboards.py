@@ -38,7 +38,7 @@ def get_main_menu_keyboard(role: UserRole) -> ReplyKeyboardMarkup:
     else:
         buttons = [
             [KeyboardButton(text="📋 Available Jobs"), KeyboardButton(text="🔄 My Active Jobs")],
-            [KeyboardButton(text="📤 Submit Job")],
+            [KeyboardButton(text="📤 Submit Job"), KeyboardButton(text="📅 My Availability")],
             [KeyboardButton(text="⚠️ Report Unavailability")],
             [KeyboardButton(text="🟢 Available"), KeyboardButton(text="🟡 Busy"), KeyboardButton(text="🔴 Away")],
             [KeyboardButton(text="ℹ️ Help"), KeyboardButton(text="📘 About")],

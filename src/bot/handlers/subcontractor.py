@@ -85,6 +85,91 @@ async def btn_set_away(message: Message):
     )
     await message.answer(f"🔴 {msg}" if success else f"Error: {msg}")
 
+@router.message(F.text == "📅 My Availability")
+async def btn_my_availability(message: Message):
+    """Show subcontractor's own weekly availability"""
+    if not await check_subcontractor(message):
+        return
+    
+    from datetime import datetime, timedelta
+    
+    async with async_session() as session:
+        # Get current user
+        user_result = await session.execute(
+            select(User).where(User.telegram_id == message.from_user.id)
+        )
+        user = user_result.scalar_one_or_none()
+        
+        if not user:
+            await message.answer("User not found.")
+            return
+        
+        # Calculate current week start (Monday)
+        today = datetime.utcnow().date()
+        days_since_monday = today.weekday()
+        week_start = today - timedelta(days=days_since_monday)
+        
+        # Check for existing availability record this week
+        avail_result = await session.execute(
+            select(WeeklyAvailability).where(
+                WeeklyAvailability.user_id == user.id,
+                WeeklyAvailability.week_start == week_start
+            )
+        )
+        availability = avail_result.scalar_one_or_none()
+        
+        if not availability:
+            # Create a new availability record for this week
+            availability = WeeklyAvailability(
+                user_id=user.id,
+                week_start=week_start,
+                monday_available=False,
+                tuesday_available=False,
+                wednesday_available=False,
+                thursday_available=False,
+                friday_available=False
+            )
+            session.add(availability)
+            await session.commit()
+            await session.refresh(availability)
+        
+        # Build selected days list
+        selected_days = []
+        if availability.monday_available:
+            selected_days.append("monday")
+        if availability.tuesday_available:
+            selected_days.append("tuesday")
+        if availability.wednesday_available:
+            selected_days.append("wednesday")
+        if availability.thursday_available:
+            selected_days.append("thursday")
+        if availability.friday_available:
+            selected_days.append("friday")
+        
+        # Calculate dates for display
+        mon_date = week_start.strftime("%d/%m")
+        tue_date = (week_start + timedelta(days=1)).strftime("%d/%m")
+        wed_date = (week_start + timedelta(days=2)).strftime("%d/%m")
+        thu_date = (week_start + timedelta(days=3)).strftime("%d/%m")
+        fri_date = (week_start + timedelta(days=4)).strftime("%d/%m")
+        
+        # Build status message
+        status_text = "Not submitted" if not availability.responded_at else f"Submitted on {availability.responded_at.strftime('%d/%m/%Y')}"
+        
+        await message.answer(
+            f"📅 *My Weekly Availability*\n\n"
+            f"Week of {week_start.strftime('%d/%m/%Y')}\n"
+            f"Status: {status_text}\n\n"
+            f"Tap the days you're available:\n\n"
+            f"Monday {mon_date}\n"
+            f"Tuesday {tue_date}\n"
+            f"Wednesday {wed_date}\n"
+            f"Thursday {thu_date}\n"
+            f"Friday {fri_date}",
+            reply_markup=get_weekly_availability_keyboard(availability.id, selected_days),
+            parse_mode="Markdown"
+        )
+
 async def check_subcontractor(message: Message) -> bool:
     if not async_session:
         await message.answer("Database not available.")
