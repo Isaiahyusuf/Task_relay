@@ -1219,3 +1219,175 @@ async def process_weekly_availability_notes(message: Message, state: FSMContext)
         parse_mode="Markdown"
     )
     await state.clear()
+
+# ============= MESSAGE REACTIONS =============
+
+class MessageReplyStates(StatesGroup):
+    waiting_for_reply = State()
+
+@router.callback_query(F.data.startswith("msg_ack:"))
+async def handle_message_acknowledge(callback: CallbackQuery):
+    """Handle subcontractor acknowledging a message"""
+    broadcast_id = int(callback.data.split(":")[1])
+    bot = callback.bot
+    
+    from src.bot.database.models import BroadcastMessage, MessageResponse
+    
+    async with async_session() as session:
+        # Get responder info
+        responder_result = await session.execute(
+            select(User).where(User.telegram_id == callback.from_user.id)
+        )
+        responder = responder_result.scalar_one_or_none()
+        
+        if not responder:
+            await callback.answer("User not found.")
+            return
+        
+        # Check if already responded
+        existing = await session.execute(
+            select(MessageResponse).where(
+                MessageResponse.broadcast_id == broadcast_id,
+                MessageResponse.responder_id == responder.id
+            )
+        )
+        if existing.scalar_one_or_none():
+            await callback.answer("You've already responded to this message.")
+            return
+        
+        # Get the broadcast message
+        broadcast_result = await session.execute(
+            select(BroadcastMessage).where(BroadcastMessage.id == broadcast_id)
+        )
+        broadcast = broadcast_result.scalar_one_or_none()
+        
+        if not broadcast:
+            await callback.answer("Message not found.")
+            return
+        
+        # Save the response
+        response = MessageResponse(
+            broadcast_id=broadcast_id,
+            responder_id=responder.id,
+            response_type="acknowledged"
+        )
+        session.add(response)
+        await session.commit()
+        
+        # Get sender info
+        sender_result = await session.execute(
+            select(User).where(User.id == broadcast.sender_id)
+        )
+        sender = sender_result.scalar_one_or_none()
+        
+        responder_name = responder.first_name or responder.username or "Subcontractor"
+        
+        # Notify the sender
+        if sender and bot:
+            try:
+                await bot.send_message(
+                    sender.telegram_id,
+                    f"✅ *Message Acknowledged*\n\n"
+                    f"*{responder_name}* has acknowledged your message:\n\n"
+                    f"_{broadcast.message[:100]}{'...' if len(broadcast.message) > 100 else ''}_",
+                    parse_mode="Markdown"
+                )
+            except Exception as e:
+                logger.error(f"Failed to notify sender about acknowledgement: {e}")
+    
+    # Update the message to show acknowledged
+    await callback.message.edit_text(
+        callback.message.text + "\n\n_✅ You acknowledged this message_",
+        parse_mode="Markdown"
+    )
+    await callback.answer("Acknowledged!")
+
+@router.callback_query(F.data.startswith("msg_reply:"))
+async def handle_message_reply_start(callback: CallbackQuery, state: FSMContext):
+    """Start the reply flow for a message"""
+    broadcast_id = int(callback.data.split(":")[1])
+    
+    await state.update_data(broadcast_id=broadcast_id)
+    await callback.message.answer(
+        "💬 *Reply to Message*\n\n"
+        "Type your reply:",
+        parse_mode="Markdown"
+    )
+    await state.set_state(MessageReplyStates.waiting_for_reply)
+    await callback.answer()
+
+@router.message(StateFilter(MessageReplyStates.waiting_for_reply))
+async def process_message_reply(message: Message, state: FSMContext):
+    """Process the reply to a broadcast message"""
+    if message.text and message.text.startswith("/"):
+        await message.answer("Reply cancelled.")
+        await state.clear()
+        return
+    
+    data = await state.get_data()
+    broadcast_id = data.get("broadcast_id")
+    bot = message.bot
+    
+    from src.bot.database.models import BroadcastMessage, MessageResponse
+    
+    async with async_session() as session:
+        # Get responder info
+        responder_result = await session.execute(
+            select(User).where(User.telegram_id == message.from_user.id)
+        )
+        responder = responder_result.scalar_one_or_none()
+        
+        if not responder:
+            await message.answer("User not found.")
+            await state.clear()
+            return
+        
+        # Get the broadcast message
+        broadcast_result = await session.execute(
+            select(BroadcastMessage).where(BroadcastMessage.id == broadcast_id)
+        )
+        broadcast = broadcast_result.scalar_one_or_none()
+        
+        if not broadcast:
+            await message.answer("Original message not found.")
+            await state.clear()
+            return
+        
+        # Save the response
+        response = MessageResponse(
+            broadcast_id=broadcast_id,
+            responder_id=responder.id,
+            response_type="reply",
+            reply_text=message.text
+        )
+        session.add(response)
+        await session.commit()
+        
+        # Get sender info
+        sender_result = await session.execute(
+            select(User).where(User.id == broadcast.sender_id)
+        )
+        sender = sender_result.scalar_one_or_none()
+        
+        responder_name = responder.first_name or responder.username or "Subcontractor"
+        
+        # Notify the sender with the reply
+        if sender and bot:
+            try:
+                await bot.send_message(
+                    sender.telegram_id,
+                    f"💬 *Reply Received*\n\n"
+                    f"*{responder_name}* replied to your message:\n\n"
+                    f"*Original:*\n_{broadcast.message[:100]}{'...' if len(broadcast.message) > 100 else ''}_\n\n"
+                    f"*Reply:*\n{message.text}",
+                    parse_mode="Markdown"
+                )
+            except Exception as e:
+                logger.error(f"Failed to notify sender about reply: {e}")
+    
+    await message.answer(
+        "✅ *Reply Sent*\n\n"
+        "Your reply has been sent to the sender.",
+        parse_mode="Markdown"
+    )
+    await state.clear()

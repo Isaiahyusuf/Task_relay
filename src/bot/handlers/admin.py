@@ -1517,6 +1517,8 @@ async def send_broadcast_message(message: Message, state: FSMContext):
     bot = message.bot
     sent_count = 0
     
+    from src.bot.utils.keyboards import get_message_reaction_keyboard
+    
     async with async_session() as session:
         # Get sender info
         sender_result = await session.execute(
@@ -1553,21 +1555,36 @@ async def send_broadcast_message(message: Message, state: FSMContext):
             else:
                 recipients = []
         
+        # Save the broadcast message to database
+        broadcast = BroadcastMessage(
+            sender_id=sender.id if sender else None,
+            message=message.text,
+            target_role="SUBCONTRACTOR",
+            target_team_id=team.id if target_type not in ["select", "all_subs"] and 'team' in dir() else None,
+            recipient_ids=",".join(map(str, [r.id for r in recipients]))
+        )
+        session.add(broadcast)
+        await session.flush()  # Get the broadcast ID
+        
         for recipient in recipients:
             try:
                 await bot.send_message(
                     recipient.telegram_id,
                     f"📢 *Message from {sender_name}*\n\n"
                     f"{message.text}",
+                    reply_markup=get_message_reaction_keyboard(broadcast.id),
                     parse_mode="Markdown"
                 )
                 sent_count += 1
             except Exception as e:
                 logger.error(f"Failed to send message to {recipient.telegram_id}: {e}")
+        
+        await session.commit()
     
     await message.answer(
         f"*Message Sent!*\n\n"
-        f"Delivered to {sent_count} recipient(s).",
+        f"Delivered to {sent_count} recipient(s).\n"
+        f"You'll be notified when they acknowledge or reply.",
         parse_mode="Markdown"
     )
     await state.clear()

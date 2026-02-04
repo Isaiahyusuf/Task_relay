@@ -409,3 +409,9 @@ def get_unavailability_response_keyboard(notice_id: int, subcontractor_id: int) 
         [InlineKeyboardButton(text="💬 Send Feedback", callback_data=f"unavail_feedback:{notice_id}:{subcontractor_id}")],
         [InlineKeyboardButton(text="✅ Acknowledged", callback_data=f"unavail_ack:{notice_id}")]
     ])
+
+def get_message_reaction_keyboard(broadcast_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✅ Acknowledge", callback_data=f"msg_ack:{broadcast_id}")],
+        [InlineKeyboardButton(text="💬 Reply", callback_data=f"msg_reply:{broadcast_id}")]
+    ])

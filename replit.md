@@ -157,6 +157,13 @@ When supervisors create jobs, they can choose:
   - Specific team (North/West or South/East)
   - Select specific subcontractors
 
+## Message Reactions
+- When messages are sent to subcontractors, they get "Acknowledge" and "Reply" buttons
+- Subcontractors can acknowledge messages with one click
+- Subcontractors can reply directly to messages
+- Sender (admin/supervisor) is immediately notified when subcontractor acknowledges or replies
+- Notifications include the subcontractor's name and their reply text
+
 ## Subcontractor Unavailability
 - Subcontractors can report unavailability via "Report Unavailability" button
 - Can report for specific job or general unavailability
@@ -166,6 +173,8 @@ When supervisors create jobs, they can choose:
 - Feedback is sent directly to the subcontractor who reported unavailability
 
 ## Recent Changes
+- 2026-02-04: Added message reaction system - subcontractors can acknowledge or reply to messages
+- 2026-02-04: Senders notified when subcontractors react to messages
 - 2026-02-04: Supervisors can now send messages to subcontractors (all/team/selected)
 - 2026-02-04: Fixed unavailability notifications - ALL admins and supervisors now receive them
 - 2026-02-04: Added smart reminder for subcontractors who haven't submitted availability (Mon/Tue/Wed)

@@ -273,6 +273,22 @@ async def run_migration():
             print("Updated wednesday/thursday defaults to FALSE")
         except Exception as e:
             print(f"Error updating defaults: {e}")
+        
+        # Create message_responses table for tracking reactions to broadcast messages
+        try:
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS message_responses (
+                    id SERIAL PRIMARY KEY,
+                    broadcast_id INTEGER REFERENCES broadcast_messages(id),
+                    responder_id INTEGER REFERENCES users(id),
+                    response_type VARCHAR(20) NOT NULL,
+                    reply_text TEXT,
+                    responded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            print("Created message_responses table")
+        except Exception as e:
+            print(f"message_responses table may already exist: {e}")
     
     await engine.dispose()
     print("Migration completed!")

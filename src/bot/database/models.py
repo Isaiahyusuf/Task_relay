@@ -187,3 +187,16 @@ class BroadcastMessage(Base):
     
     sender = relationship("User")
     target_team = relationship("Team")
+
+class MessageResponse(Base):
+    __tablename__ = "message_responses"
+    
+    id = Column(Integer, primary_key=True)
+    broadcast_id = Column(Integer, ForeignKey("broadcast_messages.id"), nullable=False)
+    responder_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    response_type = Column(String(20), nullable=False)  # acknowledged, reply
+    reply_text = Column(Text, nullable=True)
+    responded_at = Column(DateTime, default=datetime.utcnow)
+    
+    broadcast = relationship("BroadcastMessage")
+    responder = relationship("User")
