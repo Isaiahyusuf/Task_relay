@@ -131,6 +131,8 @@ class Quote(Base):
     amount = Column(String(100), nullable=False)
     notes = Column(Text, nullable=True)
     is_accepted = Column(Boolean, default=False)
+    is_declined = Column(Boolean, default=False)
+    decline_reason = Column(Text, nullable=True)
     submitted_at = Column(DateTime, default=datetime.utcnow)
     
     job = relationship("Job", back_populates="quotes", foreign_keys=[job_id])

@@ -42,10 +42,14 @@ class QuoteService:
             existing_quote = await session.execute(
                 select(Quote).where(
                     Quote.job_id == job_id,
-                    Quote.subcontractor_id == user.id
+                    Quote.subcontractor_id == user.id,
+                    Quote.is_declined == False
                 )
             )
-            if existing_quote.scalar_one_or_none():
+            active_quote = existing_quote.scalar_one_or_none()
+            if active_quote:
+                if active_quote.is_accepted:
+                    return False, "Your quote was already accepted for this job"
                 return False, "You have already submitted a quote for this job"
             
             quote = Quote(
@@ -130,3 +134,84 @@ class QuoteService:
                 )
             )
             return [user.telegram_id for quote, user in result.all()]
+    
+    @staticmethod
+    async def decline_quote(quote_id: int, supervisor_telegram_id: int, reason: str) -> tuple[bool, str, int, int, str]:
+        """
+        Decline a quote and return job to available status.
+        Returns: (success, message, subcontractor_telegram_id, job_id, job_title)
+        """
+        if not async_session:
+            return False, "Database not available", 0, 0, ""
+        
+        async with async_session() as session:
+            quote_result = await session.execute(
+                select(Quote).where(Quote.id == quote_id)
+            )
+            quote = quote_result.scalar_one_or_none()
+            
+            if not quote:
+                return False, "Quote not found", 0, 0, ""
+            
+            job_result = await session.execute(select(Job).where(Job.id == quote.job_id))
+            job = job_result.scalar_one_or_none()
+            
+            if not job:
+                return False, "Job not found", 0, 0, ""
+            
+            sup_result = await session.execute(
+                select(User).where(User.telegram_id == supervisor_telegram_id)
+            )
+            supervisor = sup_result.scalar_one_or_none()
+            
+            if not supervisor or job.supervisor_id != supervisor.id:
+                return False, "You don't have permission to decline quotes for this job", 0, 0, ""
+            
+            # Get subcontractor telegram_id
+            sub_result = await session.execute(
+                select(User).where(User.id == quote.subcontractor_id)
+            )
+            subcontractor = sub_result.scalar_one_or_none()
+            sub_telegram_id = subcontractor.telegram_id if subcontractor else 0
+            
+            # Mark quote as declined
+            quote.is_declined = True
+            quote.decline_reason = reason
+            
+            await session.commit()
+            
+            return True, "Quote declined", sub_telegram_id, job.id, job.title
+    
+    @staticmethod
+    async def can_resubmit_quote(job_id: int, telegram_id: int) -> tuple[bool, str]:
+        """Check if a subcontractor can resubmit a quote (only if previous was declined)."""
+        if not async_session:
+            return False, "Database not available"
+        
+        async with async_session() as session:
+            user_result = await session.execute(
+                select(User).where(User.telegram_id == telegram_id)
+            )
+            user = user_result.scalar_one_or_none()
+            
+            if not user:
+                return False, "User not found"
+            
+            existing_quote = await session.execute(
+                select(Quote).where(
+                    Quote.job_id == job_id,
+                    Quote.subcontractor_id == user.id
+                ).order_by(Quote.submitted_at.desc())
+            )
+            quote = existing_quote.scalar_one_or_none()
+            
+            if not quote:
+                return True, "No previous quote"
+            
+            if quote.is_declined:
+                return True, "Previous quote was declined, can resubmit"
+            
+            if quote.is_accepted:
+                return False, "Your quote was already accepted"
+            
+            return False, "You have already submitted a quote for this job"

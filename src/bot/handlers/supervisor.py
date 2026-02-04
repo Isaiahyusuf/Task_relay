@@ -4,7 +4,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message, CallbackQuery
 from sqlalchemy import select
-from src.bot.database import async_session, User, Job
+from src.bot.database import async_session, User, Job, Quote
 from src.bot.database.models import UserRole, JobType, JobStatus, AvailabilityStatus
 from src.bot.services.jobs import JobService
 from src.bot.services.quotes import QuoteService
@@ -34,6 +34,9 @@ class NewJobStates(StatesGroup):
 class RatingStates(StatesGroup):
     waiting_for_rating = State()
     waiting_for_comment = State()
+
+class DeclineQuoteStates(StatesGroup):
+    waiting_for_reason = State()
 
 @router.message(Command("newjob"))
 @require_role(UserRole.SUPERVISOR)
@@ -615,6 +618,81 @@ async def accept_quote(callback: CallbackQuery):
         await callback.answer("Quote accepted!")
     else:
         await callback.answer(msg, show_alert=True)
+
+@router.callback_query(F.data.startswith("decline_quote:"))
+async def decline_quote_start(callback: CallbackQuery, state: FSMContext):
+    quote_id = int(callback.data.split(":")[1])
+    
+    # Get quote info for display
+    async with async_session() as session:
+        result = await session.execute(
+            select(Quote, User).join(User, Quote.subcontractor_id == User.id).where(Quote.id == quote_id)
+        )
+        row = result.one_or_none()
+    
+    if not row:
+        await callback.answer("Quote not found", show_alert=True)
+        return
+    
+    quote, user = row
+    name = user.first_name or user.username or f"User {user.telegram_id}"
+    
+    await state.update_data(declining_quote_id=quote_id, quote_amount=quote.amount, subcontractor_name=name)
+    
+    await callback.message.edit_text(
+        f"*Decline Quote*\n\n"
+        f"You are declining the quote from *{name}* for *{quote.amount}*.\n\n"
+        f"Please provide a reason for declining (this will be sent to the subcontractor):",
+        parse_mode="Markdown"
+    )
+    await state.set_state(DeclineQuoteStates.waiting_for_reason)
+    await callback.answer()
+
+@router.message(StateFilter(DeclineQuoteStates.waiting_for_reason))
+async def process_decline_reason(message: Message, state: FSMContext):
+    reason = message.text.strip()
+    
+    if len(reason) < 5:
+        await message.answer("Please provide a meaningful reason (at least 5 characters):")
+        return
+    
+    data = await state.get_data()
+    quote_id = data.get('declining_quote_id')
+    quote_amount = data.get('quote_amount')
+    subcontractor_name = data.get('subcontractor_name')
+    
+    success, msg, sub_telegram_id, job_id, job_title = await QuoteService.decline_quote(
+        quote_id, message.from_user.id, reason
+    )
+    
+    if success:
+        await message.answer(
+            f"*Quote Declined*\n\n"
+            f"Quote from *{subcontractor_name}* for *{quote_amount}* has been declined.\n\n"
+            f"The subcontractor has been notified and can submit a new quote.",
+            parse_mode="Markdown"
+        )
+        
+        # Notify the subcontractor
+        if sub_telegram_id:
+            bot = message.bot
+            if bot:
+                try:
+                    await bot.send_message(
+                        sub_telegram_id,
+                        f"❌ *Quote Declined*\n\n"
+                        f"Your quote for Job #{job_id}: {job_title}\n"
+                        f"Amount: *{quote_amount}*\n\n"
+                        f"*Reason:* {reason}\n\n"
+                        f"You can submit a new quote for this job if you wish.",
+                        parse_mode="Markdown"
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to notify subcontractor {sub_telegram_id} of quote decline: {e}")
+    else:
+        await message.answer(f"Error: {msg}")
+    
+    await state.clear()
 
 @router.callback_query(F.data.startswith("view_submission:"))
 async def view_submission(callback: CallbackQuery):

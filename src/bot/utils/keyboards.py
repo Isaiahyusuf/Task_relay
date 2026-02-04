@@ -160,6 +160,7 @@ def get_quotes_keyboard(quotes: list, job_id: int) -> InlineKeyboardMarkup:
 def get_quote_detail_keyboard(quote_id: int, job_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="✅ Accept This Quote", callback_data=f"accept_quote:{quote_id}")],
+        [InlineKeyboardButton(text="❌ Decline Quote", callback_data=f"decline_quote:{quote_id}")],
         [InlineKeyboardButton(text="⬅️ Back to Quotes", callback_data=f"view_quotes:{job_id}")]
     ])
 

@@ -136,6 +136,24 @@ async def run_migration():
             print("Updated/created teams (North/West and South/East)")
         except Exception as e:
             print(f"Error creating default teams: {e}")
+        
+        # Add is_declined column to quotes table
+        try:
+            await conn.execute(text(
+                "ALTER TABLE quotes ADD COLUMN IF NOT EXISTS is_declined BOOLEAN DEFAULT FALSE"
+            ))
+            print("Added is_declined column to quotes table")
+        except Exception as e:
+            print(f"is_declined column may already exist: {e}")
+        
+        # Add decline_reason column to quotes table
+        try:
+            await conn.execute(text(
+                "ALTER TABLE quotes ADD COLUMN IF NOT EXISTS decline_reason TEXT"
+            ))
+            print("Added decline_reason column to quotes table")
+        except Exception as e:
+            print(f"decline_reason column may already exist: {e}")
     
     await engine.dispose()
     print("Migration completed!")
