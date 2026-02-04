@@ -30,7 +30,7 @@ def get_main_menu_keyboard(role: UserRole) -> ReplyKeyboardMarkup:
         buttons = [
             [KeyboardButton(text="➕ New Job"), KeyboardButton(text="📋 My Jobs")],
             [KeyboardButton(text="⏳ Pending Jobs"), KeyboardButton(text="🔄 Active Jobs")],
-            [KeyboardButton(text="📥 Submitted Jobs")],
+            [KeyboardButton(text="📥 Submitted Jobs"), KeyboardButton(text="📅 View Availability")],
             [KeyboardButton(text="🔑 Create Subcontractor Code")],
             [KeyboardButton(text="ℹ️ Help"), KeyboardButton(text="📘 About")],
             [KeyboardButton(text="🗑️ Delete My Account")]
@@ -326,13 +326,30 @@ def get_availability_keyboard() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="🔴 Away", callback_data="avail:away")]
     ])
 
-def get_weekly_availability_keyboard(week_id: int) -> InlineKeyboardMarkup:
+def get_weekly_availability_keyboard(week_id: int, selected_days: list = None) -> InlineKeyboardMarkup:
+    selected_days = selected_days or []
+    days = [
+        ("Monday", "mon"),
+        ("Tuesday", "tue"),
+        ("Wednesday", "wed"),
+        ("Thursday", "thu"),
+        ("Friday", "fri")
+    ]
+    buttons = []
+    for day_name, day_code in days:
+        check = "✅ " if day_code in selected_days else "⬜ "
+        buttons.append([InlineKeyboardButton(
+            text=f"{check}{day_name}",
+            callback_data=f"weekly_avail:{week_id}:toggle:{day_code}"
+        )])
+    buttons.append([InlineKeyboardButton(text="💾 Save Availability", callback_data=f"weekly_avail:{week_id}:save")])
+    buttons.append([InlineKeyboardButton(text="📝 Add Notes", callback_data=f"weekly_avail:{week_id}:notes")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+def get_supervisor_availability_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✅ Both Days Available", callback_data=f"weekly_avail:{week_id}:both")],
-        [InlineKeyboardButton(text="📅 Wednesday Only", callback_data=f"weekly_avail:{week_id}:wed")],
-        [InlineKeyboardButton(text="📅 Thursday Only", callback_data=f"weekly_avail:{week_id}:thu")],
-        [InlineKeyboardButton(text="❌ Neither Day", callback_data=f"weekly_avail:{week_id}:none")],
-        [InlineKeyboardButton(text="📝 Add Notes", callback_data=f"weekly_avail:{week_id}:notes")]
+        [InlineKeyboardButton(text="📅 View Subcontractor Availability", callback_data="sup_view_avail")],
+        [InlineKeyboardButton(text="🔙 Back", callback_data="back_main")]
     ])
 
 def get_message_target_keyboard() -> InlineKeyboardMarkup:

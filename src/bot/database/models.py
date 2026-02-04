@@ -148,8 +148,11 @@ class WeeklyAvailability(Base):
     id = Column(Integer, primary_key=True)
     subcontractor_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     week_start = Column(DateTime, nullable=False)  # Monday of the week being asked about
-    wednesday_available = Column(Boolean, nullable=True)
-    thursday_available = Column(Boolean, nullable=True)
+    monday_available = Column(Boolean, default=False)
+    tuesday_available = Column(Boolean, default=False)
+    wednesday_available = Column(Boolean, default=False)
+    thursday_available = Column(Boolean, default=False)
+    friday_available = Column(Boolean, default=False)
     notes = Column(Text, nullable=True)
     responded_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)

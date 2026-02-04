@@ -1079,3 +1079,76 @@ async def process_not_satisfied_reason(message: Message, state: FSMContext):
         parse_mode="Markdown"
     )
     await state.clear()
+
+# ============= VIEW SUBCONTRACTOR AVAILABILITY =============
+
+@router.message(F.text == "📅 View Availability")
+async def btn_view_availability(message: Message):
+    if not await check_supervisor(message):
+        return
+    await show_subcontractor_availability(message)
+
+async def show_subcontractor_availability(message: Message):
+    from src.bot.database import WeeklyAvailability
+    from datetime import timedelta
+    
+    if not async_session:
+        await message.answer("Database not available.")
+        return
+    
+    # Get current week's Monday
+    today = datetime.utcnow().date()
+    days_since_monday = today.weekday()
+    current_monday = datetime.combine(today - timedelta(days=days_since_monday), datetime.min.time())
+    
+    async with async_session() as session:
+        # Get all availability records for this week
+        result = await session.execute(
+            select(WeeklyAvailability, User).join(
+                User, WeeklyAvailability.subcontractor_id == User.id
+            ).where(WeeklyAvailability.week_start == current_monday)
+        )
+        responses = result.all()
+        
+        if not responses:
+            await message.answer(
+                "📅 *Subcontractor Availability*\n\n"
+                "No availability data for this week yet.\n\n"
+                "Subcontractors receive availability surveys every Sunday.",
+                parse_mode="Markdown"
+            )
+            return
+        
+        day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+        
+        message_text = f"📅 *Subcontractor Availability*\n"
+        message_text += f"Week of {current_monday.strftime('%d/%m/%Y')}\n\n"
+        
+        for avail, user in responses:
+            name = user.first_name or user.username or f"User {user.telegram_id}"
+            
+            if avail.responded_at is None:
+                message_text += f"*{name}:* ⏳ No response yet\n\n"
+            else:
+                days_available = []
+                if avail.monday_available:
+                    days_available.append("Mon")
+                if avail.tuesday_available:
+                    days_available.append("Tue")
+                if avail.wednesday_available:
+                    days_available.append("Wed")
+                if avail.thursday_available:
+                    days_available.append("Thu")
+                if avail.friday_available:
+                    days_available.append("Fri")
+                
+                if days_available:
+                    message_text += f"*{name}:* ✅ {', '.join(days_available)}\n"
+                else:
+                    message_text += f"*{name}:* ❌ Not available\n"
+                
+                if avail.notes:
+                    message_text += f"   _Notes: {avail.notes}_\n"
+                message_text += "\n"
+        
+        await message.answer(message_text, parse_mode="Markdown")

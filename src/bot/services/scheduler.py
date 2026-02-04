@@ -159,19 +159,18 @@ class SchedulerService:
     
     @classmethod
     async def check_weekly_availability_survey(cls):
-        """Send weekly availability survey on Saturdays for the following Wed/Thu"""
+        """Send weekly availability survey on Sundays for the following Mon-Fri"""
         if not async_session or not cls.bot:
             return
         
         today = datetime.utcnow().date()
         
-        # Only send on Saturdays (weekday 5)
-        if today.weekday() != 5:
+        # Only send on Sundays (weekday 6)
+        if today.weekday() != 6:
             return
         
-        # Calculate next week's Monday
-        days_until_monday = 7 - today.weekday() + 0  # Next Monday
-        next_week_monday = datetime.combine(today + timedelta(days=days_until_monday), datetime.min.time())
+        # Calculate tomorrow's Monday (start of the week)
+        next_week_monday = datetime.combine(today + timedelta(days=1), datetime.min.time())
         
         async with async_session() as session:
             # Get all subcontractors
@@ -203,18 +202,24 @@ class SchedulerService:
                     session.add(availability)
                     await session.flush()
                     
-                    # Send survey message
+                    # Send survey message with all weekdays
                     from src.bot.utils.keyboards import get_weekly_availability_keyboard
+                    mon_date = next_week_monday.strftime("%d/%m")
+                    tue_date = (next_week_monday + timedelta(days=1)).strftime("%d/%m")
                     wed_date = (next_week_monday + timedelta(days=2)).strftime("%d/%m")
                     thu_date = (next_week_monday + timedelta(days=3)).strftime("%d/%m")
+                    fri_date = (next_week_monday + timedelta(days=4)).strftime("%d/%m")
                     
                     await cls.bot.send_message(
                         sub.telegram_id,
                         f"📅 *Weekly Availability Survey*\n\n"
-                        f"Please confirm your availability for next week:\n\n"
-                        f"*Wednesday {wed_date}*\n"
-                        f"*Thursday {thu_date}*",
-                        reply_markup=get_weekly_availability_keyboard(availability.id),
+                        f"Please tick the days you will be available to work next week:\n\n"
+                        f"Monday {mon_date}\n"
+                        f"Tuesday {tue_date}\n"
+                        f"Wednesday {wed_date}\n"
+                        f"Thursday {thu_date}\n"
+                        f"Friday {fri_date}",
+                        reply_markup=get_weekly_availability_keyboard(availability.id, []),
                         parse_mode="Markdown"
                     )
                     
@@ -223,6 +228,20 @@ class SchedulerService:
                     logger.error(f"Failed to send weekly survey to user {sub.telegram_id}: {e}")
             
             await session.commit()
+    
+    @classmethod
+    async def reset_weekly_availability(cls):
+        """Reset weekly availability on Saturdays - records are archived, not deleted"""
+        if not async_session or not cls.bot:
+            return
+        
+        today = datetime.utcnow().date()
+        
+        # Only run on Saturdays (weekday 5)
+        if today.weekday() != 5:
+            return
+        
+        logger.info("Weekly availability reset triggered (Saturday)")
     
     @classmethod
     async def notify_admins_of_availability(cls, week_start: datetime):
@@ -239,10 +258,13 @@ class SchedulerService:
             )
             responses = result.all()
             
-            wed_available = []
-            thu_available = []
-            wed_unavailable = []
-            thu_unavailable = []
+            days_data = {
+                "mon": {"available": [], "unavailable": []},
+                "tue": {"available": [], "unavailable": []},
+                "wed": {"available": [], "unavailable": []},
+                "thu": {"available": [], "unavailable": []},
+                "fri": {"available": [], "unavailable": []}
+            }
             no_response = []
             
             for avail, user in responses:
@@ -250,28 +272,43 @@ class SchedulerService:
                 if avail.responded_at is None:
                     no_response.append(name)
                     continue
+                
+                if avail.monday_available:
+                    days_data["mon"]["available"].append(name)
+                else:
+                    days_data["mon"]["unavailable"].append(name)
+                if avail.tuesday_available:
+                    days_data["tue"]["available"].append(name)
+                else:
+                    days_data["tue"]["unavailable"].append(name)
                 if avail.wednesday_available:
-                    wed_available.append(name)
+                    days_data["wed"]["available"].append(name)
                 else:
-                    wed_unavailable.append(name)
+                    days_data["wed"]["unavailable"].append(name)
                 if avail.thursday_available:
-                    thu_available.append(name)
+                    days_data["thu"]["available"].append(name)
                 else:
-                    thu_unavailable.append(name)
+                    days_data["thu"]["unavailable"].append(name)
+                if avail.friday_available:
+                    days_data["fri"]["available"].append(name)
+                else:
+                    days_data["fri"]["unavailable"].append(name)
             
-            wed_date = (week_start + timedelta(days=2)).strftime("%d/%m/%Y")
-            thu_date = (week_start + timedelta(days=3)).strftime("%d/%m/%Y")
+            day_names = [
+                ("mon", "Monday", 0),
+                ("tue", "Tuesday", 1),
+                ("wed", "Wednesday", 2),
+                ("thu", "Thursday", 3),
+                ("fri", "Friday", 4)
+            ]
             
-            message = (
-                f"📊 *Weekly Availability Report*\n"
-                f"Week of {week_start.strftime('%d/%m/%Y')}\n\n"
-                f"*Wednesday {wed_date}:*\n"
-                f"✅ Available: {', '.join(wed_available) if wed_available else 'None'}\n"
-                f"❌ Unavailable: {', '.join(wed_unavailable) if wed_unavailable else 'None'}\n\n"
-                f"*Thursday {thu_date}:*\n"
-                f"✅ Available: {', '.join(thu_available) if thu_available else 'None'}\n"
-                f"❌ Unavailable: {', '.join(thu_unavailable) if thu_unavailable else 'None'}\n\n"
-            )
+            message = f"📊 *Weekly Availability Report*\nWeek of {week_start.strftime('%d/%m/%Y')}\n\n"
+            
+            for day_code, day_name, offset in day_names:
+                day_date = (week_start + timedelta(days=offset)).strftime("%d/%m")
+                available = days_data[day_code]["available"]
+                message += f"*{day_name} {day_date}:*\n"
+                message += f"✅ {', '.join(available) if available else 'None'}\n\n"
             
             if no_response:
                 message += f"⚠️ *No Response:* {', '.join(no_response)}"

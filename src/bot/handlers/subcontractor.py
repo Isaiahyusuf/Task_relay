@@ -943,7 +943,7 @@ async def handle_weekly_availability_response(callback: CallbackQuery, state: FS
         return
     
     avail_id = int(parts[1])
-    response = parts[2]
+    action = parts[2]
     
     async with async_session() as session:
         result = await session.execute(
@@ -955,47 +955,91 @@ async def handle_weekly_availability_response(callback: CallbackQuery, state: FS
             await callback.answer("Survey not found", show_alert=True)
             return
         
-        if response == "both":
-            availability.wednesday_available = True
-            availability.thursday_available = True
-            availability.responded_at = datetime.utcnow()
+        if action == "toggle" and len(parts) >= 4:
+            day = parts[3]
+            # Toggle the day
+            if day == "mon":
+                availability.monday_available = not availability.monday_available
+            elif day == "tue":
+                availability.tuesday_available = not availability.tuesday_available
+            elif day == "wed":
+                availability.wednesday_available = not availability.wednesday_available
+            elif day == "thu":
+                availability.thursday_available = not availability.thursday_available
+            elif day == "fri":
+                availability.friday_available = not availability.friday_available
+            
             await session.commit()
+            
+            # Build selected days list
+            selected_days = []
+            if availability.monday_available:
+                selected_days.append("mon")
+            if availability.tuesday_available:
+                selected_days.append("tue")
+            if availability.wednesday_available:
+                selected_days.append("wed")
+            if availability.thursday_available:
+                selected_days.append("thu")
+            if availability.friday_available:
+                selected_days.append("fri")
+            
+            # Update keyboard
+            from src.bot.utils.keyboards import get_weekly_availability_keyboard
+            from datetime import timedelta
+            week_start = availability.week_start
+            mon_date = week_start.strftime("%d/%m")
+            tue_date = (week_start + timedelta(days=1)).strftime("%d/%m")
+            wed_date = (week_start + timedelta(days=2)).strftime("%d/%m")
+            thu_date = (week_start + timedelta(days=3)).strftime("%d/%m")
+            fri_date = (week_start + timedelta(days=4)).strftime("%d/%m")
+            
             await callback.message.edit_text(
-                "✅ *Response Recorded*\n\n"
-                "You are available on both Wednesday and Thursday.",
+                f"📅 *Weekly Availability Survey*\n\n"
+                f"Please tick the days you will be available to work next week:\n\n"
+                f"Monday {mon_date}\n"
+                f"Tuesday {tue_date}\n"
+                f"Wednesday {wed_date}\n"
+                f"Thursday {thu_date}\n"
+                f"Friday {fri_date}",
+                reply_markup=get_weekly_availability_keyboard(avail_id, selected_days),
                 parse_mode="Markdown"
             )
-        elif response == "wed":
-            availability.wednesday_available = True
-            availability.thursday_available = False
+            await callback.answer()
+            
+        elif action == "save":
             availability.responded_at = datetime.utcnow()
             await session.commit()
-            await callback.message.edit_text(
-                "✅ *Response Recorded*\n\n"
-                "You are available on Wednesday only.",
-                parse_mode="Markdown"
-            )
-        elif response == "thu":
-            availability.wednesday_available = False
-            availability.thursday_available = True
-            availability.responded_at = datetime.utcnow()
-            await session.commit()
-            await callback.message.edit_text(
-                "✅ *Response Recorded*\n\n"
-                "You are available on Thursday only.",
-                parse_mode="Markdown"
-            )
-        elif response == "none":
-            availability.wednesday_available = False
-            availability.thursday_available = False
-            availability.responded_at = datetime.utcnow()
-            await session.commit()
-            await callback.message.edit_text(
-                "✅ *Response Recorded*\n\n"
-                "You are not available either day.",
-                parse_mode="Markdown"
-            )
-        elif response == "notes":
+            
+            # Build confirmation message
+            days_available = []
+            if availability.monday_available:
+                days_available.append("Monday")
+            if availability.tuesday_available:
+                days_available.append("Tuesday")
+            if availability.wednesday_available:
+                days_available.append("Wednesday")
+            if availability.thursday_available:
+                days_available.append("Thursday")
+            if availability.friday_available:
+                days_available.append("Friday")
+            
+            if days_available:
+                days_text = ", ".join(days_available)
+                await callback.message.edit_text(
+                    f"✅ *Availability Saved*\n\n"
+                    f"You are available on: {days_text}",
+                    parse_mode="Markdown"
+                )
+            else:
+                await callback.message.edit_text(
+                    "✅ *Availability Saved*\n\n"
+                    "You are not available any day this week.",
+                    parse_mode="Markdown"
+                )
+            await callback.answer("Availability saved!")
+            
+        elif action == "notes":
             await state.update_data(avail_id=avail_id)
             await state.set_state(WeeklyAvailabilityNotesStates.waiting_for_notes)
             await callback.message.edit_text(
@@ -1003,8 +1047,7 @@ async def handle_weekly_availability_response(callback: CallbackQuery, state: FS
                 "Please type any notes about your availability:",
                 parse_mode="Markdown"
             )
-    
-    await callback.answer()
+            await callback.answer()
 
 @router.message(StateFilter(WeeklyAvailabilityNotesStates.waiting_for_notes))
 async def process_weekly_availability_notes(message: Message, state: FSMContext):

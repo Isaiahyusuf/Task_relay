@@ -234,6 +234,45 @@ async def run_migration():
             print("Created broadcast_messages table")
         except Exception as e:
             print(f"broadcast_messages table may already exist: {e}")
+        
+        # Add monday_available to weekly_availability table
+        try:
+            await conn.execute(text(
+                "ALTER TABLE weekly_availability ADD COLUMN IF NOT EXISTS monday_available BOOLEAN DEFAULT FALSE"
+            ))
+            print("Added monday_available column")
+        except Exception as e:
+            print(f"monday_available column may already exist: {e}")
+        
+        # Add tuesday_available to weekly_availability table
+        try:
+            await conn.execute(text(
+                "ALTER TABLE weekly_availability ADD COLUMN IF NOT EXISTS tuesday_available BOOLEAN DEFAULT FALSE"
+            ))
+            print("Added tuesday_available column")
+        except Exception as e:
+            print(f"tuesday_available column may already exist: {e}")
+        
+        # Add friday_available to weekly_availability table
+        try:
+            await conn.execute(text(
+                "ALTER TABLE weekly_availability ADD COLUMN IF NOT EXISTS friday_available BOOLEAN DEFAULT FALSE"
+            ))
+            print("Added friday_available column")
+        except Exception as e:
+            print(f"friday_available column may already exist: {e}")
+        
+        # Update wednesday_available and thursday_available defaults
+        try:
+            await conn.execute(text(
+                "ALTER TABLE weekly_availability ALTER COLUMN wednesday_available SET DEFAULT FALSE"
+            ))
+            await conn.execute(text(
+                "ALTER TABLE weekly_availability ALTER COLUMN thursday_available SET DEFAULT FALSE"
+            ))
+            print("Updated wednesday/thursday defaults to FALSE")
+        except Exception as e:
+            print(f"Error updating defaults: {e}")
     
     await engine.dispose()
     print("Migration completed!")

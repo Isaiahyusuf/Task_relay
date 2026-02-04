@@ -133,9 +133,10 @@ When supervisors create jobs, they can choose:
 - Ratings show format: "★★★★☆ (4.2/5 from 8 jobs)"
 
 ## Weekly Availability Survey
-- Scheduler sends availability survey to all subcontractors on Saturdays
-- Subcontractors report their Wednesday/Thursday availability for the following week
-- Admins can view availability summary via "Weekly Availability" menu
+- Scheduler sends availability survey to all subcontractors every Sunday
+- Subcontractors tick which days they can work (Monday-Friday) for the coming week
+- Supervisors can view individual subcontractor availability via "View Availability" button
+- Availability resets every Saturday when new week begins
 - Admins receive automatic reports when responses are collected
 
 ## Job Deadlines
@@ -162,8 +163,11 @@ When supervisors create jobs, they can choose:
 - Supervisors with active jobs are automatically notified
 
 ## Recent Changes
+- 2026-02-04: Replaced Wed/Thu availability with Monday-Friday daily availability system
+- 2026-02-04: Subcontractors receive availability survey every Sunday to tick available days
+- 2026-02-04: Supervisors can view subcontractor availability via "View Availability" button
+- 2026-02-04: Availability resets every Saturday
 - 2026-02-04: Added "Not Satisfied" button for supervisors to request revision with feedback
-- 2026-02-04: Added weekly availability survey system (automatic Saturday surveys)
 - 2026-02-04: Added job deadlines with 24-hour reminder notifications
 - 2026-02-04: Supervisors can attach photos when creating jobs
 - 2026-02-04: Admins can now create and post jobs
