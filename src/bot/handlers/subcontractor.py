@@ -1000,34 +1000,36 @@ async def process_unavailability_dates(message: Message, state: FSMContext):
                     except Exception as e:
                         logger.error(f"Failed to notify supervisor: {e}")
         
-        # Also notify all admins and super admins
-        admin_result = await session.execute(
-            select(User).where(User.role.in_([UserRole.ADMIN, UserRole.SUPER_ADMIN]))
+        # Also notify all admins, super admins, and all supervisors
+        notify_result = await session.execute(
+            select(User).where(User.role.in_([UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.SUPERVISOR]))
         )
-        admins = admin_result.scalars().all()
+        notify_users = notify_result.scalars().all()
         
-        for admin in admins:
-            if admin.id in notified_users:
-                continue  # Don't notify twice if admin is also the supervisor
-            try:
-                job_info = ""
-                if job_id:
-                    job = await JobService.get_job(job_id)
-                    if job:
-                        job_info = f"Job #{job.id}: {job.title}\n"
-                
-                await bot.send_message(
-                    admin.telegram_id,
-                    f"⚠️ *Unavailability Notice*\n\n"
-                    f"*{sub_name}* has reported {'job-specific' if job_id else 'general'} unavailability.\n\n"
-                    f"{job_info}"
-                    f"Reason: {reason}{dates_text}",
-                    reply_markup=get_unavailability_response_keyboard(notice.id, sub.id),
-                    parse_mode="Markdown"
-                )
-                notified_users.append(admin.id)
-            except Exception as e:
-                logger.error(f"Failed to notify admin {admin.telegram_id}: {e}")
+        for user in notify_users:
+            if user.id in notified_users:
+                continue  # Don't notify twice
+            if bot:
+                try:
+                    job_info = ""
+                    if job_id:
+                        job = await JobService.get_job(job_id)
+                        if job:
+                            job_info = f"Job #{job.id}: {job.title}\n"
+                    
+                    await bot.send_message(
+                        user.telegram_id,
+                        f"⚠️ *Unavailability Notice*\n\n"
+                        f"*{sub_name}* has reported {'job-specific' if job_id else 'general'} unavailability.\n\n"
+                        f"{job_info}"
+                        f"Reason: {reason}{dates_text}",
+                        reply_markup=get_unavailability_response_keyboard(notice.id, sub.id),
+                        parse_mode="Markdown"
+                    )
+                    notified_users.append(user.id)
+                    logger.info(f"Notified {user.role.value} {user.telegram_id} about unavailability")
+                except Exception as e:
+                    logger.error(f"Failed to notify {user.role.value} {user.telegram_id}: {e}")
         
         # Update the notice with notified users
         notice.notified_supervisor_ids = ",".join(map(str, notified_users))
