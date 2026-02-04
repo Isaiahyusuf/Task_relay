@@ -582,12 +582,12 @@ async def handle_confirm_job_delete(callback: CallbackQuery):
     job_id = int(callback.data.split(":")[1])
     
     async with async_session() as session:
-        # Check admin again
+        # Check admin or super admin
         admin_result = await session.execute(
             select(User).where(User.telegram_id == callback.from_user.id)
         )
         admin = admin_result.scalar_one_or_none()
-        if not admin or admin.role != UserRole.ADMIN:
+        if not admin or admin.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
             await callback.answer("Not authorized", show_alert=True)
             return
 
