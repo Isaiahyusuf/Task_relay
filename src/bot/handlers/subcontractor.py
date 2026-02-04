@@ -1128,6 +1128,13 @@ async def handle_weekly_availability_response(callback: CallbackQuery, state: FS
             availability.responded_at = datetime.utcnow()
             await session.commit()
             
+            # Get subcontractor info for notification
+            sub_result = await session.execute(
+                select(User).where(User.id == availability.subcontractor_id)
+            )
+            subcontractor = sub_result.scalar_one_or_none()
+            sub_name = subcontractor.first_name or subcontractor.username or "Subcontractor" if subcontractor else "Subcontractor"
+            
             # Build confirmation message
             days_available = []
             if availability.monday_available:
@@ -1141,17 +1148,40 @@ async def handle_weekly_availability_response(callback: CallbackQuery, state: FS
             if availability.friday_available:
                 days_available.append("Friday")
             
+            days_text = ", ".join(days_available) if days_available else "No days selected"
+            
+            # Notify all admins and supervisors
+            bot = callback.bot
+            if bot:
+                notify_result = await session.execute(
+                    select(User).where(User.role.in_([UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.SUPERVISOR]))
+                )
+                notify_users = notify_result.scalars().all()
+                
+                for user in notify_users:
+                    try:
+                        await bot.send_message(
+                            user.telegram_id,
+                            f"📅 *Availability Update*\n\n"
+                            f"*{sub_name}* has submitted their weekly availability.\n\n"
+                            f"Available days: {days_text}",
+                            parse_mode="Markdown"
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to notify user {user.telegram_id}: {e}")
+            
             if days_available:
-                days_text = ", ".join(days_available)
                 await callback.message.edit_text(
                     f"✅ *Availability Saved*\n\n"
-                    f"You are available on: {days_text}",
+                    f"You are available on: {days_text}\n\n"
+                    f"Supervisors and admins have been notified.",
                     parse_mode="Markdown"
                 )
             else:
                 await callback.message.edit_text(
                     "✅ *Availability Saved*\n\n"
-                    "You are not available any day this week.",
+                    "You are not available any day this week.\n\n"
+                    "Supervisors and admins have been notified.",
                     parse_mode="Markdown"
                 )
             await callback.answer("Availability saved!")

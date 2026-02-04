@@ -1570,74 +1570,72 @@ async def send_broadcast_message(message: Message, state: FSMContext):
 
 @router.message(F.text == "📅 Weekly Availability")
 async def btn_weekly_availability(message: Message):
-    """View weekly availability responses"""
+    """View weekly availability responses for all subcontractors"""
     if not await check_admin(message):
         return
     
     from datetime import datetime, timedelta
     
-    # Get current/upcoming week's availability
+    # Get current week's Monday
     today = datetime.utcnow().date()
-    # Find the Monday of this week or next week
     days_since_monday = today.weekday()
-    this_monday = datetime.combine(today - timedelta(days=days_since_monday), datetime.min.time())
-    next_monday = this_monday + timedelta(days=7)
+    current_monday = datetime.combine(today - timedelta(days=days_since_monday), datetime.min.time())
     
     async with async_session() as session:
-        # Check next week first, then current week
-        for week_start in [next_monday, this_monday]:
-            result = await session.execute(
-                select(WeeklyAvailability, User).join(
-                    User, WeeklyAvailability.subcontractor_id == User.id
-                ).where(WeeklyAvailability.week_start == week_start)
-            )
-            responses = list(result.all())
-            
-            if responses:
-                wed_date = (week_start + timedelta(days=2)).strftime("%d/%m")
-                thu_date = (week_start + timedelta(days=3)).strftime("%d/%m")
-                
-                wed_avail = []
-                thu_avail = []
-                wed_unavail = []
-                thu_unavail = []
-                pending = []
-                
-                for avail, user in responses:
-                    name = user.first_name or user.username or f"User {user.telegram_id}"
-                    if avail.responded_at is None:
-                        pending.append(name)
-                    else:
-                        if avail.wednesday_available:
-                            wed_avail.append(name)
-                        else:
-                            wed_unavail.append(name)
-                        if avail.thursday_available:
-                            thu_avail.append(name)
-                        else:
-                            thu_unavail.append(name)
-                
-                text = (
-                    f"📅 *Weekly Availability*\n"
-                    f"Week of {week_start.strftime('%d/%m/%Y')}\n\n"
-                    f"*Wednesday {wed_date}:*\n"
-                    f"✅ {', '.join(wed_avail) if wed_avail else 'None'}\n"
-                    f"❌ {', '.join(wed_unavail) if wed_unavail else 'None'}\n\n"
-                    f"*Thursday {thu_date}:*\n"
-                    f"✅ {', '.join(thu_avail) if thu_avail else 'None'}\n"
-                    f"❌ {', '.join(thu_unavail) if thu_unavail else 'None'}\n\n"
-                )
-                
-                if pending:
-                    text += f"⏳ *Pending Response:*\n{', '.join(pending)}"
-                
-                await message.answer(text, parse_mode="Markdown")
-                return
-        
-        await message.answer(
-            "📅 *Weekly Availability*\n\n"
-            "No availability surveys have been sent yet.\n"
-            "Surveys are automatically sent to subcontractors on Saturdays.",
-            parse_mode="Markdown"
+        # Get all availability records for this week
+        result = await session.execute(
+            select(WeeklyAvailability, User).join(
+                User, WeeklyAvailability.subcontractor_id == User.id
+            ).where(WeeklyAvailability.week_start == current_monday)
         )
+        responses = list(result.all())
+        
+        if not responses:
+            await message.answer(
+                "📅 *Weekly Availability*\n\n"
+                "No availability data for this week yet.\n\n"
+                "Subcontractors receive availability surveys every Sunday.",
+                parse_mode="Markdown"
+            )
+            return
+        
+        text = f"📅 *Subcontractor Availability*\n"
+        text += f"Week of {current_monday.strftime('%d/%m/%Y')}\n\n"
+        
+        responded = []
+        pending = []
+        
+        for avail, user in responses:
+            name = user.first_name or user.username or f"User {user.telegram_id}"
+            
+            if avail.responded_at is None:
+                pending.append(name)
+            else:
+                days_available = []
+                if avail.monday_available:
+                    days_available.append("Mon")
+                if avail.tuesday_available:
+                    days_available.append("Tue")
+                if avail.wednesday_available:
+                    days_available.append("Wed")
+                if avail.thursday_available:
+                    days_available.append("Thu")
+                if avail.friday_available:
+                    days_available.append("Fri")
+                
+                if days_available:
+                    responded.append(f"*{name}:* ✅ {', '.join(days_available)}")
+                else:
+                    responded.append(f"*{name}:* ❌ Not available")
+                
+                if avail.notes:
+                    responded[-1] += f"\n   _Notes: {avail.notes}_"
+        
+        if responded:
+            text += "\n".join(responded) + "\n\n"
+        
+        if pending:
+            text += f"⏳ *Pending Response:*\n{', '.join(pending)}"
+        
+        await message.answer(text, parse_mode="Markdown")
 
