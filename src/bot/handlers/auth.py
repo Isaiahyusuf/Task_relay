@@ -337,7 +337,7 @@ async def show_help(message: Message):
                 
                 "*WEEKLY AVAILABILITY*\n"
                 "• *My Availability* - View/update weekly schedule\n"
-                "• Every Sunday: Tick days you can work (Mon-Fri)\n"
+                "• Every Thursday: Tick days you can work (Mon-Fri)\n"
                 "• Add notes for specific days if needed\n\n"
                 
                 "*COMMUNICATION*\n"
