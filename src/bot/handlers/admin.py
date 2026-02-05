@@ -1689,7 +1689,7 @@ async def btn_weekly_availability(message: Message):
             await message.answer(
                 "📅 *Weekly Availability*\n\n"
                 "No availability data for this week yet.\n\n"
-                "Subcontractors receive availability surveys every Sunday.",
+                "Subcontractors receive availability surveys every thursday.",
                 parse_mode="Markdown"
             )
             return
