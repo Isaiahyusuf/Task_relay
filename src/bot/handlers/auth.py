@@ -8,6 +8,7 @@ from src.bot.database import async_session, User
 from src.bot.database.models import UserRole
 from src.bot.services.access_codes import AccessCodeService
 from src.bot.utils.keyboards import get_main_menu_keyboard, get_self_delete_confirm_keyboard
+from src.bot.utils.roles import role_display_name
 from src.bot.config import config
 import logging
 
@@ -46,7 +47,7 @@ async def cmd_start(message: Message, state: FSMContext):
                     await state.set_state(AuthStates.waiting_for_code)
                     return
             
-            role_name = user.role.value.replace("_", " ").title()
+            role_name = role_display_name(user.role)
             keyboard = get_main_menu_keyboard(user.role)
             await message.answer(
                 f"Welcome back, {message.from_user.first_name or 'there'}!\n\n"
@@ -218,26 +219,25 @@ async def show_help(message: Message):
         
         if user.role == UserRole.SUPER_ADMIN:
             help_text = (
-                "*SUPER ADMIN MANUAL*\n"
+                "*GENERAL MANAGER MANUAL*\n"
                 "━━━━━━━━━━━━━━━━━━━━\n\n"
                 
                 "*USER MANAGEMENT*\n"
-                "• *Create Admin Code* - Generate codes for new admins\n"
+                "• *Create Manager Code* - Generate codes for new managers\n"
                 "• *Create Supervisor Code* - Generate codes for supervisors\n"
                 "• *Create Subcontractor Code* - Generate codes for workers\n"
                 "• *All Access Codes* - View all generated codes\n"
-                "• *View Admins/Supervisors/Subcontractors* - Manage users by role\n"
+                "• *View Managers/Supervisors/Subcontractors* - Manage users by role\n"
                 "• *All Users* - View complete user list\n"
                 "• *View By Teams* - See users grouped by team\n\n"
                 
                 "*JOB MANAGEMENT*\n"
-                "• *New Job* - Create and dispatch jobs\n"
                 "• *Job History* - View all job records\n"
                 "• *Archive Jobs* - Archive old completed jobs\n"
                 "• *View Archived* - Browse archived jobs\n\n"
                 
                 "*COMMUNICATION*\n"
-                "• *Send Message* - Message subcontractors (all/team/select)\n"
+                "• *Send Message* - Message everyone on bot or subcontractors\n"
                 "• *Weekly Availability* - View subcontractor schedules\n\n"
                 
                 "*OTHER*\n"
@@ -246,7 +246,7 @@ async def show_help(message: Message):
             )
         elif user.role == UserRole.ADMIN:
             help_text = (
-                "*ADMIN MANUAL*\n"
+                "*MANAGER MANUAL*\n"
                 "━━━━━━━━━━━━━━━━━━━━\n\n"
                 
                 "*USER MANAGEMENT*\n"

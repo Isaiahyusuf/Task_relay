@@ -6,15 +6,15 @@ def get_main_menu_keyboard(role: UserRole) -> ReplyKeyboardMarkup:
     if role == UserRole.SUPER_ADMIN:
         buttons = [
             [KeyboardButton(text="📊 Job History"), KeyboardButton(text="📦 Archive Jobs")],
-            [KeyboardButton(text="➕ New Job"), KeyboardButton(text="📨 Send Message")],
+            [KeyboardButton(text="📨 Send Message")],
             [KeyboardButton(text="📅 Weekly Availability")],
             [KeyboardButton(text="🔑 All Access Codes")],
-            [KeyboardButton(text="👑 Create Admin Code"), KeyboardButton(text="👔 Create Supervisor Code")],
+            [KeyboardButton(text="👑 Create Manager Code"), KeyboardButton(text="👔 Create Supervisor Code")],
             [KeyboardButton(text="🔧 Create Subcontractor Code")],
             [KeyboardButton(text="🏢 View By Teams"), KeyboardButton(text="🌍 View Regions")],
             [KeyboardButton(text="🎭 Manage Roles"), KeyboardButton(text="🌐 Manage Regions")],
             [KeyboardButton(text="🏢 Manage Teams")],
-            [KeyboardButton(text="👑 View Admins"), KeyboardButton(text="👔 View Supervisors")],
+            [KeyboardButton(text="👑 View Managers"), KeyboardButton(text="👔 View Supervisors")],
             [KeyboardButton(text="🔧 View Subcontractors"), KeyboardButton(text="👥 All Users")],
             [KeyboardButton(text="🔄 Switch Role"), KeyboardButton(text="📋 View Archived")],
             [KeyboardButton(text="ℹ️ Help"), KeyboardButton(text="📘 About")]
@@ -227,7 +227,7 @@ def get_role_selection_keyboard(creator_role: str = "super_admin") -> InlineKeyb
     role_options = creatable_roles(role_map.get(creator_role))
 
     labels = {
-        UserRole.ADMIN: "👑 Admin",
+        UserRole.ADMIN: "👑 Manager",
         UserRole.SUPERVISOR: "👔 Supervisor",
         UserRole.SUBCONTRACTOR: "🔧 Subcontractor",
     }
@@ -291,7 +291,7 @@ def get_switch_role_keyboard() -> InlineKeyboardMarkup:
 
 def get_super_admin_switch_role_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="👑 Admin", callback_data="sa_switch:admin")],
+        [InlineKeyboardButton(text="👑 Manager", callback_data="sa_switch:admin")],
         [InlineKeyboardButton(text="👔 Supervisor", callback_data="sa_switch:supervisor")],
         [InlineKeyboardButton(text="🔧 Subcontractor", callback_data="sa_switch:subcontractor")],
         [InlineKeyboardButton(text="❌ Cancel", callback_data="back:sa_menu")]
@@ -364,14 +364,18 @@ def get_supervisor_availability_keyboard() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="🔙 Back", callback_data="back_main")]
     ])
 
-def get_message_target_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[
+def get_message_target_keyboard(sender_role: UserRole | None = None) -> InlineKeyboardMarkup:
+    rows = []
+    if sender_role == UserRole.SUPER_ADMIN:
+        rows.append([InlineKeyboardButton(text="📣 Everyone on Bot", callback_data="msg_target:all_users")])
+    rows.extend([
         [InlineKeyboardButton(text="📢 All Subcontractors", callback_data="msg_target:all_subs")],
         [InlineKeyboardButton(text="🏢 North/West Team", callback_data="msg_target:northwest")],
         [InlineKeyboardButton(text="🏢 South/East Team", callback_data="msg_target:southeast")],
         [InlineKeyboardButton(text="👤 Select Specific Users", callback_data="msg_target:select")],
         [InlineKeyboardButton(text="❌ Cancel", callback_data="msg_cancel")]
     ])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 def get_subcontractor_select_keyboard(subcontractors: list, selected_ids: list = None) -> InlineKeyboardMarkup:
     selected_ids = selected_ids or []

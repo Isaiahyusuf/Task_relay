@@ -1,4 +1,7 @@
 from datetime import datetime
+import os
+import tempfile
+from typing import Any
 
 from fpdf import FPDF
 
@@ -31,6 +34,63 @@ class JobPdfService:
             parts.append("\n".join(chunks))
         return " ".join(parts)
 
+    @staticmethod
+    def _extract_photo_ids(raw_ids: str | None, max_count: int = 3) -> list[str]:
+        if not raw_ids:
+            return []
+        return [photo_id.strip() for photo_id in raw_ids.split(",") if photo_id.strip()][:max_count]
+
+    @staticmethod
+    async def _download_temp_photo(bot: Any, file_id: str) -> str:
+        tg_file = await bot.get_file(file_id)
+        downloaded = await bot.download_file(tg_file.file_path)
+
+        if hasattr(downloaded, "seek"):
+            downloaded.seek(0)
+        content = downloaded.read()
+
+        suffix = os.path.splitext(tg_file.file_path or "")[1].lower()
+        if suffix not in {".jpg", ".jpeg", ".png", ".webp"}:
+            suffix = ".jpg"
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
+            temp_file.write(content)
+            return temp_file.name
+
+    @classmethod
+    async def _add_photo_gallery(cls, pdf: FPDF, bot: Any | None, photo_ids: list[str], section_title: str):
+        if not bot or not photo_ids:
+            return
+
+        pdf.set_font("Helvetica", "B", 11)
+        pdf.cell(0, 8, cls._safe(section_title), ln=True)
+
+        page_width = pdf.w - pdf.l_margin - pdf.r_margin
+        added = 0
+
+        for idx, photo_id in enumerate(photo_ids, start=1):
+            temp_path = None
+            try:
+                temp_path = await cls._download_temp_photo(bot, photo_id)
+                pdf.set_font("Helvetica", size=10)
+                pdf.cell(0, 7, f"Photo {idx}", ln=True)
+                pdf.image(temp_path, w=page_width)
+                pdf.ln(2)
+                added += 1
+            except Exception:
+                continue
+            finally:
+                if temp_path and os.path.exists(temp_path):
+                    try:
+                        os.remove(temp_path)
+                    except OSError:
+                        pass
+
+        if added == 0:
+            pdf.set_font("Helvetica", size=10)
+            pdf.multi_cell(0, 7, "No photos could be embedded into this PDF.")
+        pdf.ln(1)
+
     @classmethod
     def _base_pdf(cls, title: str) -> FPDF:
         pdf = FPDF()
@@ -54,11 +114,12 @@ class JobPdfService:
         pdf.ln(1)
 
     @classmethod
-    def build_job_dispatch_pdf(
+    async def build_job_dispatch_pdf(
         cls,
         job: Job,
         supervisor_name: str | None = None,
         recipient_name: str | None = None,
+        bot: Any | None = None,
     ) -> tuple[str, bytes]:
         pdf = cls._base_pdf(f"Work Order - Job #{job.id}")
 
@@ -72,6 +133,12 @@ class JobPdfService:
         cls._add_field(pdf, "Preset Price:", job.preset_price)
         cls._add_field(pdf, "Deadline:", cls._fmt_dt(job.deadline))
         cls._add_field(pdf, "Created At:", cls._fmt_dt(job.created_at))
+        await cls._add_photo_gallery(
+            pdf,
+            bot,
+            cls._extract_photo_ids(job.supervisor_photos),
+            "Job Photos:",
+        )
 
         out = pdf.output(dest="S")
         if isinstance(out, str):
@@ -81,12 +148,13 @@ class JobPdfService:
         return f"job_{job.id}_work_order.pdf", content
 
     @classmethod
-    def build_job_completion_pdf(
+    async def build_job_completion_pdf(
         cls,
         job: Job,
         subcontractor_name: str | None = None,
         notes: str | None = None,
         photo_count: int = 0,
+        bot: Any | None = None,
     ) -> tuple[str, bytes]:
         pdf = cls._base_pdf(f"Completion Report - Job #{job.id}")
 
@@ -100,6 +168,12 @@ class JobPdfService:
         cls._add_field(pdf, "Submitted Photos:", str(photo_count))
         cls._add_field(pdf, "Accepted At:", cls._fmt_dt(job.accepted_at))
         cls._add_field(pdf, "Submitted At:", datetime.utcnow().strftime("%Y-%m-%d %H:%M"))
+        await cls._add_photo_gallery(
+            pdf,
+            bot,
+            cls._extract_photo_ids(job.photos),
+            "Completion Photos:",
+        )
 
         out = pdf.output(dest="S")
         if isinstance(out, str):

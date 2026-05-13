@@ -543,11 +543,12 @@ async def finish_photo_submission(message: Message, state: FSMContext):
 
                     if job:
                         try:
-                            pdf_filename, pdf_content = JobPdfService.build_job_completion_pdf(
+                            pdf_filename, pdf_content = await JobPdfService.build_job_completion_pdf(
                                 job=job,
                                 subcontractor_name=sub_name,
                                 notes=notes,
-                                photo_count=len(photos)
+                                photo_count=len(photos),
+                                bot=bot,
                             )
                             await bot.send_document(
                                 supervisor_tg_id,

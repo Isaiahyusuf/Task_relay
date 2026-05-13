@@ -11,7 +11,7 @@ from src.bot.services.jobs import JobService
 from src.bot.services.archive import ArchiveService
 from src.bot.services.access_codes import AccessCodeService
 from src.bot.utils.permissions import require_role
-from src.bot.utils.roles import has_minimum_role, can_manage_role, creatable_roles
+from src.bot.utils.roles import has_minimum_role, can_manage_role, creatable_roles, role_display_name
 from src.bot.config import config
 from src.bot.utils.keyboards import (
     get_role_selection_keyboard, get_job_list_keyboard, get_back_keyboard,
@@ -90,7 +90,7 @@ async def check_super_admin(message: Message) -> bool:
             )
         )
         if not is_effective_super_admin:
-            await message.answer("You don't have super admin permissions.")
+            await message.answer("You don't have general manager permissions.")
             return False
     return True
 
@@ -240,7 +240,7 @@ async def cmd_create_code(message: Message, state: FSMContext):
             await message.answer(
                 f"*Access Code Created*\n\n"
                 f"Code: `{code}`\n"
-                f"Role: {role_str.title()}\n\n"
+                f"Role: {role_display_name(target_role)}\n\n"
                 "Share this code privately with the intended user.",
                 parse_mode="Markdown"
             )
@@ -257,10 +257,11 @@ async def btn_create_code(message: Message, state: FSMContext):
     await start_code_creation(message, state)
 
 @router.message(F.text == "👑 Create Admin Code")
+@router.message(F.text == "👑 Create Manager Code")
 async def btn_create_admin_code(message: Message, state: FSMContext):
     if not await check_super_admin(message):
         return
-    await start_role_specific_code_creation(message, state, UserRole.ADMIN, "Admin")
+    await start_role_specific_code_creation(message, state, UserRole.ADMIN, "Manager")
 
 @router.message(F.text == "👔 Create Supervisor Code")
 async def btn_create_supervisor_code(message: Message, state: FSMContext):
@@ -303,9 +304,9 @@ async def start_code_creation(message: Message, state: FSMContext):
     await state.set_state(CreateCodeStates.waiting_for_code)
 
 MENU_BUTTON_TEXTS = {
-    "👔 View Supervisors", "🔧 View Subcontractors", "👑 View Admins",
+    "👔 View Supervisors", "🔧 View Subcontractors", "👑 View Admins", "👑 View Managers",
     "👥 All Users", "🔑 All Access Codes", "🔑 Create Access Code",
-    "👑 Create Admin Code", "👔 Create Supervisor Code", "🔧 Create Subcontractor Code",
+    "👑 Create Admin Code", "👑 Create Manager Code", "👔 Create Supervisor Code", "🔧 Create Subcontractor Code",
     "📋 View Jobs", "➕ Create Job", "📜 Job History", "🏠 Main Menu",
     "🏢 View By Teams", "⬅️ Back", "❌ Cancel"
 }
@@ -894,7 +895,7 @@ async def show_team_hierarchy(message: Message, user_team_id: int = None, is_sup
     
     # Show unassigned users (Super Admins and others without team) - only for super admins
     if is_super_admin and unassigned:
-        text += "🦸 *Super Admins / Unassigned*\n"
+        text += "🦸 *General Managers / Unassigned*\n"
         for u in unassigned:
             role_emoji = "🦸" if u.role == UserRole.SUPER_ADMIN else "👤"
             name = u.first_name or "Unknown"
@@ -903,11 +904,12 @@ async def show_team_hierarchy(message: Message, user_team_id: int = None, is_sup
     await message.answer(text, parse_mode="Markdown")
 
 @router.message(F.text == "👑 View Admins")
+@router.message(F.text == "👑 View Managers")
 async def btn_view_admins(message: Message, state: FSMContext):
     await state.clear()
     if not await check_super_admin(message):
         return
-    await show_users_by_role(message, UserRole.ADMIN, "Admins")
+    await show_users_by_role(message, UserRole.ADMIN, "Managers")
 
 @router.message(F.text == "👔 View Supervisors")
 async def btn_view_supervisors(message: Message, state: FSMContext):
@@ -999,8 +1001,8 @@ async def btn_switch_role_super_admin(message: Message, state: FSMContext):
         from src.bot.utils.keyboards import get_super_admin_switch_role_keyboard
         await message.answer(
             "*Switch Role*\n\n"
-            "As Super Admin, you can temporarily switch to any role.\n"
-            "You can always switch back using the super admin code.\n\n"
+            "As General Manager, you can temporarily switch to any role.\n"
+            "You can always switch back using the general manager code.\n\n"
             "Select a role:",
             reply_markup=get_super_admin_switch_role_keyboard(),
             parse_mode="Markdown"
@@ -1009,9 +1011,9 @@ async def btn_switch_role_super_admin(message: Message, state: FSMContext):
         # User was a super admin, show return option
         await message.answer(
             "*Switch Role*\n\n"
-            "You can return to Super Admin using the button below.",
+            "You can return to General Manager using the button below.",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="🦸 Return to Super Admin", callback_data="sa_switch:super_admin")],
+                [InlineKeyboardButton(text="🦸 Return to General Manager", callback_data="sa_switch:super_admin")],
                 [InlineKeyboardButton(text="❌ Cancel", callback_data="back:main")]
             ]),
             parse_mode="Markdown"
@@ -1049,8 +1051,8 @@ async def handle_super_admin_switch(callback: CallbackQuery):
                 await session.commit()
                 
                 await callback.message.edit_text(
-                    "✅ *Welcome back, Super Admin!*\n\n"
-                    "You have returned to Super Admin role.",
+                    "✅ *Welcome back, General Manager!*\n\n"
+                    "You have returned to General Manager role.",
                     parse_mode="Markdown"
                 )
                 keyboard = get_main_menu_keyboard(UserRole.SUPER_ADMIN)
@@ -1059,7 +1061,7 @@ async def handle_super_admin_switch(callback: CallbackQuery):
                     reply_markup=keyboard
                 )
             else:
-                await callback.answer("Cannot return to Super Admin - code has changed", show_alert=True)
+                await callback.answer("Cannot return to General Manager - code has changed", show_alert=True)
         else:
             # Switch to another role
             if user.role != UserRole.SUPER_ADMIN and not user.super_admin_code:
@@ -1101,7 +1103,7 @@ async def handle_super_admin_switch(callback: CallbackQuery):
             await callback.message.edit_text(
                 f"✅ *Role Changed*\n\n"
                 f"You are now a *{role_str.title()}*.\n\n"
-                f"You can return to Super Admin anytime by using 'Switch Role' or entering the super admin code.",
+                f"You can return to General Manager anytime by using 'Switch Role' or entering the general manager code.",
                 parse_mode="Markdown"
             )
             keyboard = get_main_menu_keyboard(new_role)
@@ -1150,7 +1152,7 @@ async def handle_switch_team_selection(callback: CallbackQuery):
         await callback.message.edit_text(
             f"✅ *Role Changed*\n\n"
             f"You are now a *Subcontractor* in the *{team.name}* team.\n\n"
-            f"You can return to Super Admin anytime by using 'Switch Role' or entering the super admin code.",
+            f"You can return to General Manager anytime by using 'Switch Role' or entering the general manager code.",
             parse_mode="Markdown"
         )
         keyboard = get_main_menu_keyboard(UserRole.SUBCONTRACTOR)
@@ -1162,6 +1164,7 @@ async def handle_switch_team_selection(callback: CallbackQuery):
     await callback.answer()
 
 @router.message(F.text == "🦸 Return to Super Admin")
+@router.message(F.text == "🦸 Return to General Manager")
 async def btn_return_to_super_admin(message: Message, state: FSMContext):
     await state.clear()
     
@@ -1183,13 +1186,13 @@ async def btn_return_to_super_admin(message: Message, state: FSMContext):
             
             keyboard = get_main_menu_keyboard(UserRole.SUPER_ADMIN)
             await message.answer(
-                "✅ *Welcome back, Super Admin!*\n\n"
-                "You have returned to Super Admin role.",
+                "✅ *Welcome back, General Manager!*\n\n"
+                "You have returned to General Manager role.",
                 reply_markup=keyboard,
                 parse_mode="Markdown"
             )
         else:
-            await message.answer("Cannot return to Super Admin - code has changed or you were never a super admin.")
+            await message.answer("Cannot return to General Manager - code has changed or you were never a general manager.")
 
 async def show_user_list(message: Message, is_super_admin: bool = False):
     async with async_session() as session:
@@ -1207,7 +1210,7 @@ async def show_user_list(message: Message, is_super_admin: bool = False):
         await message.answer("No users found.")
         return
     
-    title = "Manage All Users (Super Admin)" if is_super_admin else "Manage Users"
+    title = "Manage All Users (General Manager)" if is_super_admin else "Manage Users"
     await message.answer(
         f"*{title}* ({len(users)} total)\n\n"
         "Select a user to manage:",
@@ -1497,7 +1500,7 @@ async def btn_admin_new_job(message: Message, state: FSMContext):
             select(User).where(User.telegram_id == message.from_user.id)
         )
         user = result.scalar_one_or_none()
-        if not user or user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.SUPERVISOR]:
+        if not user or user.role not in [UserRole.ADMIN, UserRole.SUPERVISOR]:
             await message.answer("You don't have permission to create jobs.")
             return
     
@@ -1522,7 +1525,7 @@ async def btn_send_message(message: Message, state: FSMContext):
     await message.answer(
         "*Send Message*\n\n"
         "Choose who you want to send a message to:",
-        reply_markup=get_message_target_keyboard(),
+        reply_markup=get_message_target_keyboard(user.role if user else None),
         parse_mode="Markdown"
     )
     await state.set_state(MessageStates.selecting_target)
@@ -1536,6 +1539,16 @@ async def cancel_message(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("msg_target:"), StateFilter(MessageStates.selecting_target))
 async def process_message_target(callback: CallbackQuery, state: FSMContext):
     target = callback.data.split(":")[1]
+
+    if target == "all_users":
+        async with async_session() as session:
+            result = await session.execute(
+                select(User).where(User.telegram_id == callback.from_user.id)
+            )
+            sender = result.scalar_one_or_none()
+        if not sender or sender.role != UserRole.SUPER_ADMIN:
+            await callback.answer("Only a General Manager can message everyone.", show_alert=True)
+            return
     
     if target == "select":
         # Show list of subcontractors to select
@@ -1560,7 +1573,7 @@ async def process_message_target(callback: CallbackQuery, state: FSMContext):
         )
         await state.set_state(MessageStates.selecting_users)
     else:
-        # Direct target (all_subs, northwest, southeast)
+        # Direct target (all_users, all_subs, northwest, southeast)
         await state.update_data(target_type=target)
         await callback.message.edit_text(
             "*Compose Message*\n\n"
@@ -1643,6 +1656,11 @@ async def send_broadcast_message(message: Message, state: FSMContext):
                 select(User).where(User.id.in_(selected_ids))
             )
             recipients = list(result.scalars().all())
+        elif target_type == "all_users":
+            result = await session.execute(
+                select(User).where(User.is_active == True)
+            )
+            recipients = [u for u in list(result.scalars().all()) if u.telegram_id != message.from_user.id]
         elif target_type == "all_subs":
             result = await session.execute(
                 select(User).where(User.role == UserRole.SUBCONTRACTOR)
@@ -1667,7 +1685,7 @@ async def send_broadcast_message(message: Message, state: FSMContext):
         
         # Determine team_id for storage
         team_id = None
-        if target_type not in ["select", "all_subs"]:
+        if target_type not in ["select", "all_subs", "all_users"]:
             try:
                 team_id = team.id if team else None
             except:
@@ -1677,7 +1695,7 @@ async def send_broadcast_message(message: Message, state: FSMContext):
         broadcast = BroadcastMessage(
             sender_id=sender.id if sender else None,
             message=message.text,
-            target_role="SUBCONTRACTOR",
+            target_role=("ALL_USERS" if target_type == "all_users" else "SUBCONTRACTOR"),
             target_team_id=team_id,
             recipient_ids=",".join(map(str, [r.id for r in recipients]))
         )
