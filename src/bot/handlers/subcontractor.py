@@ -542,17 +542,20 @@ async def finish_photo_submission(message: Message, state: FSMContext):
                     )
 
                     if job:
-                        pdf_filename, pdf_content = JobPdfService.build_job_completion_pdf(
-                            job=job,
-                            subcontractor_name=sub_name,
-                            notes=notes,
-                            photo_count=len(photos)
-                        )
-                        await bot.send_document(
-                            supervisor_tg_id,
-                            BufferedInputFile(pdf_content, filename=pdf_filename),
-                            caption=f"Completion report PDF for Job #{job_id}"
-                        )
+                        try:
+                            pdf_filename, pdf_content = JobPdfService.build_job_completion_pdf(
+                                job=job,
+                                subcontractor_name=sub_name,
+                                notes=notes,
+                                photo_count=len(photos)
+                            )
+                            await bot.send_document(
+                                supervisor_tg_id,
+                                BufferedInputFile(pdf_content, filename=pdf_filename),
+                                caption=f"Completion report PDF for Job #{job_id}"
+                            )
+                        except Exception as pdf_error:
+                            logger.error(f"[PDF SEND FAILED] completion job_id={job_id} supervisor={supervisor_tg_id}: {pdf_error}")
                     
                     logger.info(f"Sending {len(photos)} photos to supervisor {supervisor_tg_id}")
                     if photos:

@@ -20,6 +20,17 @@ class JobPdfService:
     def _fmt_dt(value: datetime | None) -> str:
         return value.strftime("%Y-%m-%d %H:%M") if value else "N/A"
 
+    @staticmethod
+    def _soft_wrap_long_tokens(text: str, token_len: int = 40) -> str:
+        parts = []
+        for token in text.split(" "):
+            if len(token) <= token_len:
+                parts.append(token)
+                continue
+            chunks = [token[i:i + token_len] for i in range(0, len(token), token_len)]
+            parts.append("\n".join(chunks))
+        return " ".join(parts)
+
     @classmethod
     def _base_pdf(cls, title: str) -> FPDF:
         pdf = FPDF()
@@ -36,9 +47,11 @@ class JobPdfService:
     @classmethod
     def _add_field(cls, pdf: FPDF, label: str, value: str | None):
         pdf.set_font("Helvetica", "B", 11)
-        pdf.cell(50, 8, cls._safe(label), border=0)
+        pdf.cell(0, 8, cls._safe(label), ln=True)
         pdf.set_font("Helvetica", size=11)
-        pdf.multi_cell(0, 8, cls._safe(value))
+        safe_value = cls._soft_wrap_long_tokens(cls._safe(value))
+        pdf.multi_cell(0, 8, safe_value)
+        pdf.ln(1)
 
     @classmethod
     def build_job_dispatch_pdf(

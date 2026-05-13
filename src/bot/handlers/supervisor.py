@@ -454,12 +454,6 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
                 
                 for sub in available_subs:
                     try:
-                        pdf_filename, pdf_content = JobPdfService.build_job_dispatch_pdf(
-                            job=job,
-                            supervisor_name=callback.from_user.first_name or callback.from_user.username,
-                            recipient_name=sub.first_name or sub.username
-                        )
-
                         logger.info(f"[NOTIFY] Sending to subcontractor id={sub.id}, telegram_id={sub.telegram_id}, name={sub.first_name}")
                         await bot.send_message(
                             sub.telegram_id,
@@ -471,11 +465,19 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
                             parse_mode="Markdown"
                         )
 
-                        await bot.send_document(
-                            sub.telegram_id,
-                            BufferedInputFile(pdf_content, filename=pdf_filename),
-                            caption=f"Work order PDF for Job #{job.id}"
-                        )
+                        try:
+                            pdf_filename, pdf_content = JobPdfService.build_job_dispatch_pdf(
+                                job=job,
+                                supervisor_name=callback.from_user.first_name or callback.from_user.username,
+                                recipient_name=sub.first_name or sub.username
+                            )
+                            await bot.send_document(
+                                sub.telegram_id,
+                                BufferedInputFile(pdf_content, filename=pdf_filename),
+                                caption=f"Work order PDF for Job #{job.id}"
+                            )
+                        except Exception as pdf_error:
+                            logger.error(f"[PDF SEND FAILED] job_id={job.id} subcontractor={sub.telegram_id}: {pdf_error}")
                         
                         # Send supervisor photos if any
                         if sup_photos:
