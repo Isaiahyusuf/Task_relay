@@ -15,7 +15,7 @@ from src.bot.database.session import engine
 from src.bot.migrations.add_new_columns import run_migration
 from src.bot.services.access_codes import AccessCodeService
 from src.bot.services.scheduler import SchedulerService
-from src.bot.handlers import auth_router, supervisor_router, subcontractor_router, admin_router
+from src.bot.handlers import auth_router, supervisor_router, subcontractor_router, admin_router, safety_checklist_router
 from src.bot.middleware.error_handler import setup_error_handlers
 
 logging.basicConfig(
@@ -106,6 +106,7 @@ async def main():
     dp.include_router(auth_router)
     dp.include_router(supervisor_router)
     dp.include_router(subcontractor_router)
+    dp.include_router(safety_checklist_router)
     dp.include_router(admin_router)
     
     loop = asyncio.get_event_loop()

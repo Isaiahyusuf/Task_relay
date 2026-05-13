@@ -206,6 +206,60 @@ class MessageResponse(Base):
     broadcast = relationship("BroadcastMessage")
     responder = relationship("User")
 
+
+class SafetyChecklist(Base):
+    __tablename__ = "safety_checklists"
+
+    id = Column(Integer, primary_key=True)
+    job_id = Column(Integer, ForeignKey("jobs.id"), nullable=True)
+    subcontractor_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    site_address = Column(String(500), nullable=False)
+    checklist_datetime = Column(DateTime, nullable=False)
+    task_description = Column(Text, nullable=False)
+    geo_location = Column(String(100), nullable=True)
+
+    # Serialized JSON payloads
+    hazard_answers_json = Column(Text, nullable=False)
+    worker_signatures_json = Column(Text, nullable=True)
+
+    final_is_safe = Column(Boolean, nullable=False)
+    unsafe_explanation = Column(Text, nullable=True)
+    unsafe_photo_ids = Column(Text, nullable=True)  # comma-separated file_ids
+
+    signature_type = Column(String(30), nullable=False)
+    signature_value = Column(String(255), nullable=False)
+
+    post_task_waste_removed = Column(Boolean, default=False)
+    post_task_vehicle_cleaned = Column(Boolean, default=False)
+    post_task_site_secure = Column(Boolean, default=False)
+
+    status = Column(String(20), default="PENDING")  # PENDING/APPROVED/REJECTED
+    reviewed_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    reviewed_at = Column(DateTime, nullable=True)
+    review_comment = Column(Text, nullable=True)
+
+    pdf_filename = Column(String(255), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+    job = relationship("Job")
+    subcontractor = relationship("User", foreign_keys=[subcontractor_id])
+    reviewed_by = relationship("User", foreign_keys=[reviewed_by_id])
+
+
+class SafetyChecklistAudit(Base):
+    __tablename__ = "safety_checklist_audits"
+
+    id = Column(Integer, primary_key=True)
+    checklist_id = Column(Integer, ForeignKey("safety_checklists.id"), nullable=False)
+    actor_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    action = Column(String(50), nullable=False)
+    details = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    checklist = relationship("SafetyChecklist")
+    actor = relationship("User")
+
 # ============= CUSTOM ROLES & REGIONS SYSTEM =============
 
 # Available permissions that can be assigned to custom roles

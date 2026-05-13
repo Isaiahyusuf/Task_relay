@@ -2,12 +2,14 @@ from .session import engine, async_session, init_db
 from .models import (
     Base, User, AccessCode, Team, Job, Quote, UserRole, JobStatus, JobType, 
     AvailabilityStatus, WeeklyAvailability, UnavailabilityNotice, BroadcastMessage, 
-    MessageResponse, Region, CustomRole, RolePermission, AVAILABLE_PERMISSIONS
+    MessageResponse, Region, CustomRole, RolePermission, AVAILABLE_PERMISSIONS,
+    SafetyChecklist, SafetyChecklistAudit
 )
 
 __all__ = [
     'engine', 'async_session', 'init_db', 'Base', 'User', 'AccessCode', 'Team', 
     'Job', 'Quote', 'UserRole', 'JobStatus', 'JobType', 'AvailabilityStatus', 
     'WeeklyAvailability', 'UnavailabilityNotice', 'BroadcastMessage', 'MessageResponse',
-    'Region', 'CustomRole', 'RolePermission', 'AVAILABLE_PERMISSIONS'
+    'Region', 'CustomRole', 'RolePermission', 'AVAILABLE_PERMISSIONS',
+    'SafetyChecklist', 'SafetyChecklistAudit'
 ]

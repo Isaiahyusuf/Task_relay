@@ -383,6 +383,55 @@ async def run_migration():
             print("Added region_id column to jobs table")
         except Exception as e:
             print(f"region_id column may already exist in jobs: {e}")
+
+        # ============= SITE SAFETY CHECKLIST MODULE =============
+        try:
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS safety_checklists (
+                    id SERIAL PRIMARY KEY,
+                    job_id INTEGER REFERENCES jobs(id),
+                    subcontractor_id INTEGER NOT NULL REFERENCES users(id),
+                    site_address VARCHAR(500) NOT NULL,
+                    checklist_datetime TIMESTAMP NOT NULL,
+                    task_description TEXT NOT NULL,
+                    geo_location VARCHAR(100),
+                    hazard_answers_json TEXT NOT NULL,
+                    worker_signatures_json TEXT,
+                    final_is_safe BOOLEAN NOT NULL,
+                    unsafe_explanation TEXT,
+                    unsafe_photo_ids TEXT,
+                    signature_type VARCHAR(30) NOT NULL,
+                    signature_value VARCHAR(255) NOT NULL,
+                    post_task_waste_removed BOOLEAN DEFAULT FALSE,
+                    post_task_vehicle_cleaned BOOLEAN DEFAULT FALSE,
+                    post_task_site_secure BOOLEAN DEFAULT FALSE,
+                    status VARCHAR(20) DEFAULT 'PENDING',
+                    reviewed_by_id INTEGER REFERENCES users(id),
+                    reviewed_at TIMESTAMP,
+                    review_comment TEXT,
+                    pdf_filename VARCHAR(255),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            print("Created safety_checklists table")
+        except Exception as e:
+            print(f"safety_checklists table may already exist: {e}")
+
+        try:
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS safety_checklist_audits (
+                    id SERIAL PRIMARY KEY,
+                    checklist_id INTEGER NOT NULL REFERENCES safety_checklists(id) ON DELETE CASCADE,
+                    actor_id INTEGER REFERENCES users(id),
+                    action VARCHAR(50) NOT NULL,
+                    details TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            print("Created safety_checklist_audits table")
+        except Exception as e:
+            print(f"safety_checklist_audits table may already exist: {e}")
     
     await engine.dispose()
     print("Migration completed!")
