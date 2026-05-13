@@ -11,7 +11,8 @@ from src.bot.services.jobs import JobService
 from src.bot.services.archive import ArchiveService
 from src.bot.services.access_codes import AccessCodeService
 from src.bot.utils.permissions import require_role
-from src.bot.utils.roles import has_minimum_role, can_manage_role
+from src.bot.utils.roles import has_minimum_role, can_manage_role, creatable_roles
+from src.bot.config import config
 from src.bot.utils.keyboards import (
     get_role_selection_keyboard, get_job_list_keyboard, get_back_keyboard,
     get_user_list_keyboard, get_user_actions_keyboard, get_switch_role_keyboard,
@@ -80,7 +81,15 @@ async def check_super_admin(message: Message) -> bool:
             select(User).where(User.telegram_id == message.from_user.id)
         )
         user = result.scalar_one_or_none()
-        if not user or not has_minimum_role(user.role, UserRole.SUPER_ADMIN):
+        # A user with valid super admin identity can regain super admin capabilities
+        # even if currently switched to a lower role.
+        is_effective_super_admin = bool(
+            user and (
+                has_minimum_role(user.role, UserRole.SUPER_ADMIN)
+                or (user.super_admin_code and user.super_admin_code == config.SUPER_ADMIN_CODE)
+            )
+        )
+        if not is_effective_super_admin:
             await message.answer("You don't have super admin permissions.")
             return False
     return True
@@ -207,10 +216,23 @@ async def cmd_create_code(message: Message, state: FSMContext):
                 select(User).where(User.telegram_id == message.from_user.id)
             )
             user = result.scalar_one_or_none()
+
+        if not user:
+            await message.answer("User not found.")
+            return
+
+        creator_role = user.role
+        if user.super_admin_code and user.super_admin_code == config.SUPER_ADMIN_CODE:
+            creator_role = UserRole.SUPER_ADMIN
+
+        target_role = role_map[role_str]
+        if target_role not in creatable_roles(creator_role):
+            await message.answer("You don't have permission to create this role code.")
+            return
         
         success = await AccessCodeService.create_access_code(
             code=code,
-            role=role_map[role_str],
+            role=target_role,
             team_id=user.team_id if user else None
         )
         
@@ -383,7 +405,30 @@ async def process_role_selection(callback: CallbackQuery, state: FSMContext):
         "subcontractor": UserRole.SUBCONTRACTOR
     }
     
-    await state.update_data(role=role_map[role_str], role_str=role_str)
+    selected_role = role_map.get(role_str)
+    if not selected_role:
+        await callback.answer("Invalid role", show_alert=True)
+        return
+
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == callback.from_user.id)
+        )
+        creator = result.scalar_one_or_none()
+
+    if not creator:
+        await callback.answer("User not found", show_alert=True)
+        return
+
+    creator_role = creator.role
+    if creator.super_admin_code and creator.super_admin_code == config.SUPER_ADMIN_CODE:
+        creator_role = UserRole.SUPER_ADMIN
+
+    if selected_role not in creatable_roles(creator_role):
+        await callback.answer("You cannot create that role", show_alert=True)
+        return
+
+    await state.update_data(role=selected_role, role_str=role_str)
     
     # Ask for team assignment for admin, supervisor, and subcontractor
     if role_str in ["admin", "supervisor", "subcontractor"]:
