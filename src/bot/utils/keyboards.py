@@ -1,5 +1,6 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
 from src.bot.database.models import UserRole, JobStatus, AvailabilityStatus
+from src.bot.utils.roles import creatable_roles
 
 def get_main_menu_keyboard(role: UserRole) -> ReplyKeyboardMarkup:
     if role == UserRole.SUPER_ADMIN:
@@ -216,16 +217,23 @@ def get_role_selection_keyboard(creator_role: str = "super_admin") -> InlineKeyb
     - Supervisor: can create Subcontractor codes only
     """
     buttons = []
-    
-    if creator_role == "super_admin":
-        buttons.append([InlineKeyboardButton(text="👑 Admin", callback_data="role:admin")])
-        buttons.append([InlineKeyboardButton(text="👔 Supervisor", callback_data="role:supervisor")])
-        buttons.append([InlineKeyboardButton(text="🔧 Subcontractor", callback_data="role:subcontractor")])
-    elif creator_role == "admin":
-        buttons.append([InlineKeyboardButton(text="👔 Supervisor", callback_data="role:supervisor")])
-        buttons.append([InlineKeyboardButton(text="🔧 Subcontractor", callback_data="role:subcontractor")])
-    elif creator_role == "supervisor":
-        buttons.append([InlineKeyboardButton(text="🔧 Subcontractor", callback_data="role:subcontractor")])
+
+    role_map = {
+        "super_admin": UserRole.SUPER_ADMIN,
+        "admin": UserRole.ADMIN,
+        "supervisor": UserRole.SUPERVISOR,
+        "subcontractor": UserRole.SUBCONTRACTOR,
+    }
+    role_options = creatable_roles(role_map.get(creator_role))
+
+    labels = {
+        UserRole.ADMIN: "👑 Admin",
+        UserRole.SUPERVISOR: "👔 Supervisor",
+        UserRole.SUBCONTRACTOR: "🔧 Subcontractor",
+    }
+
+    for role in role_options:
+        buttons.append([InlineKeyboardButton(text=labels[role], callback_data=f"role:{role.value}")])
     
     buttons.append([InlineKeyboardButton(text="❌ Cancel", callback_data="code_cancel")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)

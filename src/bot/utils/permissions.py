@@ -3,6 +3,7 @@ from aiogram.types import Message
 from sqlalchemy import select
 from src.bot.database import async_session, User
 from src.bot.database.models import UserRole
+from src.bot.utils.roles import has_minimum_role
 import logging
 
 logger = logging.getLogger(__name__)
@@ -34,11 +35,27 @@ def require_role(*roles: UserRole):
             if user_role is None:
                 await message.answer("You are not registered. Please use /start with your access code.")
                 return
-            # Super admin can access all admin routes
             allowed_roles = list(roles)
+            # Preserve legacy behavior: super admin can use admin-only commands.
             if UserRole.ADMIN in roles and UserRole.SUPER_ADMIN not in roles:
                 allowed_roles.append(UserRole.SUPER_ADMIN)
             if user_role not in allowed_roles:
+                await message.answer("You don't have permission to use this command.")
+                return
+            return await handler(message, *args, **kwargs)
+        return wrapper
+    return decorator
+
+
+def require_min_role(minimum_role: UserRole):
+    def decorator(handler):
+        @wraps(handler)
+        async def wrapper(message: Message, *args, **kwargs):
+            user_role = await get_user_role(message.from_user.id)
+            if user_role is None:
+                await message.answer("You are not registered. Please use /start with your access code.")
+                return
+            if not has_minimum_role(user_role, minimum_role):
                 await message.answer("You don't have permission to use this command.")
                 return
             return await handler(message, *args, **kwargs)

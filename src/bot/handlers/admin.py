@@ -11,6 +11,7 @@ from src.bot.services.jobs import JobService
 from src.bot.services.archive import ArchiveService
 from src.bot.services.access_codes import AccessCodeService
 from src.bot.utils.permissions import require_role
+from src.bot.utils.roles import has_minimum_role, can_manage_role
 from src.bot.utils.keyboards import (
     get_role_selection_keyboard, get_job_list_keyboard, get_back_keyboard,
     get_user_list_keyboard, get_user_actions_keyboard, get_switch_role_keyboard,
@@ -64,7 +65,7 @@ async def check_admin(message: Message) -> bool:
             select(User).where(User.telegram_id == message.from_user.id)
         )
         user = result.scalar_one_or_none()
-        if not user or user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN]:
+        if not user or not has_minimum_role(user.role, UserRole.ADMIN):
             await message.answer("You don't have admin permissions.")
             return False
     return True
@@ -79,7 +80,7 @@ async def check_super_admin(message: Message) -> bool:
             select(User).where(User.telegram_id == message.from_user.id)
         )
         user = result.scalar_one_or_none()
-        if not user or user.role != UserRole.SUPER_ADMIN:
+        if not user or not has_minimum_role(user.role, UserRole.SUPER_ADMIN):
             await message.answer("You don't have super admin permissions.")
             return False
     return True
@@ -247,15 +248,15 @@ async def btn_create_supervisor_code(message: Message, state: FSMContext):
 
 @router.message(F.text == "🔧 Create Subcontractor Code")
 async def btn_create_subcontractor_code(message: Message, state: FSMContext):
-    # Check if super admin or supervisor
+    # Check role hierarchy for subcontractor-code creation.
     async with async_session() as session:
         result = await session.execute(
             select(User).where(User.telegram_id == message.from_user.id)
         )
         user = result.scalar_one_or_none()
     
-    if not user or user.role not in [UserRole.SUPER_ADMIN, UserRole.SUPERVISOR]:
-        await message.answer("Only super admins and supervisors can create subcontractor codes.")
+    if not user or not can_manage_role(user.role, UserRole.SUBCONTRACTOR):
+        await message.answer("You don't have permission to create subcontractor codes.")
         return
     
     await start_role_specific_code_creation(message, state, UserRole.SUBCONTRACTOR, "Subcontractor")
