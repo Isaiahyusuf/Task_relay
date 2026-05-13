@@ -13,6 +13,7 @@ from src.bot.services.access_codes import AccessCodeService
 from src.bot.services.pdf_generator import JobPdfService
 from src.bot.handlers.admin import CreateCodeStates
 from src.bot.utils.permissions import require_role
+from src.bot.utils.roles import has_minimum_role
 from src.bot.utils.keyboards import (
     get_job_type_keyboard, get_skip_keyboard,
     get_confirmation_keyboard, get_job_list_keyboard, get_main_menu_keyboard, 
@@ -46,7 +47,7 @@ class NotSatisfiedStates(StatesGroup):
     waiting_for_reason = State()
 
 @router.message(Command("newjob"))
-@require_role(UserRole.SUPERVISOR)
+@require_role(UserRole.SUPERVISOR, UserRole.ADMIN, UserRole.SUPER_ADMIN)
 async def cmd_new_job(message: Message, state: FSMContext):
     await start_new_job(message, state)
 
@@ -74,7 +75,7 @@ async def btn_new_job(message: Message, state: FSMContext):
             select(User).where(User.telegram_id == message.from_user.id)
         )
         user = result.scalar_one_or_none()
-        if not user or user.role != UserRole.SUPERVISOR:
+        if not user or not has_minimum_role(user.role, UserRole.SUPERVISOR):
             await message.answer("You don't have permission to create jobs.")
             return
     
