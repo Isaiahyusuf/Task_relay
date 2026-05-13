@@ -3,6 +3,7 @@ from sqlalchemy import select
 from src.bot.database import async_session, AccessCode, User, Team
 from src.bot.database.models import UserRole
 from src.bot.config import config
+from src.bot.utils.roles import role_display_name
 import logging
 
 logger = logging.getLogger(__name__)
@@ -65,7 +66,7 @@ class AccessCodeService:
                     session.add(user)
                 
                 await session.commit()
-                return True, "Welcome! You have been registered as a Super Admin."
+                return True, "Welcome! You have been registered as a General Manager."
             
             result = await session.execute(
                 select(AccessCode).where(AccessCode.code == code)
@@ -110,7 +111,7 @@ class AccessCodeService:
             
             await session.commit()
             
-            role_name = access_code.role.value.capitalize()
+            role_name = role_display_name(access_code.role)
             return True, f"Welcome! You have been registered as a {role_name}."
     
     @staticmethod
