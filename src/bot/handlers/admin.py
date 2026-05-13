@@ -1752,7 +1752,7 @@ class CreateTeamStates(StatesGroup):
 from src.bot.database.models import Region, CustomRole, RolePermission, AVAILABLE_PERMISSIONS
 
 @router.message(F.text == "🎭 Manage Roles")
-@require_role([UserRole.SUPER_ADMIN])
+@require_role(UserRole.SUPER_ADMIN)
 async def show_manage_roles(message: Message):
     async with async_session() as session:
         result = await session.execute(
@@ -1982,7 +1982,7 @@ async def cancel_role_create(callback: CallbackQuery, state: FSMContext):
 # ============= REGIONS MANAGEMENT =============
 
 @router.message(F.text == "🌐 Manage Regions")
-@require_role([UserRole.SUPER_ADMIN, UserRole.ADMIN])
+@require_role(UserRole.SUPER_ADMIN, UserRole.ADMIN)
 async def show_manage_regions(message: Message):
     async with async_session() as session:
         result = await session.execute(
@@ -2008,7 +2008,7 @@ async def show_manage_regions(message: Message):
     )
 
 @router.message(F.text == "🌍 View Regions")
-@require_role([UserRole.SUPER_ADMIN, UserRole.ADMIN])
+@require_role(UserRole.SUPER_ADMIN, UserRole.ADMIN)
 async def view_regions_list(message: Message):
     async with async_session() as session:
         result = await session.execute(
@@ -2143,7 +2143,7 @@ async def delete_region(callback: CallbackQuery):
 # ============= TEAMS MANAGEMENT =============
 
 @router.message(F.text == "🏢 Manage Teams")
-@require_role([UserRole.SUPER_ADMIN, UserRole.ADMIN])
+@require_role(UserRole.SUPER_ADMIN, UserRole.ADMIN)
 async def show_manage_teams(message: Message):
     async with async_session() as session:
         result = await session.execute(

@@ -9,6 +9,7 @@ from src.bot.database.models import UserRole, JobType, JobStatus, AvailabilitySt
 from src.bot.services.jobs import JobService
 from src.bot.services.quotes import QuoteService
 from src.bot.services.availability import AvailabilityService
+from src.bot.services.pdf_generator import JobPdfService
 from src.bot.utils.permissions import require_role
 from src.bot.utils.keyboards import (
     get_job_actions_keyboard, get_decline_reason_keyboard, get_back_keyboard,
@@ -16,6 +17,7 @@ from src.bot.utils.keyboards import (
 )
 from src.bot.database import UnavailabilityNotice, WeeklyAvailability
 from datetime import datetime
+from aiogram.types import BufferedInputFile
 import logging
 
 logger = logging.getLogger(__name__)
@@ -538,6 +540,19 @@ async def finish_photo_submission(message: Message, state: FSMContext):
                         f"Please review and mark as completed if satisfied.",
                         parse_mode="Markdown"
                     )
+
+                    if job:
+                        pdf_filename, pdf_content = JobPdfService.build_job_completion_pdf(
+                            job=job,
+                            subcontractor_name=sub_name,
+                            notes=notes,
+                            photo_count=len(photos)
+                        )
+                        await bot.send_document(
+                            supervisor_tg_id,
+                            BufferedInputFile(pdf_content, filename=pdf_filename),
+                            caption=f"Completion report PDF for Job #{job_id}"
+                        )
                     
                     logger.info(f"Sending {len(photos)} photos to supervisor {supervisor_tg_id}")
                     if photos:

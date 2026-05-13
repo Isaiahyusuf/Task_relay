@@ -3,13 +3,14 @@ from aiogram import Router, F
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, BufferedInputFile
 from sqlalchemy import select
 from src.bot.database import async_session, User, Job, Quote
 from src.bot.database.models import UserRole, JobType, JobStatus, AvailabilityStatus
 from src.bot.services.jobs import JobService
 from src.bot.services.quotes import QuoteService
 from src.bot.services.access_codes import AccessCodeService
+from src.bot.services.pdf_generator import JobPdfService
 from src.bot.handlers.admin import CreateCodeStates
 from src.bot.utils.permissions import require_role
 from src.bot.utils.keyboards import (
@@ -453,6 +454,12 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
                 
                 for sub in available_subs:
                     try:
+                        pdf_filename, pdf_content = JobPdfService.build_job_dispatch_pdf(
+                            job=job,
+                            supervisor_name=callback.from_user.first_name or callback.from_user.username,
+                            recipient_name=sub.first_name or sub.username
+                        )
+
                         logger.info(f"[NOTIFY] Sending to subcontractor id={sub.id}, telegram_id={sub.telegram_id}, name={sub.first_name}")
                         await bot.send_message(
                             sub.telegram_id,
@@ -462,6 +469,12 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
                             f"Price: {job.preset_price or 'N/A'}{deadline_text}\n\n"
                             f"Check 'Available Jobs' to accept this job!",
                             parse_mode="Markdown"
+                        )
+
+                        await bot.send_document(
+                            sub.telegram_id,
+                            BufferedInputFile(pdf_content, filename=pdf_filename),
+                            caption=f"Work order PDF for Job #{job.id}"
                         )
                         
                         # Send supervisor photos if any
