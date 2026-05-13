@@ -776,6 +776,22 @@ async def accept_quote(callback: CallbackQuery):
                         f"Check 'My Active Jobs' to start working on it.",
                         parse_mode="Markdown"
                     )
+
+                    try:
+                        job = await JobService.get_job_by_id(job_id)
+                        if job:
+                            pdf_filename, pdf_content = JobPdfService.build_job_dispatch_pdf(
+                                job=job,
+                                supervisor_name=callback.from_user.first_name or callback.from_user.username,
+                                recipient_name=None
+                            )
+                            await bot.send_document(
+                                sub_telegram_id,
+                                BufferedInputFile(pdf_content, filename=pdf_filename),
+                                caption=f"Work order PDF for Job #{job_id}"
+                            )
+                    except Exception as pdf_error:
+                        logger.error(f"[PDF SEND FAILED] accepted quote job_id={job_id} subcontractor={sub_telegram_id}: {pdf_error}")
                 except Exception as e:
                     logger.error(f"Failed to notify subcontractor {sub_telegram_id} of quote acceptance: {e}")
     else:
