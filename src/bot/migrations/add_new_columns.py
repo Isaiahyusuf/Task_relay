@@ -374,6 +374,22 @@ async def run_migration():
             print("Added custom_role_id column to access_codes table")
         except Exception as e:
             print(f"custom_role_id column may already exist in access_codes: {e}")
+
+        # Track who created each access code
+        try:
+            await conn.execute(text(
+                "ALTER TABLE access_codes ADD COLUMN IF NOT EXISTS created_by_id INTEGER"
+            ))
+            await conn.execute(text(
+                "DO $$ BEGIN "
+                "ALTER TABLE access_codes ADD CONSTRAINT fk_access_codes_created_by "
+                "FOREIGN KEY (created_by_id) REFERENCES users(id); "
+                "EXCEPTION WHEN duplicate_object THEN null; "
+                "END $$;"
+            ))
+            print("Added created_by_id column to access_codes table")
+        except Exception as e:
+            print(f"created_by_id column may already exist in access_codes: {e}")
         
         # Add region_id to jobs table
         try:
@@ -432,6 +448,24 @@ async def run_migration():
             print("Created safety_checklist_audits table")
         except Exception as e:
             print(f"safety_checklist_audits table may already exist: {e}")
+
+        try:
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS safety_checklist_requests (
+                    id SERIAL PRIMARY KEY,
+                    requester_id INTEGER NOT NULL REFERENCES users(id),
+                    subcontractor_id INTEGER NOT NULL REFERENCES users(id),
+                    job_id INTEGER REFERENCES jobs(id),
+                    note TEXT,
+                    status VARCHAR(20) DEFAULT 'PENDING',
+                    checklist_id INTEGER REFERENCES safety_checklists(id),
+                    requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    fulfilled_at TIMESTAMP
+                )
+            """))
+            print("Created safety_checklist_requests table")
+        except Exception as e:
+            print(f"safety_checklist_requests table may already exist: {e}")
     
     await engine.dispose()
     print("Migration completed!")

@@ -75,6 +75,7 @@ class AccessCode(Base):
     code = Column(String(50), unique=True, nullable=False)
     role = Column(Enum(UserRole), nullable=False)
     team_id = Column(Integer, ForeignKey("teams.id"), nullable=True)
+    created_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     region_id = Column(Integer, ForeignKey("regions.id", use_alter=True), nullable=True)  # Region for this code
     custom_role_id = Column(Integer, ForeignKey("custom_roles.id", use_alter=True), nullable=True)  # Custom role for this code
     is_active = Column(Boolean, default=True)
@@ -84,6 +85,7 @@ class AccessCode(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     
     team = relationship("Team")
+    created_by = relationship("User", foreign_keys=[created_by_id])
     users = relationship("User", back_populates="access_code")
 
 class Job(Base):
@@ -259,6 +261,25 @@ class SafetyChecklistAudit(Base):
 
     checklist = relationship("SafetyChecklist")
     actor = relationship("User")
+
+
+class SafetyChecklistRequest(Base):
+    __tablename__ = "safety_checklist_requests"
+
+    id = Column(Integer, primary_key=True)
+    requester_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    subcontractor_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    job_id = Column(Integer, ForeignKey("jobs.id"), nullable=True)
+    note = Column(Text, nullable=True)
+    status = Column(String(20), default="PENDING")  # PENDING/FULFILLED/CANCELLED
+    checklist_id = Column(Integer, ForeignKey("safety_checklists.id"), nullable=True)
+    requested_at = Column(DateTime, default=datetime.utcnow)
+    fulfilled_at = Column(DateTime, nullable=True)
+
+    requester = relationship("User", foreign_keys=[requester_id])
+    subcontractor = relationship("User", foreign_keys=[subcontractor_id])
+    job = relationship("Job")
+    checklist = relationship("SafetyChecklist")
 
 # ============= CUSTOM ROLES & REGIONS SYSTEM =============
 

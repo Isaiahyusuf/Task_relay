@@ -3,7 +3,7 @@ from .models import (
     Base, User, AccessCode, Team, Job, Quote, UserRole, JobStatus, JobType, 
     AvailabilityStatus, WeeklyAvailability, UnavailabilityNotice, BroadcastMessage, 
     MessageResponse, Region, CustomRole, RolePermission, AVAILABLE_PERMISSIONS,
-    SafetyChecklist, SafetyChecklistAudit
+    SafetyChecklist, SafetyChecklistAudit, SafetyChecklistRequest
 )
 
 __all__ = [
@@ -11,5 +11,5 @@ __all__ = [
     'Job', 'Quote', 'UserRole', 'JobStatus', 'JobType', 'AvailabilityStatus', 
     'WeeklyAvailability', 'UnavailabilityNotice', 'BroadcastMessage', 'MessageResponse',
     'Region', 'CustomRole', 'RolePermission', 'AVAILABLE_PERMISSIONS',
-    'SafetyChecklist', 'SafetyChecklistAudit'
+    'SafetyChecklist', 'SafetyChecklistAudit', 'SafetyChecklistRequest'
 ]
