@@ -7,8 +7,9 @@ from typing import Any
 
 from fpdf import FPDF
 from sqlalchemy import select, or_, func
+from sqlalchemy.exc import SQLAlchemyError
 
-from src.bot.database import async_session, SafetyChecklist, SafetyChecklistAudit, User, Job
+from src.bot.database import async_session, SafetyChecklist, SafetyChecklistAudit, SafetyChecklistRequest, User, Job
 from src.bot.database.models import UserRole, JobStatus
 
 
@@ -66,6 +67,87 @@ class SafetyChecklistService:
                 )
             )
             return (result.scalar() or 0) > 0
+
+    @staticmethod
+    async def create_request(requester_id: int, subcontractor_id: int, job_id: int | None = None, note: str | None = None) -> SafetyChecklistRequest | None:
+        if not async_session:
+            return None
+        async with async_session() as session:
+            try:
+                req = SafetyChecklistRequest(
+                    requester_id=requester_id,
+                    subcontractor_id=subcontractor_id,
+                    job_id=job_id,
+                    note=note,
+                    status="PENDING",
+                    requested_at=datetime.utcnow(),
+                )
+                session.add(req)
+                await session.commit()
+                await session.refresh(req)
+                return req
+            except SQLAlchemyError:
+                await session.rollback()
+                return None
+
+    @staticmethod
+    async def has_pending_request(subcontractor_id: int, job_id: int | None = None) -> bool:
+        if not async_session:
+            return False
+        async with async_session() as session:
+            q = select(func.count(SafetyChecklistRequest.id)).where(
+                SafetyChecklistRequest.subcontractor_id == subcontractor_id,
+                SafetyChecklistRequest.status == "PENDING",
+            )
+            if job_id is not None:
+                q = q.where(or_(SafetyChecklistRequest.job_id == job_id, SafetyChecklistRequest.job_id == None))
+            result = await session.execute(q)
+            return (result.scalar() or 0) > 0
+
+    @staticmethod
+    async def fulfill_pending_request(subcontractor_id: int, checklist_id: int, job_id: int | None = None):
+        if not async_session:
+            return
+        async with async_session() as session:
+            q = select(SafetyChecklistRequest).where(
+                SafetyChecklistRequest.subcontractor_id == subcontractor_id,
+                SafetyChecklistRequest.status == "PENDING",
+            ).order_by(SafetyChecklistRequest.requested_at.asc())
+            if job_id is not None:
+                q = q.where(or_(SafetyChecklistRequest.job_id == job_id, SafetyChecklistRequest.job_id == None))
+
+            result = await session.execute(q)
+            req = result.scalar_one_or_none()
+            if not req:
+                return
+            req.status = "FULFILLED"
+            req.checklist_id = checklist_id
+            req.fulfilled_at = datetime.utcnow()
+            await session.commit()
+
+    @staticmethod
+    async def list_subcontractors_for_requester(requester: User) -> list[User]:
+        if not async_session:
+            return []
+        async with async_session() as session:
+            q = select(User).where(User.role == UserRole.SUBCONTRACTOR, User.is_active == True)
+            if requester.role == UserRole.SUPERVISOR and requester.team_id:
+                q = q.where(User.team_id == requester.team_id)
+            q = q.order_by(User.first_name)
+            result = await session.execute(q)
+            return list(result.scalars().all())
+
+    @staticmethod
+    async def list_subcontractor_checklists(subcontractor_id: int, limit: int = 10) -> list[SafetyChecklist]:
+        if not async_session:
+            return []
+        async with async_session() as session:
+            result = await session.execute(
+                select(SafetyChecklist).where(
+                    SafetyChecklist.subcontractor_id == subcontractor_id
+                ).order_by(SafetyChecklist.created_at.desc()).limit(limit)
+            )
+            return list(result.scalars().all())
 
     @staticmethod
     async def create_checklist(payload: dict[str, Any]) -> SafetyChecklist | None:

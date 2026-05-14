@@ -1,5 +1,6 @@
 ﻿import os
 from datetime import datetime
+import logging
 
 from aiogram import Router, F
 from aiogram.filters import StateFilter
@@ -14,6 +15,7 @@ from src.bot.services.safety_checklist import SafetyChecklistService, SafetyChec
 
 
 router = Router()
+logger = logging.getLogger(__name__)
 
 
 HAZARD_ITEMS = [
@@ -706,7 +708,13 @@ async def btn_request_safety_checklist(message: Message, state: FSMContext):
         await message.answer("Only managers and supervisors can request safety checklists.")
         return
 
-    subs = await SafetyChecklistService.list_subcontractors_for_requester(user)
+    try:
+        subs = await SafetyChecklistService.list_subcontractors_for_requester(user)
+    except Exception as exc:
+        logger.exception("Failed to list subcontractors for safety request: %s", exc)
+        await message.answer("Could not load subcontractors right now. Please try again.")
+        return
+
     if not subs:
         await message.answer("No subcontractors available to request from.")
         return
@@ -728,7 +736,28 @@ async def cancel_safety_request(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data.startswith("safety_req_sub:"), StateFilter(SafetyRequestStates.selecting_subcontractor))
 async def process_request_subcontractor(callback: CallbackQuery, state: FSMContext):
-    sub_id = int(callback.data.split(":")[1])
+    requester = await _get_current_user(callback.from_user.id)
+    if not requester or requester.role not in [UserRole.ADMIN, UserRole.SUPERVISOR]:
+        await state.clear()
+        await callback.answer("Not authorized", show_alert=True)
+        return
+
+    try:
+        sub_id = int(callback.data.split(":")[1])
+    except (IndexError, ValueError):
+        await callback.answer("Invalid subcontractor selection", show_alert=True)
+        return
+
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.id == sub_id, User.role == UserRole.SUBCONTRACTOR, User.is_active == True)
+        )
+        sub = result.scalar_one_or_none()
+
+    if not sub:
+        await callback.answer("Subcontractor not found", show_alert=True)
+        return
+
     await state.update_data(request_subcontractor_id=sub_id)
     await state.set_state(SafetyRequestStates.waiting_note)
     await callback.message.edit_text(
@@ -745,15 +774,29 @@ async def process_request_note(message: Message, state: FSMContext):
         await message.answer("Not authorized.")
         return
 
+    if not message.text:
+        await message.answer("Please type a note, or type /skip.")
+        return
+
     data = await state.get_data()
     sub_id = data.get("request_subcontractor_id")
+    if not sub_id:
+        await state.clear()
+        await message.answer("Request session expired. Tap 'Request Safety Checklist' again.")
+        return
+
     note = None if message.text.strip().lower() == "/skip" else message.text.strip()
 
-    req = await SafetyChecklistService.create_request(
-        requester_id=requester.id,
-        subcontractor_id=sub_id,
-        note=note,
-    )
+    try:
+        req = await SafetyChecklistService.create_request(
+            requester_id=requester.id,
+            subcontractor_id=sub_id,
+            note=note,
+        )
+    except Exception as exc:
+        logger.exception("Failed creating safety checklist request: %s", exc)
+        req = None
+
     if not req:
         await state.clear()
         await message.answer("Failed to create checklist request.")
@@ -773,8 +816,8 @@ async def process_request_note(message: Message, state: FSMContext):
                 f"Please open 'Site Safety Checklist' and complete it before starting work.\n"
                 f"Note: {note or 'No note provided.'}"
             )
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Unable to notify subcontractor %s: %s", sub.telegram_id, exc)
 
     await state.clear()
     await message.answer("Checklist request sent to subcontractor.")
