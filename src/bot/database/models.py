@@ -63,7 +63,7 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     
     team = relationship("Team", back_populates="users")
-    access_code = relationship("AccessCode", back_populates="users")
+    access_code = relationship("AccessCode", back_populates="users", foreign_keys=[access_code_id])
     created_jobs = relationship("Job", back_populates="supervisor", foreign_keys="Job.supervisor_id")
     assigned_jobs = relationship("Job", back_populates="subcontractor", foreign_keys="Job.subcontractor_id")
     quotes = relationship("Quote", back_populates="subcontractor")
@@ -86,7 +86,7 @@ class AccessCode(Base):
     
     team = relationship("Team")
     created_by = relationship("User", foreign_keys=[created_by_id])
-    users = relationship("User", back_populates="access_code")
+    users = relationship("User", back_populates="access_code", foreign_keys="User.access_code_id")
 
 class Job(Base):
     __tablename__ = "jobs"
