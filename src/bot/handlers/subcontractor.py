@@ -49,25 +49,25 @@ class UnavailabilityStates(StatesGroup):
 class WeeklyAvailabilityNotesStates(StatesGroup):
     waiting_for_notes = State()
 
-@router.message(F.text == " Available Jobs")
+@router.message(F.text == "Available Jobs")
 async def btn_available_jobs(message: Message):
     if not await check_subcontractor(message):
         return
     await show_available_jobs(message)
 
-@router.message(F.text == " My Active Jobs")
+@router.message(F.text == "My Active Jobs")
 async def btn_active_jobs(message: Message):
     if not await check_subcontractor(message):
         return
     await show_active_jobs(message)
 
-@router.message(F.text == " Start Work")
+@router.message(F.text == "Start Work")
 async def btn_start_work(message: Message):
     if not await check_subcontractor(message):
         return
     await show_active_jobs(message)
 
-@router.message(F.text == " Available")
+@router.message(F.text == "Available")
 async def btn_set_available(message: Message):
     if not await check_subcontractor(message):
         return
@@ -76,7 +76,7 @@ async def btn_set_available(message: Message):
     )
     await message.answer(f" {msg}" if success else f"Error: {msg}")
 
-@router.message(F.text == " Busy")
+@router.message(F.text == "Busy")
 async def btn_set_busy(message: Message):
     if not await check_subcontractor(message):
         return
@@ -85,7 +85,7 @@ async def btn_set_busy(message: Message):
     )
     await message.answer(f" {msg}" if success else f"Error: {msg}")
 
-@router.message(F.text == " Away")
+@router.message(F.text == "Away")
 async def btn_set_away(message: Message):
     if not await check_subcontractor(message):
         return
@@ -94,7 +94,7 @@ async def btn_set_away(message: Message):
     )
     await message.answer(f" {msg}" if success else f"Error: {msg}")
 
-@router.message(F.text == " My Availability")
+@router.message(F.text == "My Availability")
 async def btn_my_availability(message: Message):
     """Show subcontractor's own weekly availability"""
     if not await check_subcontractor(message):
@@ -413,7 +413,7 @@ async def mark_job_done_callback(callback: CallbackQuery):
     else:
         await callback.answer(msg, show_alert=True)
 
-@router.message(F.text == " Submit Job")
+@router.message(F.text == "Submit Job")
 async def btn_submit_job_menu(message: Message):
     if not await check_subcontractor(message):
         return
@@ -855,7 +855,7 @@ async def process_custom_decline_reason(message: Message, state: FSMContext):
 
 # ============= UNAVAILABILITY NOTIFICATION =============
 
-@router.message(F.text == " Report Unavailability")
+@router.message(F.text == "Report Unavailability")
 async def btn_report_unavailability(message: Message, state: FSMContext):
     """Start the unavailability notification flow"""
     if not await check_subcontractor(message):
@@ -1431,4 +1431,5 @@ async def process_message_reply(message: Message, state: FSMContext):
         parse_mode="Markdown"
     )
     await state.clear()
+
 

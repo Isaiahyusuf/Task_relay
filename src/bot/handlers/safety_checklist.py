@@ -1,4 +1,4 @@
-import os
+﻿import os
 from datetime import datetime
 
 from aiogram import Router, F
@@ -55,6 +55,11 @@ class SafetyFilterStates(StatesGroup):
     waiting_keyword = State()
 
 
+class SafetyRequestStates(StatesGroup):
+    selecting_subcontractor = State()
+    waiting_note = State()
+
+
 def _yes_no_keyboard(prefix: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
@@ -104,7 +109,7 @@ async def _get_current_user(telegram_id: int) -> User | None:
         return result.scalar_one_or_none()
 
 
-@router.message(F.text == " Site Safety Checklist")
+@router.message(F.text == "Site Safety Checklist")
 async def btn_site_safety_checklist(message: Message, state: FSMContext):
     user = await _get_current_user(message.from_user.id)
     if not user or user.role != UserRole.SUBCONTRACTOR:
@@ -112,6 +117,14 @@ async def btn_site_safety_checklist(message: Message, state: FSMContext):
         return
 
     jobs = await SafetyChecklistService.get_subcontractor_active_jobs(message.from_user.id)
+    has_any_request = await SafetyChecklistService.has_pending_request(user.id)
+    if not has_any_request:
+        await message.answer(
+            "No checklist request found for you yet.\n"
+            "Please wait until a manager or supervisor requests a Site Safety Checklist."
+        )
+        return
+
     await state.clear()
     await state.set_state(SafetyChecklistStates.selecting_job)
     await message.answer(
@@ -145,6 +158,11 @@ async def process_selected_job(callback: CallbackQuery, state: FSMContext):
 
     if not job:
         await callback.answer("Job unavailable", show_alert=True)
+        return
+
+    has_request = await SafetyChecklistService.has_pending_request(user.id, job.id)
+    if not has_request:
+        await callback.answer("Checklist not requested for this job yet", show_alert=True)
         return
 
     await state.update_data(
@@ -469,6 +487,12 @@ async def process_post_task_3(callback: CallbackQuery, state: FSMContext):
         await state.clear()
         return
 
+    await SafetyChecklistService.fulfill_pending_request(
+        subcontractor_id=user.id,
+        checklist_id=checklist.id,
+        job_id=payload.get("job_id"),
+    )
+
     logo_path = os.path.join(os.getcwd(), "attached_assets", "company_logo.png")
     pdf_name, pdf_content = await SafetyChecklistPdfService.build_pdf(
         checklist,
@@ -518,7 +542,7 @@ async def process_post_task_3(callback: CallbackQuery, state: FSMContext):
     await state.clear()
 
 
-@router.message(F.text == " My Submissions")
+@router.message(F.text == "My Submissions")
 async def btn_my_submissions(message: Message):
     user = await _get_current_user(message.from_user.id)
     if not user or user.role != UserRole.SUBCONTRACTOR:
@@ -544,7 +568,7 @@ async def btn_my_submissions(message: Message):
     await message.answer(text)
 
 
-@router.message(F.text == " Safety Submissions")
+@router.message(F.text == "Safety Submissions")
 async def btn_safety_submissions(message: Message):
     user = await _get_current_user(message.from_user.id)
     if not user or user.role not in [UserRole.SUPERVISOR, UserRole.ADMIN, UserRole.SUPER_ADMIN]:
@@ -566,7 +590,7 @@ async def btn_safety_submissions(message: Message):
         )
 
 
-@router.message(F.text == " Filter Safety Submissions")
+@router.message(F.text == "Filter Safety Submissions")
 async def btn_filter_safety_submissions(message: Message, state: FSMContext):
     user = await _get_current_user(message.from_user.id)
     if not user or user.role not in [UserRole.SUPERVISOR, UserRole.ADMIN, UserRole.SUPER_ADMIN]:
@@ -642,7 +666,7 @@ async def review_checklist(callback: CallbackQuery):
     await callback.answer("Review saved")
 
 
-@router.message(F.text == " Export Safety CSV")
+@router.message(F.text == "Export Safety CSV")
 async def export_safety_csv(message: Message):
     user = await _get_current_user(message.from_user.id)
     if not user or user.role not in [UserRole.SUPERVISOR, UserRole.ADMIN, UserRole.SUPER_ADMIN]:
@@ -656,11 +680,102 @@ async def export_safety_csv(message: Message):
     )
 
 
-@router.message(F.text == " Upload Site Photos")
+@router.message(F.text == "Upload Site Photos")
 async def btn_upload_site_photos(message: Message):
     await message.answer("Use Site Safety Checklist to upload unsafe-condition photos during submission.")
 
 
-@router.message(F.text == " Contact Supervisor")
+@router.message(F.text == "Contact Supervisor")
 async def btn_contact_supervisor(message: Message):
     await message.answer("Use Send Message to contact your supervisor directly.")
+
+
+def _request_subcontractor_keyboard(subcontractors: list[User]) -> InlineKeyboardMarkup:
+    rows = []
+    for sub in subcontractors[:20]:
+        name = sub.first_name or sub.username or f"User {sub.telegram_id}"
+        rows.append([InlineKeyboardButton(text=name, callback_data=f"safety_req_sub:{sub.id}")])
+    rows.append([InlineKeyboardButton(text="Cancel", callback_data="safety_req_cancel")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+@router.message(F.text == "Request Safety Checklist")
+async def btn_request_safety_checklist(message: Message, state: FSMContext):
+    user = await _get_current_user(message.from_user.id)
+    if not user or user.role not in [UserRole.ADMIN, UserRole.SUPERVISOR]:
+        await message.answer("Only managers and supervisors can request safety checklists.")
+        return
+
+    subs = await SafetyChecklistService.list_subcontractors_for_requester(user)
+    if not subs:
+        await message.answer("No subcontractors available to request from.")
+        return
+
+    await state.clear()
+    await state.set_state(SafetyRequestStates.selecting_subcontractor)
+    await message.answer(
+        "Select subcontractor to request a Site Safety Checklist:",
+        reply_markup=_request_subcontractor_keyboard(subs),
+    )
+
+
+@router.callback_query(F.data == "safety_req_cancel", StateFilter(SafetyRequestStates.selecting_subcontractor, SafetyRequestStates.waiting_note))
+async def cancel_safety_request(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
+    await callback.message.edit_text("Checklist request cancelled.")
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("safety_req_sub:"), StateFilter(SafetyRequestStates.selecting_subcontractor))
+async def process_request_subcontractor(callback: CallbackQuery, state: FSMContext):
+    sub_id = int(callback.data.split(":")[1])
+    await state.update_data(request_subcontractor_id=sub_id)
+    await state.set_state(SafetyRequestStates.waiting_note)
+    await callback.message.edit_text(
+        "Enter request note (job/task context), or type /skip:",
+    )
+    await callback.answer()
+
+
+@router.message(StateFilter(SafetyRequestStates.waiting_note))
+async def process_request_note(message: Message, state: FSMContext):
+    requester = await _get_current_user(message.from_user.id)
+    if not requester or requester.role not in [UserRole.ADMIN, UserRole.SUPERVISOR]:
+        await state.clear()
+        await message.answer("Not authorized.")
+        return
+
+    data = await state.get_data()
+    sub_id = data.get("request_subcontractor_id")
+    note = None if message.text.strip().lower() == "/skip" else message.text.strip()
+
+    req = await SafetyChecklistService.create_request(
+        requester_id=requester.id,
+        subcontractor_id=sub_id,
+        note=note,
+    )
+    if not req:
+        await state.clear()
+        await message.answer("Failed to create checklist request.")
+        return
+
+    # Notify subcontractor
+    async with async_session() as session:
+        result = await session.execute(select(User).where(User.id == sub_id))
+        sub = result.scalar_one_or_none()
+
+    if sub and sub.telegram_id:
+        requester_name = requester.first_name or requester.username or "Manager"
+        try:
+            await message.bot.send_message(
+                sub.telegram_id,
+                f"Site Safety Checklist requested by {requester_name}.\n"
+                f"Please open 'Site Safety Checklist' and complete it before starting work.\n"
+                f"Note: {note or 'No note provided.'}"
+            )
+        except Exception:
+            pass
+
+    await state.clear()
+    await message.answer("Checklist request sent to subcontractor.")
+

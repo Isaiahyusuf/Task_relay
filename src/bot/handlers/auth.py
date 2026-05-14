@@ -1,4 +1,4 @@
-from aiogram import Router, F
+﻿from aiogram import Router, F
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -105,11 +105,11 @@ async def process_access_code(message: Message, state: FSMContext):
 async def cmd_help(message: Message):
     await show_help(message)
 
-@router.message(F.text == "ℹ️ Help")
+@router.message(F.text == "Help")
 async def btn_help(message: Message):
     await show_help(message)
 
-@router.message(F.text == "🗑️ Delete My Account")
+@router.message(F.text == "Delete My Account")
 async def btn_delete_account(message: Message):
     if not async_session:
         await message.answer("Database not available.")
@@ -126,7 +126,7 @@ async def btn_delete_account(message: Message):
             return
     
     await message.answer(
-        "⚠️ *Delete Your Account*\n\n"
+        " *Delete Your Account*\n\n"
         "Are you sure you want to delete your account?\n\n"
         "*This action cannot be undone.*\n"
         "You will need a new access code to register again.",
@@ -171,30 +171,30 @@ async def handle_cancel_self_delete(callback: CallbackQuery):
     await callback.message.edit_text("Account deletion cancelled.")
     await callback.answer()
 
-@router.message(F.text == "📘 About")
+@router.message(F.text == "About")
 async def btn_about(message: Message):
     about_text = (
-        "🤖 *About TaskRelay Bot*\n\n"
+        " *About TaskRelay Bot*\n\n"
         "TaskRelay is a comprehensive workflow automation system designed to streamline the connection "
         "between supervisors who need work done and subcontractors who perform it.\n\n"
-        "📊 *Job Lifecycle Explained:*\n"
-        "• *CREATED:* Job is drafted by a supervisor.\n"
-        "• *SENT:* Dispatched to a subcontractor (Preset Price) or open for bids (Quote Job).\n"
-        "• *ACCEPTED:* Subcontractor has committed to the work.\n"
-        "• *IN_PROGRESS:* Work is currently being performed.\n"
-        "• *COMPLETED:* Work is finished and pending supervisor review.\n\n"
-        "🔧 *Subcontractor Tools:*\n"
-        "• Submit binding quotes for bidding jobs.\n"
-        "• Manage availability (Available/Busy/Away) to control incoming work.\n"
-        "• Real-time buttons to accept, start, and finish tasks.\n\n"
-        "👔 *Supervisor Tools:*\n"
-        "• Create detailed job postings with photos and locations.\n"
-        "• Compare multiple subcontractor quotes side-by-side.\n"
-        "• Monitor team progress in real-time via filtered dashboards.\n\n"
-        "⚡ *Automation Details:*\n"
-        "• *Smart Reminders:* Sent if a job is ignored for 24 hours.\n"
-        "• *Auto-Cancel:* Unanswered jobs close after 72 hours to free up the request.\n"
-        "• *Archives:* 90-day auto-archiving keeps your history clean and searchable.\n\n"
+        " *Job Lifecycle Explained:*\n"
+        " *CREATED:* Job is drafted by a supervisor.\n"
+        " *SENT:* Dispatched to a subcontractor (Preset Price) or open for bids (Quote Job).\n"
+        " *ACCEPTED:* Subcontractor has committed to the work.\n"
+        " *IN_PROGRESS:* Work is currently being performed.\n"
+        " *COMPLETED:* Work is finished and pending supervisor review.\n\n"
+        " *Subcontractor Tools:*\n"
+        " Submit binding quotes for bidding jobs.\n"
+        " Manage availability (Available/Busy/Away) to control incoming work.\n"
+        " Real-time buttons to accept, start, and finish tasks.\n\n"
+        " *Supervisor Tools:*\n"
+        " Create detailed job postings with photos and locations.\n"
+        " Compare multiple subcontractor quotes side-by-side.\n"
+        " Monitor team progress in real-time via filtered dashboards.\n\n"
+        " *Automation Details:*\n"
+        " *Smart Reminders:* Sent if a job is ignored for 24 hours.\n"
+        " *Auto-Cancel:* Unanswered jobs close after 72 hours to free up the request.\n"
+        " *Archives:* 90-day auto-archiving keeps your history clean and searchable.\n\n"
         "_Version 1.0.0 - Built for efficiency and reliability._"
     )
     await message.answer(about_text, parse_mode="Markdown")
@@ -220,49 +220,49 @@ async def show_help(message: Message):
         if user.role == UserRole.SUPER_ADMIN:
             help_text = (
                 "*GENERAL MANAGER MANUAL*\n"
-                "━━━━━━━━━━━━━━━━━━━━\n\n"
+                "\n\n"
                 
                 "*USER MANAGEMENT*\n"
-                "• *Create Manager Code* - Generate codes for new managers\n"
-                "• *Create Supervisor Code* - Generate codes for supervisors\n"
-                "• *Create Subcontractor Code* - Generate codes for workers\n"
-                "• *All Access Codes* - View all generated codes\n"
-                "• *View Managers/Supervisors/Subcontractors* - Manage users by role\n"
-                "• *All Users* - View complete user list\n"
-                "• *View By Teams* - See users grouped by team\n\n"
+                " *Create Manager Code* - Generate codes for new managers\n"
+                " *Create Supervisor Code* - Generate codes for supervisors\n"
+                " *Create Subcontractor Code* - Generate codes for workers\n"
+                " *All Access Codes* - View all generated codes\n"
+                " *View Managers/Supervisors/Subcontractors* - Manage users by role\n"
+                " *All Users* - View complete user list\n"
+                " *View By Teams* - See users grouped by team\n\n"
                 
                 "*JOB MANAGEMENT*\n"
-                "• *Job History* - View all job records\n"
-                "• *Archive Jobs* - Archive old completed jobs\n"
-                "• *View Archived* - Browse archived jobs\n\n"
+                " *Job History* - View all job records\n"
+                " *Archive Jobs* - Archive old completed jobs\n"
+                " *View Archived* - Browse archived jobs\n\n"
                 
                 "*COMMUNICATION*\n"
-                "• *Send Message* - Message everyone on bot or subcontractors\n"
-                "• *Weekly Availability* - View subcontractor schedules\n\n"
+                " *Send Message* - Message everyone on bot or subcontractors\n"
+                " *Weekly Availability* - View subcontractor schedules\n\n"
                 
                 "*OTHER*\n"
-                "• *Switch Role* - Test other role views\n"
-                "• *About* - Bot information"
+                " *Switch Role* - Test other role views\n"
+                " *About* - Bot information"
             )
         elif user.role == UserRole.ADMIN:
             help_text = (
                 "*MANAGER MANUAL*\n"
-                "━━━━━━━━━━━━━━━━━━━━\n\n"
+                "\n\n"
                 
                 "*USER MANAGEMENT*\n"
-                "• *Create Access Code* - Generate codes for supervisors and subcontractors\n"
-                "• *Manage Users* - View and manage all users\n"
-                "• *View By Teams* - See users grouped by team\n\n"
+                " *Create Access Code* - Generate codes for supervisors and subcontractors\n"
+                " *Manage Users* - View and manage all users\n"
+                " *View By Teams* - See users grouped by team\n\n"
                 
                 "*JOB MANAGEMENT*\n"
-                "• *New Job* - Create and dispatch jobs to subcontractors\n"
-                "• *Job History* - View all job records\n"
-                "• *Archive Jobs* - Archive old completed jobs\n"
-                "• *View Archived* - Browse archived jobs\n\n"
+                " *New Job* - Create and dispatch jobs to subcontractors\n"
+                " *Job History* - View all job records\n"
+                " *Archive Jobs* - Archive old completed jobs\n"
+                " *View Archived* - Browse archived jobs\n\n"
                 
                 "*COMMUNICATION*\n"
-                "• *Send Message* - Message subcontractors (all/team/select)\n"
-                "• *Weekly Availability* - View subcontractor schedules\n\n"
+                " *Send Message* - Message subcontractors (all/team/select)\n"
+                " *Weekly Availability* - View subcontractor schedules\n\n"
                 
                 "*HOW TO CREATE A JOB*\n"
                 "1. Tap *New Job*\n"
@@ -272,16 +272,16 @@ async def show_help(message: Message):
                 "5. Select target team or send bot-wide\n\n"
                 
                 "*OTHER*\n"
-                "• *Switch Role* - Test other role views\n"
-                "• *About* - Bot information"
+                " *Switch Role* - Test other role views\n"
+                " *About* - Bot information"
             )
         elif user.role == UserRole.SUPERVISOR:
             help_text = (
                 "*SUPERVISOR MANUAL*\n"
-                "━━━━━━━━━━━━━━━━━━━━\n\n"
+                "\n\n"
                 
                 "*JOB CREATION*\n"
-                "• *New Job* - Create and dispatch jobs\n"
+                " *New Job* - Create and dispatch jobs\n"
                 "  1. Choose: Quote Job or Preset Price\n"
                 "  2. Enter title, description, price (if preset)\n"
                 "  3. Add photos (optional) - repair images\n"
@@ -289,22 +289,22 @@ async def show_help(message: Message):
                 "  5. Select team or send bot-wide\n\n"
                 
                 "*JOB TRACKING*\n"
-                "• *My Jobs* - View all your jobs\n"
-                "• *Pending Jobs* - Jobs awaiting response\n"
-                "• *Active Jobs* - Jobs in progress\n"
-                "• *Submitted Jobs* - Jobs ready for review\n\n"
+                " *My Jobs* - View all your jobs\n"
+                " *Pending Jobs* - Jobs awaiting response\n"
+                " *Active Jobs* - Jobs in progress\n"
+                " *Submitted Jobs* - Jobs ready for review\n\n"
                 
                 "*JOB ACTIONS*\n"
-                "• *View Quotes* - Compare quotes from subcontractors\n"
-                "• *Accept Quote* - Select winning quote\n"
-                "• *Cancel Job* - Cancel unstarted jobs\n"
-                "• *Mark Complete* - Close job with star rating\n"
-                "• *Not Satisfied* - Request revision with feedback\n\n"
+                " *View Quotes* - Compare quotes from subcontractors\n"
+                " *Accept Quote* - Select winning quote\n"
+                " *Cancel Job* - Cancel unstarted jobs\n"
+                " *Mark Complete* - Close job with star rating\n"
+                " *Not Satisfied* - Request revision with feedback\n\n"
                 
                 "*COMMUNICATION*\n"
-                "• *Send Message* - Message subcontractors\n"
-                "• *View Availability* - Check subcontractor schedules\n"
-                "• *Create Subcontractor Code* - Add new workers\n\n"
+                " *Send Message* - Message subcontractors\n"
+                " *View Availability* - Check subcontractor schedules\n"
+                " *Create Subcontractor Code* - Add new workers\n\n"
                 
                 "*STAR RATINGS*\n"
                 "When marking complete, rate 1-5 stars.\n"
@@ -313,43 +313,45 @@ async def show_help(message: Message):
         else:  # SUBCONTRACTOR
             help_text = (
                 "*SUBCONTRACTOR MANUAL*\n"
-                "━━━━━━━━━━━━━━━━━━━━\n\n"
+                "\n\n"
                 
                 "*FINDING JOBS*\n"
-                "• *Available Jobs* - View jobs waiting for you\n"
-                "• *My Active Jobs* - Jobs you're working on\n\n"
+                " *Available Jobs* - View jobs waiting for you\n"
+                " *My Active Jobs* - Jobs you're working on\n\n"
                 
                 "*RESPONDING TO JOBS*\n"
-                "• *Accept* - Take the job (enter company name)\n"
-                "• *Decline* - Reject with reason\n"
-                "• *Submit Quote* - For quote-type jobs, enter your price\n\n"
+                " *Accept* - Take the job (enter company name)\n"
+                " *Decline* - Reject with reason\n"
+                " *Submit Quote* - For quote-type jobs, enter your price\n\n"
                 
                 "*COMPLETING JOBS*\n"
-                "• *Start Job* - Begin work on accepted job\n"
-                "• *Submit Job* - Finish with notes and photo proof\n"
-                "• Supervisor reviews and marks complete\n\n"
+                " *Start Job* - Begin work on accepted job\n"
+                " *Submit Job* - Finish with notes and photo proof\n"
+                " Supervisor reviews and marks complete\n\n"
                 
                 "*AVAILABILITY STATUS*\n"
                 "Set your current status:\n"
-                "• *Available* (green) - Ready for new jobs\n"
-                "• *Busy* (yellow) - Temporarily unavailable\n"
-                "• *Away* (red) - Not accepting jobs\n\n"
+                " *Available* (green) - Ready for new jobs\n"
+                " *Busy* (yellow) - Temporarily unavailable\n"
+                " *Away* (red) - Not accepting jobs\n\n"
                 
                 "*WEEKLY AVAILABILITY*\n"
-                "• *My Availability* - View/update weekly schedule\n"
-                "• Every Thursday: Tick days you can work (Mon-Fri)\n"
-                "• Add notes for specific days if needed\n\n"
+                " *My Availability* - View/update weekly schedule\n"
+                " Every Thursday: Tick days you can work (Mon-Fri)\n"
+                " Add notes for specific days if needed\n\n"
                 
                 "*COMMUNICATION*\n"
-                "• *Report Unavailability* - Notify supervisors\n"
-                "• When you receive messages, tap:\n"
+                " *Report Unavailability* - Notify supervisors\n"
+                " When you receive messages, tap:\n"
                 "  - *Acknowledge* - Confirm you've seen it\n"
                 "  - *Reply* - Send a response\n\n"
                 
                 "*TIPS*\n"
-                "• Submit jobs with clear photos\n"
-                "• Keep your availability updated\n"
-                "• Respond to jobs promptly"
+                " Submit jobs with clear photos\n"
+                " Keep your availability updated\n"
+                " Respond to jobs promptly"
             )
         
         await message.answer(help_text, parse_mode="Markdown")
+
+

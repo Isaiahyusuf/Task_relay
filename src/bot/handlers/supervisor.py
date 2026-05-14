@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+﻿from datetime import datetime, timedelta
 from aiogram import Router, F
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
@@ -50,7 +50,7 @@ class NotSatisfiedStates(StatesGroup):
 async def cmd_new_job(message: Message, state: FSMContext):
     await start_new_job(message, state)
 
-@router.message(F.text == "🔑 Create Subcontractor Code")
+@router.message(F.text == "Create Subcontractor Code")
 @require_role(UserRole.SUPERVISOR)
 async def btn_create_sub_code(message: Message, state: FSMContext):
     await message.answer(
@@ -63,7 +63,7 @@ async def btn_create_sub_code(message: Message, state: FSMContext):
     # Use preset_role instead of forced_role to trigger team selection
     await state.update_data(preset_role=UserRole.SUBCONTRACTOR.value, preset_role_name="Subcontractor")
 
-@router.message(F.text == "➕ New Job")
+@router.message(F.text == "New Job")
 async def btn_new_job(message: Message, state: FSMContext):
     if not async_session:
         await message.answer("Database not available.")
@@ -457,7 +457,7 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
                         logger.info(f"[NOTIFY] Sending to subcontractor id={sub.id}, telegram_id={sub.telegram_id}, name={sub.first_name}")
                         await bot.send_message(
                             sub.telegram_id,
-                            f"🆕 *New Job Available*\n\n"
+                            f" *New Job Available*\n\n"
                             f"Job #{job.id}: {job.title}\n"
                             f"Location: {job.address or 'N/A'}\n"
                             f"Price: {job.preset_price or 'N/A'}{deadline_text}\n\n"
@@ -484,10 +484,10 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
                         if sup_photos:
                             from aiogram.types import InputMediaPhoto
                             if len(sup_photos) == 1:
-                                await bot.send_photo(sub.telegram_id, sup_photos[0], caption="📷 Repair photos for this job")
+                                await bot.send_photo(sub.telegram_id, sup_photos[0], caption=" Repair photos for this job")
                             else:
                                 media_group = [InputMediaPhoto(media=photo_id) for photo_id in sup_photos]
-                                media_group[0] = InputMediaPhoto(media=sup_photos[0], caption="📷 Repair photos for this job")
+                                media_group[0] = InputMediaPhoto(media=sup_photos[0], caption=" Repair photos for this job")
                                 await bot.send_media_group(sub.telegram_id, media_group)
                         
                         notified_count += 1
@@ -504,7 +504,7 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
                 f"*Job Created & Sent!*\n\n"
                 f"Job #{job.id}: {job.title}\n"
                 f"Sent to: {team_label}\n\n"
-                f"📢 Notified {notified_count} subcontractor(s).\n"
+                f" Notified {notified_count} subcontractor(s).\n"
                 "First one to accept will get the job!",
                 parse_mode="Markdown"
             )
@@ -563,25 +563,25 @@ async def cancel_save_pending(callback: CallbackQuery, state: FSMContext):
 async def cmd_my_jobs(message: Message):
     await show_my_jobs(message)
 
-@router.message(F.text == "📋 My Jobs")
+@router.message(F.text == "My Jobs")
 async def btn_my_jobs(message: Message):
     if not await check_supervisor(message):
         return
     await show_my_jobs(message)
 
-@router.message(F.text == "⏳ Pending Jobs")
+@router.message(F.text == "Pending Jobs")
 async def btn_pending_jobs(message: Message):
     if not await check_supervisor(message):
         return
     await show_filtered_jobs(message, [JobStatus.CREATED, JobStatus.SENT], "Pending Jobs")
 
-@router.message(F.text == "🔄 Active Jobs")
+@router.message(F.text == "Active Jobs")
 async def btn_active_jobs(message: Message):
     if not await check_supervisor(message):
         return
     await show_filtered_jobs(message, [JobStatus.ACCEPTED, JobStatus.IN_PROGRESS], "Active Jobs")
 
-@router.message(F.text == "📥 Submitted Jobs")
+@router.message(F.text == "Submitted Jobs")
 async def btn_submitted_jobs(message: Message):
     if not await check_supervisor(message):
         return
@@ -677,12 +677,12 @@ async def view_job_details_supervisor(callback: CallbackQuery):
         details += f"*Price:* {job.preset_price}\n"
     
     if job.photos:
-        details += "\n📸 *Photo Evidence available*"
+        details += "\n *Photo Evidence available*"
     
     if job.rating:
-        details += f"\n⭐ *Rating:* {job.rating}/5"
+        details += f"\n *Rating:* {job.rating}/5"
         if job.rating_comment:
-            details += f"\n💬 *Comment:* {job.rating_comment}"
+            details += f"\n *Comment:* {job.rating_comment}"
     
     details += f"\n*Created:* {job.created_at.strftime('%Y-%m-%d %H:%M')}"
     
@@ -770,7 +770,7 @@ async def accept_quote(callback: CallbackQuery):
                 try:
                     await bot.send_message(
                         sub_telegram_id,
-                        f"🎉 *Your Quote Was Accepted!*\n\n"
+                        f" *Your Quote Was Accepted!*\n\n"
                         f"Job #{job_id}: {job_title}\n"
                         f"Your Quote: *{quote_amount}*\n\n"
                         f"Congratulations! The job is now assigned to you.\n"
@@ -859,7 +859,7 @@ async def process_decline_reason(message: Message, state: FSMContext):
                 try:
                     await bot.send_message(
                         sub_telegram_id,
-                        f"❌ *Quote Declined*\n\n"
+                        f" *Quote Declined*\n\n"
                         f"Your quote for Job #{job_id}: {job_title}\n"
                         f"Amount: *{quote_amount}*\n\n"
                         f"*Reason:* {reason}\n\n"
@@ -934,7 +934,7 @@ async def supervisor_complete_job(callback: CallbackQuery, state: FSMContext):
         from aiogram.utils.keyboard import InlineKeyboardBuilder
         kb = InlineKeyboardBuilder()
         for i in range(1, 6):
-            kb.button(text=f"{i} ⭐", callback_data=f"rate:{job_id}:{i}")
+            kb.button(text=f"{i} ", callback_data=f"rate:{job_id}:{i}")
         kb.adjust(5)
         
         await callback.message.edit_text(
@@ -956,7 +956,7 @@ async def process_rating_selection(callback: CallbackQuery, state: FSMContext):
     
     await state.update_data(rating_job_id=job_id, rating_value=rating)
     await callback.message.edit_text(
-        f"*Rating: {rating} ⭐*\n\n"
+        f"*Rating: {rating} *\n\n"
         "Please provide a short comment about the work (or send /skip):",
         parse_mode="Markdown"
     )
@@ -997,11 +997,11 @@ async def process_rating_comment(message: Message, state: FSMContext):
         bot = message.bot
         if bot:
             try:
-                stars = "⭐" * rating
+                stars = "" * rating
                 comment_text = f"\nComment: {comment}" if comment else ""
                 await bot.send_message(
                     subcontractor_tg_id,
-                    f"🎉 *Job Completed & Rated!*\n\n"
+                    f" *Job Completed & Rated!*\n\n"
                     f"Job #{job_id}: {job_title}\n\n"
                     f"Your rating: {stars} ({rating}/5){comment_text}\n\n"
                     f"Thank you for your work!",
@@ -1010,7 +1010,7 @@ async def process_rating_comment(message: Message, state: FSMContext):
             except Exception as e:
                 logger.error(f"Failed to notify subcontractor {subcontractor_tg_id} of rating: {e}")
             
-    await message.answer(f"Thank you! Rating of {rating} ⭐ saved for Job #{job_id}.")
+    await message.answer(f"Thank you! Rating of {rating}  saved for Job #{job_id}.")
     await state.clear()
 
 @router.callback_query(F.data == "back:sup")
@@ -1096,7 +1096,7 @@ async def process_not_satisfied_reason(message: Message, state: FSMContext):
                 bot = message.bot
                 await bot.send_message(
                     subcontractor.telegram_id,
-                    f"⚠️ *Revision Requested*\n\n"
+                    f" *Revision Requested*\n\n"
                     f"Job #{job_id}: {job.title}\n\n"
                     f"*Supervisor Feedback:*\n{reason}\n\n"
                     "Please address the issues and resubmit your work.",
@@ -1115,7 +1115,7 @@ async def process_not_satisfied_reason(message: Message, state: FSMContext):
 
 # ============= VIEW SUBCONTRACTOR AVAILABILITY =============
 
-@router.message(F.text == "📅 View Availability")
+@router.message(F.text == "View Availability")
 async def btn_view_availability(message: Message):
     if not await check_supervisor(message):
         return
@@ -1145,7 +1145,7 @@ async def show_subcontractor_availability(message: Message):
         
         if not responses:
             await message.answer(
-                "📅 *Subcontractor Availability*\n\n"
+                " *Subcontractor Availability*\n\n"
                 "No availability data for this week yet.\n\n"
                 "Subcontractors receive availability surveys every thursday.",
                 parse_mode="Markdown"
@@ -1154,14 +1154,14 @@ async def show_subcontractor_availability(message: Message):
         
         day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
         
-        message_text = f"📅 *Subcontractor Availability*\n"
+        message_text = f" *Subcontractor Availability*\n"
         message_text += f"Week of {current_monday.strftime('%d/%m/%Y')}\n\n"
         
         for avail, user in responses:
             name = user.first_name or user.username or f"User {user.telegram_id}"
             
             if avail.responded_at is None:
-                message_text += f"*{name}:* ⏳ No response yet\n\n"
+                message_text += f"*{name}:*  No response yet\n\n"
             else:
                 days_available = []
                 if avail.monday_available:
@@ -1176,9 +1176,9 @@ async def show_subcontractor_availability(message: Message):
                     days_available.append("Fri")
                 
                 if days_available:
-                    message_text += f"*{name}:* ✅ {', '.join(days_available)}\n"
+                    message_text += f"*{name}:*  {', '.join(days_available)}\n"
                 else:
-                    message_text += f"*{name}:* ❌ Not available\n"
+                    message_text += f"*{name}:*  Not available\n"
                 
                 if avail.notes:
                     message_text += f"   _Notes: {avail.notes}_\n"
@@ -1194,7 +1194,7 @@ class UnavailabilityFeedbackStates(StatesGroup):
 @router.callback_query(F.data.startswith("unavail_ack:"))
 async def acknowledge_unavailability(callback: CallbackQuery):
     await callback.message.edit_text(
-        callback.message.text + "\n\n✅ _Acknowledged_",
+        callback.message.text + "\n\n _Acknowledged_",
         parse_mode="Markdown"
     )
     await callback.answer("Acknowledged")
@@ -1213,12 +1213,12 @@ async def start_unavailability_feedback(callback: CallbackQuery, state: FSMConte
     await state.set_state(UnavailabilityFeedbackStates.waiting_for_feedback)
     
     await callback.message.edit_text(
-        callback.message.text + "\n\n💬 _Sending feedback..._",
+        callback.message.text + "\n\n _Sending feedback..._",
         parse_mode="Markdown"
     )
     
     await callback.message.answer(
-        "💬 *Send Feedback*\n\n"
+        " *Send Feedback*\n\n"
         "Please type your feedback for the subcontractor:",
         parse_mode="Markdown"
     )
@@ -1255,14 +1255,14 @@ async def process_unavailability_feedback(message: Message, state: FSMContext):
                 bot = message.bot
                 await bot.send_message(
                     subcontractor.telegram_id,
-                    f"💬 *Supervisor Feedback*\n\n"
+                    f" *Supervisor Feedback*\n\n"
                     f"*{sup_name}* has responded to your unavailability notice:\n\n"
                     f"_{feedback}_",
                     parse_mode="Markdown"
                 )
                 
                 await message.answer(
-                    "✅ *Feedback Sent*\n\n"
+                    " *Feedback Sent*\n\n"
                     "Your feedback has been sent to the subcontractor.",
                     parse_mode="Markdown"
                 )
@@ -1276,3 +1276,5 @@ async def process_unavailability_feedback(message: Message, state: FSMContext):
             await message.answer("Subcontractor not found.")
     
     await state.clear()
+
+

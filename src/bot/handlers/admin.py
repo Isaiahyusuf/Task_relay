@@ -1,4 +1,4 @@
-from aiogram import Router, F
+﻿from aiogram import Router, F
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -10,6 +10,7 @@ from src.bot.database.models import UserRole, JobStatus, JobType, TeamType, Team
 from src.bot.services.jobs import JobService
 from src.bot.services.archive import ArchiveService
 from src.bot.services.access_codes import AccessCodeService
+from src.bot.services.safety_checklist import SafetyChecklistService
 from src.bot.utils.permissions import require_role
 from src.bot.utils.roles import has_minimum_role, can_manage_role, creatable_roles, role_display_name
 from src.bot.config import config
@@ -50,7 +51,7 @@ class WeeklyAvailabilityNotes(StatesGroup):
 async def cmd_history(message: Message):
     await show_history(message)
 
-@router.message(F.text == "📊 Job History")
+@router.message(F.text == "Job History")
 async def btn_history(message: Message):
     if not await check_admin(message):
         return
@@ -131,7 +132,7 @@ async def show_history(message: Message):
 async def cmd_archive(message: Message):
     await archive_jobs(message)
 
-@router.message(F.text == "📦 Archive Jobs")
+@router.message(F.text == "Archive Jobs")
 async def btn_archive(message: Message):
     if not await check_admin(message):
         return
@@ -160,7 +161,7 @@ async def archive_jobs(message: Message):
 async def cmd_archived(message: Message):
     await show_archived(message)
 
-@router.message(F.text == "📋 View Archived")
+@router.message(F.text == "View Archived")
 async def btn_archived(message: Message):
     if not await check_admin(message):
         return
@@ -250,26 +251,26 @@ async def cmd_create_code(message: Message, state: FSMContext):
     
     await start_code_creation(message, state)
 
-@router.message(F.text == "🔑 Create Access Code")
+@router.message(F.text == "Create Access Code")
 async def btn_create_code(message: Message, state: FSMContext):
     if not await check_admin(message):
         return
     await start_code_creation(message, state)
 
-@router.message(F.text == "👑 Create Admin Code")
-@router.message(F.text == "👑 Create Manager Code")
+@router.message(F.text == "Create Admin Code")
+@router.message(F.text == "Create Manager Code")
 async def btn_create_admin_code(message: Message, state: FSMContext):
     if not await check_super_admin(message):
         return
     await start_role_specific_code_creation(message, state, UserRole.ADMIN, "Manager")
 
-@router.message(F.text == "👔 Create Supervisor Code")
+@router.message(F.text == "Create Supervisor Code")
 async def btn_create_supervisor_code(message: Message, state: FSMContext):
     if not await check_super_admin(message):
         return
     await start_role_specific_code_creation(message, state, UserRole.SUPERVISOR, "Supervisor")
 
-@router.message(F.text == "🔧 Create Subcontractor Code")
+@router.message(F.text == "Create Subcontractor Code")
 async def btn_create_subcontractor_code(message: Message, state: FSMContext):
     # Check role hierarchy for subcontractor-code creation.
     async with async_session() as session:
@@ -304,11 +305,11 @@ async def start_code_creation(message: Message, state: FSMContext):
     await state.set_state(CreateCodeStates.waiting_for_code)
 
 MENU_BUTTON_TEXTS = {
-    "👔 View Supervisors", "🔧 View Subcontractors", "👑 View Admins", "👑 View Managers",
-    "👥 All Users", "🔑 All Access Codes", "🔑 Create Access Code",
-    "👑 Create Admin Code", "👑 Create Manager Code", "👔 Create Supervisor Code", "🔧 Create Subcontractor Code",
-    "📋 View Jobs", "➕ Create Job", "📜 Job History", "🏠 Main Menu",
-    "🏢 View By Teams", "⬅️ Back", "❌ Cancel"
+    " View Supervisors", " View Subcontractors", " View Admins", " View Managers",
+    " All Users", " All Access Codes", " Create Access Code",
+    " Create Admin Code", " Create Manager Code", " Create Supervisor Code", " Create Subcontractor Code",
+    " View Jobs", " Create Job", " Job History", " Main Menu",
+    " View By Teams", " Back", " Cancel"
 }
 
 @router.message(StateFilter(CreateCodeStates.waiting_for_code), ~F.text.in_(MENU_BUTTON_TEXTS))
@@ -490,11 +491,11 @@ async def create_code_with_team(callback: CallbackQuery, state: FSMContext, team
         keyboard = InlineKeyboardBuilder()
         for region in regions:
             keyboard.row(InlineKeyboardButton(
-                text=f"🌍 {region.name}",
+                text=f" {region.name}",
                 callback_data=f"code_region:{region.id}"
             ))
-        keyboard.row(InlineKeyboardButton(text="⏭️ Skip (No Region)", callback_data="code_region:skip"))
-        keyboard.row(InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_code"))
+        keyboard.row(InlineKeyboardButton(text=" Skip (No Region)", callback_data="code_region:skip"))
+        keyboard.row(InlineKeyboardButton(text=" Cancel", callback_data="cancel_code"))
         
         await callback.message.edit_text(
             f"*Select Region (Optional)*\n\n"
@@ -680,7 +681,7 @@ async def handle_admin_delete_job(callback: CallbackQuery):
         return
 
     await callback.message.edit_text(
-        f"⚠️ *Delete Job #{job_id}*\n\n"
+        f" *Delete Job #{job_id}*\n\n"
         "Are you sure you want to delete this job record completely?\n"
         "*This action cannot be undone.*",
         reply_markup=get_confirm_job_delete_keyboard(job_id),
@@ -715,7 +716,7 @@ async def handle_confirm_job_delete(callback: CallbackQuery):
         await session.commit()
 
     await callback.message.edit_text(
-        f"✅ Job #{job_id} and all associated quotes have been deleted.",
+        f" Job #{job_id} and all associated quotes have been deleted.",
         reply_markup=get_back_keyboard("back:history")
     )
     await callback.answer()
@@ -764,7 +765,7 @@ async def back_to_archived(callback: CallbackQuery):
     )
     await callback.answer()
 
-@router.message(F.text == "👥 Manage Users")
+@router.message(F.text == "Manage Users")
 async def btn_manage_users(message: Message):
     if not await check_admin(message):
         return
@@ -793,7 +794,7 @@ async def show_all_access_codes(message: Message):
     
     code_text = ""
     for code in codes:
-        role_emoji = {"admin": "👑", "supervisor": "👔", "subcontractor": "🔧", "super_admin": "🦸"}.get(code.role.value, "👤")
+        role_emoji = {"admin": "", "supervisor": "", "subcontractor": "", "super_admin": ""}.get(code.role.value, "")
         code_text += f"{role_emoji} `{code.code}` - {code.role.value.replace('_', ' ').title()}\n"
     
     await message.answer(
@@ -803,7 +804,7 @@ async def show_all_access_codes(message: Message):
         parse_mode="Markdown"
     )
 
-@router.message(F.text == "🏢 View By Teams")
+@router.message(F.text == "View By Teams")
 async def btn_view_by_teams(message: Message, state: FSMContext):
     await state.clear()
     
@@ -851,7 +852,7 @@ async def show_team_hierarchy(message: Message, user_team_id: int = None, is_sup
             )
         all_users = list(users_result.scalars().all())
     
-    title = "*📊 All Teams Hierarchy*" if is_super_admin else "*📊 My Team Hierarchy*"
+    title = "* All Teams Hierarchy*" if is_super_admin else "* My Team Hierarchy*"
     text = f"{title}\n\n"
     
     # Group users by team
@@ -876,18 +877,18 @@ async def show_team_hierarchy(message: Message, user_team_id: int = None, is_sup
             # Group by role within team
             role_order = [UserRole.ADMIN, UserRole.SUPERVISOR, UserRole.SUBCONTRACTOR]
             role_emojis = {
-                UserRole.ADMIN: "👑",
-                UserRole.SUPERVISOR: "👔",
-                UserRole.SUBCONTRACTOR: "🔧"
+                UserRole.ADMIN: "",
+                UserRole.SUPERVISOR: "",
+                UserRole.SUBCONTRACTOR: ""
             }
             
             for role in role_order:
                 role_users = [u for u in users_in_team if u.role == role]
                 if role_users:
-                    text += f"  {role_emojis.get(role, '👤')} *{role.value.replace('_', ' ').title()}s:*\n"
+                    text += f"  {role_emojis.get(role, '')} *{role.value.replace('_', ' ').title()}s:*\n"
                     for u in role_users:
                         name = u.first_name or "Unknown"
-                        text += f"    • {name}\n"
+                        text += f"     {name}\n"
         else:
             text += "  _No members_\n"
         
@@ -895,44 +896,44 @@ async def show_team_hierarchy(message: Message, user_team_id: int = None, is_sup
     
     # Show unassigned users (Super Admins and others without team) - only for super admins
     if is_super_admin and unassigned:
-        text += "🦸 *General Managers / Unassigned*\n"
+        text += " *General Managers / Unassigned*\n"
         for u in unassigned:
-            role_emoji = "🦸" if u.role == UserRole.SUPER_ADMIN else "👤"
+            role_emoji = "" if u.role == UserRole.SUPER_ADMIN else ""
             name = u.first_name or "Unknown"
             text += f"  {role_emoji} {name} ({u.role.value.replace('_', ' ').title()})\n"
     
     await message.answer(text, parse_mode="Markdown")
 
-@router.message(F.text == "👑 View Admins")
-@router.message(F.text == "👑 View Managers")
+@router.message(F.text == "View Admins")
+@router.message(F.text == "View Managers")
 async def btn_view_admins(message: Message, state: FSMContext):
     await state.clear()
     if not await check_super_admin(message):
         return
     await show_users_by_role(message, UserRole.ADMIN, "Managers")
 
-@router.message(F.text == "👔 View Supervisors")
+@router.message(F.text == "View Supervisors")
 async def btn_view_supervisors(message: Message, state: FSMContext):
     await state.clear()
     if not await check_super_admin(message):
         return
     await show_users_by_role(message, UserRole.SUPERVISOR, "Supervisors")
 
-@router.message(F.text == "🔧 View Subcontractors")
+@router.message(F.text == "View Subcontractors")
 async def btn_view_subcontractors(message: Message, state: FSMContext):
     await state.clear()
     if not await check_super_admin(message):
         return
     await show_users_by_role(message, UserRole.SUBCONTRACTOR, "Subcontractors")
 
-@router.message(F.text == "🔑 All Access Codes")
+@router.message(F.text == "All Access Codes")
 async def btn_all_access_codes_v2(message: Message, state: FSMContext):
     await state.clear()
     if not await check_super_admin(message):
         return
     await show_all_access_codes(message)
 
-@router.message(F.text == "👥 All Users")
+@router.message(F.text == "All Users")
 async def btn_all_users_v2(message: Message, state: FSMContext):
     await state.clear()
     if not await check_super_admin(message):
@@ -964,10 +965,10 @@ async def show_users_by_role(message: Message, role: UserRole, role_name: str):
             if avg_rating:
                 # Use round() for proper star display
                 full_stars = round(avg_rating)
-                stars = "★" * full_stars + "☆" * (5 - full_stars)
-                text += f"• {name} - {stars} ({avg_rating}/5 from {count} jobs)\n"
+                stars = "" * full_stars + "" * (5 - full_stars)
+                text += f" {name} - {stars} ({avg_rating}/5 from {count} jobs)\n"
             else:
-                text += f"• {name} - No ratings yet\n"
+                text += f" {name} - No ratings yet\n"
         text += "\nSelect a user to manage:"
         await message.answer(
             text,
@@ -982,7 +983,7 @@ async def show_users_by_role(message: Message, role: UserRole, role_name: str):
             parse_mode="Markdown"
         )
 
-@router.message(F.text == "🔄 Switch Role")
+@router.message(F.text == "Switch Role")
 async def btn_switch_role_super_admin(message: Message, state: FSMContext):
     await state.clear()
     
@@ -1013,8 +1014,8 @@ async def btn_switch_role_super_admin(message: Message, state: FSMContext):
             "*Switch Role*\n\n"
             "You can return to General Manager using the button below.",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="🦸 Return to General Manager", callback_data="sa_switch:super_admin")],
-                [InlineKeyboardButton(text="❌ Cancel", callback_data="back:main")]
+                [InlineKeyboardButton(text=" Return to General Manager", callback_data="sa_switch:super_admin")],
+                [InlineKeyboardButton(text=" Cancel", callback_data="back:main")]
             ]),
             parse_mode="Markdown"
         )
@@ -1051,7 +1052,7 @@ async def handle_super_admin_switch(callback: CallbackQuery):
                 await session.commit()
                 
                 await callback.message.edit_text(
-                    "✅ *Welcome back, General Manager!*\n\n"
+                    " *Welcome back, General Manager!*\n\n"
                     "You have returned to General Manager role.",
                     parse_mode="Markdown"
                 )
@@ -1101,7 +1102,7 @@ async def handle_super_admin_switch(callback: CallbackQuery):
             await session.commit()
             
             await callback.message.edit_text(
-                f"✅ *Role Changed*\n\n"
+                f" *Role Changed*\n\n"
                 f"You are now a *{role_str.title()}*.\n\n"
                 f"You can return to General Manager anytime by using 'Switch Role' or entering the general manager code.",
                 parse_mode="Markdown"
@@ -1150,7 +1151,7 @@ async def handle_switch_team_selection(callback: CallbackQuery):
         await session.commit()
         
         await callback.message.edit_text(
-            f"✅ *Role Changed*\n\n"
+            f" *Role Changed*\n\n"
             f"You are now a *Subcontractor* in the *{team.name}* team.\n\n"
             f"You can return to General Manager anytime by using 'Switch Role' or entering the general manager code.",
             parse_mode="Markdown"
@@ -1163,8 +1164,8 @@ async def handle_switch_team_selection(callback: CallbackQuery):
     
     await callback.answer()
 
-@router.message(F.text == "🦸 Return to Super Admin")
-@router.message(F.text == "🦸 Return to General Manager")
+@router.message(F.text == "Return to Super Admin")
+@router.message(F.text == "Return to General Manager")
 async def btn_return_to_super_admin(message: Message, state: FSMContext):
     await state.clear()
     
@@ -1186,7 +1187,7 @@ async def btn_return_to_super_admin(message: Message, state: FSMContext):
             
             keyboard = get_main_menu_keyboard(UserRole.SUPER_ADMIN)
             await message.answer(
-                "✅ *Welcome back, General Manager!*\n\n"
+                " *Welcome back, General Manager!*\n\n"
                 "You have returned to General Manager role.",
                 reply_markup=keyboard,
                 parse_mode="Markdown"
@@ -1252,15 +1253,28 @@ async def handle_manage_user(callback: CallbackQuery):
         stored_user_id = user.id
     
     rating_text = ""
+    safety_text = ""
     if user_role == UserRole.SUBCONTRACTOR:
         avg_rating, count = await JobService.get_subcontractor_average_rating(stored_user_id)
         if avg_rating:
             # Use round() for proper star display
             full_stars = round(avg_rating)
-            stars = "★" * full_stars + "☆" * (5 - full_stars)
+            stars = "" * full_stars + "" * (5 - full_stars)
             rating_text = f"*Rating:* {stars} ({avg_rating}/5 from {count} jobs)\n"
         else:
             rating_text = "*Rating:* No ratings yet\n"
+
+        # General Manager can see this subcontractor's submitted checklist history.
+        if admin and admin.role == UserRole.SUPER_ADMIN:
+            checklists = await SafetyChecklistService.list_subcontractor_checklists(stored_user_id, limit=5)
+            if checklists:
+                safety_text = "\n*Recent Safety Checklists:*\n"
+                for c in checklists:
+                    safety_text += (
+                        f"- #{c.id} | {c.status} | {c.created_at.strftime('%Y-%m-%d %H:%M')}\n"
+                    )
+            else:
+                safety_text = "\n*Recent Safety Checklists:* None\n"
     
     # Handle username display - don't show @ for N/A
     username_display = f"@{username}" if username and username != 'N/A' else "Not set"
@@ -1273,6 +1287,7 @@ async def handle_manage_user(callback: CallbackQuery):
         f"{rating_text}"
         f"*Status:* {'Active' if is_active else 'Inactive'}\n"
         f"*Joined:* {created_date}\n\n"
+        f"{safety_text}"
         f"{'This is your own account.' if is_self else ''}",
         reply_markup=get_user_actions_keyboard(user_id, is_self),
         parse_mode="Markdown"
@@ -1311,14 +1326,14 @@ async def handle_delete_user_request(callback: CallbackQuery):
     
     if delete_type == "self":
         warning = (
-            f"⚠️ *Delete Your Account*\n\n"
+            f" *Delete Your Account*\n\n"
             f"Are you sure you want to delete your own admin account?\n\n"
             f"*This action cannot be undone.*\n"
             f"You will be logged out and need a new access code to return."
         )
     else:
         warning = (
-            f"⚠️ *Delete User*\n\n"
+            f" *Delete User*\n\n"
             f"Are you sure you want to delete *{name}*?\n\n"
             f"*This action cannot be undone.*"
         )
@@ -1418,7 +1433,7 @@ async def handle_users_pagination(callback: CallbackQuery):
     )
     await callback.answer()
 
-@router.message(F.text == "🔄 Switch Role")
+@router.message(F.text == "Switch Role")
 async def btn_switch_role(message: Message):
     if not await check_admin(message):
         return
@@ -1426,7 +1441,7 @@ async def btn_switch_role(message: Message):
     await message.answer(
         "*Switch Your Role*\n\n"
         "You are currently an Admin.\n\n"
-        "⚠️ *Warning:* Switching roles will change your access level.\n"
+        " *Warning:* Switching roles will change your access level.\n"
         "You can ask another admin to switch you back later.\n\n"
         "Select your new role:",
         reply_markup=get_switch_role_keyboard(),
@@ -1488,7 +1503,7 @@ async def handle_switch_role(callback: CallbackQuery):
 
 # ============= ADMIN/SUPER ADMIN JOB CREATION =============
 
-@router.message(F.text == "➕ New Job")
+@router.message(F.text == "New Job")
 async def btn_admin_new_job(message: Message, state: FSMContext):
     """Allow admins to create jobs (shared with supervisor flow)"""
     if not async_session:
@@ -1510,7 +1525,7 @@ async def btn_admin_new_job(message: Message, state: FSMContext):
 
 # ============= ADMIN MESSAGING =============
 
-@router.message(F.text == "📨 Send Message")
+@router.message(F.text == "Send Message")
 async def btn_send_message(message: Message, state: FSMContext):
     """Start the messaging flow for admins and supervisors"""
     async with async_session() as session:
@@ -1706,7 +1721,7 @@ async def send_broadcast_message(message: Message, state: FSMContext):
             try:
                 await bot.send_message(
                     recipient.telegram_id,
-                    f"📢 *Message from {sender_name}*\n\n"
+                    f" *Message from {sender_name}*\n\n"
                     f"{message.text}",
                     reply_markup=get_message_reaction_keyboard(broadcast.id),
                     parse_mode="Markdown"
@@ -1727,7 +1742,7 @@ async def send_broadcast_message(message: Message, state: FSMContext):
 
 # ============= WEEKLY AVAILABILITY VIEW =============
 
-@router.message(F.text == "📅 Weekly Availability")
+@router.message(F.text == "Weekly Availability")
 async def btn_weekly_availability(message: Message):
     """View weekly availability responses for all subcontractors"""
     if not await check_admin(message):
@@ -1751,14 +1766,14 @@ async def btn_weekly_availability(message: Message):
         
         if not responses:
             await message.answer(
-                "📅 *Weekly Availability*\n\n"
+                " *Weekly Availability*\n\n"
                 "No availability data for this week yet.\n\n"
                 "Subcontractors receive availability surveys every thursday.",
                 parse_mode="Markdown"
             )
             return
         
-        text = f"📅 *Subcontractor Availability*\n"
+        text = f" *Subcontractor Availability*\n"
         text += f"Week of {current_monday.strftime('%d/%m/%Y')}\n\n"
         
         responded = []
@@ -1783,9 +1798,9 @@ async def btn_weekly_availability(message: Message):
                     days_available.append("Fri")
                 
                 if days_available:
-                    responded.append(f"*{name}:* ✅ {', '.join(days_available)}")
+                    responded.append(f"*{name}:*  {', '.join(days_available)}")
                 else:
-                    responded.append(f"*{name}:* ❌ Not available")
+                    responded.append(f"*{name}:*  Not available")
                 
                 if avail.notes:
                     responded[-1] += f"\n   _Notes: {avail.notes}_"
@@ -1794,7 +1809,7 @@ async def btn_weekly_availability(message: Message):
             text += "\n".join(responded) + "\n\n"
         
         if pending:
-            text += f"⏳ *Pending Response:*\n{', '.join(pending)}"
+            text += f" *Pending Response:*\n{', '.join(pending)}"
         
         await message.answer(text, parse_mode="Markdown")
 
@@ -1815,7 +1830,7 @@ class CreateTeamStates(StatesGroup):
 
 from src.bot.database.models import Region, CustomRole, RolePermission, AVAILABLE_PERMISSIONS
 
-@router.message(F.text == "🎭 Manage Roles")
+@router.message(F.text == "Manage Roles")
 @require_role(UserRole.SUPER_ADMIN)
 async def show_manage_roles(message: Message):
     async with async_session() as session:
@@ -1825,16 +1840,16 @@ async def show_manage_roles(message: Message):
         roles = list(result.scalars().all())
     
     keyboard = InlineKeyboardBuilder()
-    keyboard.row(InlineKeyboardButton(text="➕ Create New Role", callback_data="create_role"))
+    keyboard.row(InlineKeyboardButton(text=" Create New Role", callback_data="create_role"))
     
     for role in roles:
         keyboard.row(InlineKeyboardButton(
-            text=f"🎭 {role.name}", 
+            text=f" {role.name}", 
             callback_data=f"view_role:{role.id}"
         ))
     
     await message.answer(
-        "*🎭 Manage Custom Roles*\n\n"
+        "* Manage Custom Roles*\n\n"
         f"You have {len(roles)} custom role(s).\n\n"
         "Custom roles let you define specific permissions for users.",
         reply_markup=keyboard.as_markup(),
@@ -1866,9 +1881,9 @@ async def process_role_description(message: Message, state: FSMContext):
     await state.update_data(role_description=description)
     
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="👔 Supervisor-based", callback_data="base_role:supervisor")],
-        [InlineKeyboardButton(text="🔧 Subcontractor-based", callback_data="base_role:subcontractor")],
-        [InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_role_create")]
+        [InlineKeyboardButton(text=" Supervisor-based", callback_data="base_role:supervisor")],
+        [InlineKeyboardButton(text=" Subcontractor-based", callback_data="base_role:subcontractor")],
+        [InlineKeyboardButton(text=" Cancel", callback_data="cancel_role_create")]
     ])
     
     await message.answer(
@@ -1890,7 +1905,7 @@ async def process_base_role(callback: CallbackQuery, state: FSMContext):
     await callback.message.answer(
         "*Select Permissions*\n\n"
         "Tap permissions to toggle them on/off.\n"
-        "✅ = Enabled, ⬜ = Disabled\n\n"
+        " = Enabled,  = Disabled\n\n"
         "When done, tap *Save Role*.",
         reply_markup=keyboard,
         parse_mode="Markdown"
@@ -1902,15 +1917,15 @@ async def build_permission_keyboard(selected: list) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardBuilder()
     
     for key, label in AVAILABLE_PERMISSIONS:
-        status = "✅" if key in selected else "⬜"
+        status = "" if key in selected else ""
         keyboard.row(InlineKeyboardButton(
             text=f"{status} {label}",
             callback_data=f"toggle_perm:{key}"
         ))
     
     keyboard.row(
-        InlineKeyboardButton(text="💾 Save Role", callback_data="save_custom_role"),
-        InlineKeyboardButton(text="❌ Cancel", callback_data="cancel_role_create")
+        InlineKeyboardButton(text=" Save Role", callback_data="save_custom_role"),
+        InlineKeyboardButton(text=" Cancel", callback_data="cancel_role_create")
     )
     
     return keyboard.as_markup()
@@ -1966,7 +1981,7 @@ async def save_custom_role(callback: CallbackQuery, state: FSMContext):
         await session.commit()
     
     await callback.message.answer(
-        f"*✅ Role Created!*\n\n"
+        f"* Role Created!*\n\n"
         f"*Name:* {role_name}\n"
         f"*Base:* {base_role.value.title()}\n"
         f"*Permissions:* {len(selected_permissions)} enabled\n\n"
@@ -2005,16 +2020,16 @@ async def view_custom_role(callback: CallbackQuery):
             perm_names.append(perm_dict[p.permission_key])
     
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🗑️ Delete Role", callback_data=f"delete_role:{role_id}")],
-        [InlineKeyboardButton(text="◀️ Back", callback_data="back_to_roles")]
+        [InlineKeyboardButton(text=" Delete Role", callback_data=f"delete_role:{role_id}")],
+        [InlineKeyboardButton(text=" Back", callback_data="back_to_roles")]
     ])
     
     await callback.message.answer(
-        f"*🎭 {role.name}*\n\n"
+        f"* {role.name}*\n\n"
         f"*Base Role:* {role.base_role.value.title()}\n"
         f"*Description:* {role.description or 'None'}\n\n"
         f"*Enabled Permissions:*\n" + 
-        ("\n".join([f"• {p}" for p in perm_names]) if perm_names else "None"),
+        ("\n".join([f" {p}" for p in perm_names]) if perm_names else "None"),
         reply_markup=keyboard,
         parse_mode="Markdown"
     )
@@ -2034,7 +2049,7 @@ async def delete_custom_role(callback: CallbackQuery):
             role.is_active = False
             await session.commit()
     
-    await callback.message.answer("✅ Role deleted.")
+    await callback.message.answer(" Role deleted.")
     await callback.answer()
 
 @router.callback_query(F.data == "cancel_role_create")
@@ -2045,7 +2060,7 @@ async def cancel_role_create(callback: CallbackQuery, state: FSMContext):
 
 # ============= REGIONS MANAGEMENT =============
 
-@router.message(F.text == "🌐 Manage Regions")
+@router.message(F.text == "Manage Regions")
 @require_role(UserRole.SUPER_ADMIN, UserRole.ADMIN)
 async def show_manage_regions(message: Message):
     async with async_session() as session:
@@ -2055,23 +2070,23 @@ async def show_manage_regions(message: Message):
         regions = list(result.scalars().all())
     
     keyboard = InlineKeyboardBuilder()
-    keyboard.row(InlineKeyboardButton(text="➕ Create New Region", callback_data="create_region"))
+    keyboard.row(InlineKeyboardButton(text=" Create New Region", callback_data="create_region"))
     
     for region in regions:
         keyboard.row(InlineKeyboardButton(
-            text=f"🌍 {region.name}", 
+            text=f" {region.name}", 
             callback_data=f"view_region:{region.id}"
         ))
     
     await message.answer(
-        "*🌐 Manage Regions*\n\n"
+        "* Manage Regions*\n\n"
         f"You have {len(regions)} region(s).\n\n"
         "Regions let you organize users and jobs by geographic area.",
         reply_markup=keyboard.as_markup(),
         parse_mode="Markdown"
     )
 
-@router.message(F.text == "🌍 View Regions")
+@router.message(F.text == "View Regions")
 @require_role(UserRole.SUPER_ADMIN, UserRole.ADMIN)
 async def view_regions_list(message: Message):
     async with async_session() as session:
@@ -2082,20 +2097,20 @@ async def view_regions_list(message: Message):
         
         if not regions:
             await message.answer(
-                "*🌍 Regions*\n\n"
+                "* Regions*\n\n"
                 "No regions created yet.\n"
                 "Use *Manage Regions* to create regions.",
                 parse_mode="Markdown"
             )
             return
         
-        text = "*🌍 All Regions*\n\n"
+        text = "* All Regions*\n\n"
         for region in regions:
             user_count = await session.execute(
                 select(User).where(User.region_id == region.id, User.is_active == True)
             )
             count = len(list(user_count.scalars().all()))
-            text += f"• *{region.name}* - {count} user(s)\n"
+            text += f" *{region.name}* - {count} user(s)\n"
             if region.description:
                 text += f"  _{region.description}_\n"
         
@@ -2141,7 +2156,7 @@ async def process_region_description(message: Message, state: FSMContext):
         await session.commit()
     
     await message.answer(
-        f"*✅ Region Created!*\n\n"
+        f"* Region Created!*\n\n"
         f"*Name:* {region_name}\n"
         f"*Description:* {description or 'None'}\n\n"
         "You can now assign users to this region when creating access codes.",
@@ -2169,16 +2184,16 @@ async def view_region(callback: CallbackQuery):
         users = list(user_result.scalars().all())
     
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🗑️ Delete Region", callback_data=f"delete_region:{region_id}")],
-        [InlineKeyboardButton(text="◀️ Back", callback_data="back_to_regions")]
+        [InlineKeyboardButton(text=" Delete Region", callback_data=f"delete_region:{region_id}")],
+        [InlineKeyboardButton(text=" Back", callback_data="back_to_regions")]
     ])
     
-    user_list = "\n".join([f"• {u.first_name or u.username or 'Unknown'} ({u.role.value})" for u in users[:10]])
+    user_list = "\n".join([f" {u.first_name or u.username or 'Unknown'} ({u.role.value})" for u in users[:10]])
     if len(users) > 10:
         user_list += f"\n... and {len(users) - 10} more"
     
     await callback.message.answer(
-        f"*🌍 {region.name}*\n\n"
+        f"* {region.name}*\n\n"
         f"*Description:* {region.description or 'None'}\n"
         f"*Users:* {len(users)}\n\n"
         f"*Users in this region:*\n{user_list or 'None'}",
@@ -2201,12 +2216,12 @@ async def delete_region(callback: CallbackQuery):
             region.is_active = False
             await session.commit()
     
-    await callback.message.answer("✅ Region deleted.")
+    await callback.message.answer(" Region deleted.")
     await callback.answer()
 
 # ============= TEAMS MANAGEMENT =============
 
-@router.message(F.text == "🏢 Manage Teams")
+@router.message(F.text == "Manage Teams")
 @require_role(UserRole.SUPER_ADMIN, UserRole.ADMIN)
 async def show_manage_teams(message: Message):
     async with async_session() as session:
@@ -2216,16 +2231,16 @@ async def show_manage_teams(message: Message):
         teams = list(result.scalars().all())
     
     keyboard = InlineKeyboardBuilder()
-    keyboard.row(InlineKeyboardButton(text="➕ Create New Team", callback_data="create_team"))
+    keyboard.row(InlineKeyboardButton(text=" Create New Team", callback_data="create_team"))
     
     for team in teams:
         keyboard.row(InlineKeyboardButton(
-            text=f"🏢 {team.name}", 
+            text=f" {team.name}", 
             callback_data=f"view_team:{team.id}"
         ))
     
     await message.answer(
-        "*🏢 Manage Teams*\n\n"
+        "* Manage Teams*\n\n"
         f"You have {len(teams)} team(s).\n\n"
         "Teams help organize subcontractors into groups.",
         reply_markup=keyboard.as_markup(),
@@ -2259,7 +2274,7 @@ async def process_team_name(message: Message, state: FSMContext):
         await session.commit()
     
     await message.answer(
-        f"*✅ Team Created!*\n\n"
+        f"* Team Created!*\n\n"
         f"*Name:* {team_name}\n\n"
         "You can now assign users to this team when creating access codes.",
         parse_mode="Markdown"
@@ -2286,16 +2301,16 @@ async def view_team_details(callback: CallbackQuery):
         users = list(user_result.scalars().all())
     
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🗑️ Delete Team", callback_data=f"delete_team:{team_id}")],
-        [InlineKeyboardButton(text="◀️ Back", callback_data="back_to_teams")]
+        [InlineKeyboardButton(text=" Delete Team", callback_data=f"delete_team:{team_id}")],
+        [InlineKeyboardButton(text=" Back", callback_data="back_to_teams")]
     ])
     
-    user_list = "\n".join([f"• {u.first_name or u.username or 'Unknown'} ({u.role.value})" for u in users[:10]])
+    user_list = "\n".join([f" {u.first_name or u.username or 'Unknown'} ({u.role.value})" for u in users[:10]])
     if len(users) > 10:
         user_list += f"\n... and {len(users) - 10} more"
     
     await callback.message.answer(
-        f"*🏢 {team.name}*\n\n"
+        f"* {team.name}*\n\n"
         f"*Users:* {len(users)}\n\n"
         f"*Members:*\n{user_list or 'None'}",
         reply_markup=keyboard,
@@ -2317,6 +2332,8 @@ async def delete_team(callback: CallbackQuery):
             await session.delete(team)
             await session.commit()
     
-    await callback.message.answer("✅ Team deleted.")
+    await callback.message.answer(" Team deleted.")
     await callback.answer()
+
+
 
