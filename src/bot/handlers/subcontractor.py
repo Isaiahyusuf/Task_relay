@@ -10,7 +10,6 @@ from src.bot.services.jobs import JobService
 from src.bot.services.quotes import QuoteService
 from src.bot.services.availability import AvailabilityService
 from src.bot.services.pdf_generator import JobPdfService
-from src.bot.services.safety_checklist import SafetyChecklistService
 from src.bot.utils.permissions import require_role
 from src.bot.utils.keyboards import (
     get_job_actions_keyboard, get_decline_reason_keyboard, get_back_keyboard,
@@ -702,20 +701,6 @@ async def process_quote_notes(message: Message, state: FSMContext):
 @router.callback_query(F.data.startswith("job_start:"))
 async def start_job_callback(callback: CallbackQuery):
     job_id = int(callback.data.split(":")[1])
-
-    user = await SafetyChecklistService.get_user_by_tg(callback.from_user.id)
-    if not user:
-        await callback.answer("User not found", show_alert=True)
-        return
-
-    has_checklist = await SafetyChecklistService.has_submitted_for_job_today(job_id, user.id)
-    if not has_checklist:
-        await callback.answer("Complete Site Safety Checklist before starting this job", show_alert=True)
-        await callback.message.answer(
-            "You must submit a Site Safety Checklist for this job before you can start work.\n"
-            "Use the 'Site Safety Checklist' menu button now."
-        )
-        return
     
     success, msg = await JobService.start_job(job_id, callback.from_user.id)
     
