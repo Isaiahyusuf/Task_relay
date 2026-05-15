@@ -357,6 +357,12 @@ class SafetyChecklistPdfService:
         pdf.set_auto_page_break(auto=True, margin=15)
         pdf.add_page()
 
+        def write_line(text: str, height: int = 7):
+            # Reset cursor to left margin and use explicit printable width to avoid rare fpdf width errors.
+            pdf.set_x(pdf.l_margin)
+            width = max(10, pdf.w - pdf.l_margin - pdf.r_margin)
+            pdf.multi_cell(width, height, text)
+
         if company_logo_path and os.path.exists(company_logo_path):
             try:
                 pdf.image(company_logo_path, x=10, y=8, w=32)
@@ -373,13 +379,13 @@ class SafetyChecklistPdfService:
         pdf.set_font("Helvetica", "B", 11)
         pdf.cell(0, 8, f"Checklist ID: {checklist.id}", ln=True)
         pdf.set_font("Helvetica", size=11)
-        pdf.multi_cell(0, 7, f"Site Address: {cls._safe(checklist.site_address)}")
-        pdf.multi_cell(0, 7, f"Date Time: {checklist.checklist_datetime.strftime('%Y-%m-%d %H:%M')}")
-        pdf.multi_cell(0, 7, f"Task Description: {cls._safe(checklist.task_description)}")
-        pdf.multi_cell(0, 7, f"Final Site Safe: {'YES' if checklist.final_is_safe else 'NO'}")
-        pdf.multi_cell(0, 7, f"Signature: {cls._safe(checklist.signature_type)} - {cls._safe(checklist.signature_value)}")
+        write_line(f"Site Address: {cls._safe(checklist.site_address)}")
+        write_line(f"Date Time: {checklist.checklist_datetime.strftime('%Y-%m-%d %H:%M')}")
+        write_line(f"Task Description: {cls._safe(checklist.task_description)}")
+        write_line(f"Final Site Safe: {'YES' if checklist.final_is_safe else 'NO'}")
+        write_line(f"Signature: {cls._safe(checklist.signature_type)} - {cls._safe(checklist.signature_value)}")
         if checklist.geo_location:
-            pdf.multi_cell(0, 7, f"Geo Location: {checklist.geo_location}")
+            write_line(f"Geo Location: {checklist.geo_location}")
         pdf.ln(2)
 
         hazard_answers = []
@@ -394,10 +400,10 @@ class SafetyChecklistPdfService:
         pdf.cell(0, 8, "Hazard Assessment", ln=True)
         for item in hazard_answers:
             pdf.set_font("Helvetica", "B", 10)
-            pdf.multi_cell(0, 6, f"{cls._safe(item.get('category'))} / {cls._safe(item.get('item'))}: {cls._safe(item.get('status'))}")
+            write_line(f"{cls._safe(item.get('category'))} / {cls._safe(item.get('item'))}: {cls._safe(item.get('status'))}", 6)
             pdf.set_font("Helvetica", size=10)
-            pdf.multi_cell(0, 6, f"Notes: {cls._safe(item.get('notes') or 'None')}")
-            pdf.multi_cell(0, 6, f"Corrective Action: {cls._safe(item.get('corrective') or 'None')}")
+            write_line(f"Notes: {cls._safe(item.get('notes') or 'None')}", 6)
+            write_line(f"Corrective Action: {cls._safe(item.get('corrective') or 'None')}", 6)
             pdf.ln(1)
 
         pdf.set_font("Helvetica", "B", 12)
@@ -405,22 +411,22 @@ class SafetyChecklistPdfService:
         pdf.set_font("Helvetica", size=10)
         if workers:
             for worker in workers:
-                pdf.multi_cell(0, 6, f"{cls._safe(worker.get('name'))} - {cls._safe(worker.get('signature'))}")
+                write_line(f"{cls._safe(worker.get('name'))} - {cls._safe(worker.get('signature'))}", 6)
         else:
-            pdf.multi_cell(0, 6, "No additional workers listed")
+            write_line("No additional workers listed", 6)
 
         pdf.set_font("Helvetica", "B", 12)
         pdf.cell(0, 8, "Post Task Checklist", ln=True)
         pdf.set_font("Helvetica", size=10)
-        pdf.multi_cell(0, 6, f"Waste removed: {'YES' if checklist.post_task_waste_removed else 'NO'}")
-        pdf.multi_cell(0, 6, f"Vehicle cleaned: {'YES' if checklist.post_task_vehicle_cleaned else 'NO'}")
-        pdf.multi_cell(0, 6, f"Site safe and secure: {'YES' if checklist.post_task_site_secure else 'NO'}")
+        write_line(f"Waste removed: {'YES' if checklist.post_task_waste_removed else 'NO'}", 6)
+        write_line(f"Vehicle cleaned: {'YES' if checklist.post_task_vehicle_cleaned else 'NO'}", 6)
+        write_line(f"Site safe and secure: {'YES' if checklist.post_task_site_secure else 'NO'}", 6)
 
         if checklist.unsafe_explanation:
             pdf.set_font("Helvetica", "B", 12)
             pdf.cell(0, 8, "Unsafe Explanation", ln=True)
             pdf.set_font("Helvetica", size=10)
-            pdf.multi_cell(0, 6, cls._safe(checklist.unsafe_explanation))
+            write_line(cls._safe(checklist.unsafe_explanation), 6)
 
         # Embed unsafe photos if provided
         if bot and checklist.unsafe_photo_ids:

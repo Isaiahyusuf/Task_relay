@@ -401,13 +401,14 @@ class JobService:
                 return []
             
             # Only show jobs that are still in SENT status (not accepted, completed, etc.)
-            # AND either assigned to this user specifically or broadcast (NULL subcontractor_id)
+            # AND either assigned to this user specifically or broadcast (NULL subcontractor_id).
+            # Team-targeted broadcasts are only visible to subcontractors in the same team.
             result = await session.execute(
                 select(Job).where(
                     Job.status == JobStatus.SENT,
                     or_(
                         Job.subcontractor_id == user.id,
-                        Job.subcontractor_id == None
+                        (Job.subcontractor_id == None) & (or_(Job.team_id == None, Job.team_id == user.team_id))
                     )
                 ).order_by(Job.created_at.desc())
             )

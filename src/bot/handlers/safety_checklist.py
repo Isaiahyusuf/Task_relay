@@ -527,30 +527,38 @@ async def process_post_task_3(callback: CallbackQuery, state: FSMContext):
         job_id=payload.get("job_id"),
     )
 
-    logo_path = os.path.join(os.getcwd(), "attached_assets", "company_logo.png")
-    pdf_name, pdf_content = await SafetyChecklistPdfService.build_pdf(
-        checklist,
-        bot=callback.bot,
-        company_logo_path=logo_path,
-    )
+    pdf_name = None
+    pdf_content = None
+    try:
+        logo_path = os.path.join(os.getcwd(), "attached_assets", "company_logo.png")
+        pdf_name, pdf_content = await SafetyChecklistPdfService.build_pdf(
+            checklist,
+            bot=callback.bot,
+            company_logo_path=logo_path,
+        )
 
-    # Persist generated filename
-    async with async_session() as session:
-        db_result = await session.execute(select(SafetyChecklist).where(SafetyChecklist.id == checklist.id))
-        db_checklist = db_result.scalar_one_or_none()
-        if db_checklist:
-            db_checklist.pdf_filename = pdf_name
-            db_checklist.updated_at = datetime.utcnow()
-            await session.commit()
+        # Persist generated filename
+        async with async_session() as session:
+            db_result = await session.execute(select(SafetyChecklist).where(SafetyChecklist.id == checklist.id))
+            db_checklist = db_result.scalar_one_or_none()
+            if db_checklist:
+                db_checklist.pdf_filename = pdf_name
+                db_checklist.updated_at = datetime.utcnow()
+                await session.commit()
+    except Exception as exc:
+        logger.exception("Safety checklist PDF generation failed for checklist %s: %s", checklist.id, exc)
 
     # Send to subcontractor
     await callback.message.edit_text(
         f"Checklist submitted successfully.\nChecklist ID: {checklist.id}\nStatus: PENDING"
     )
-    await callback.message.answer_document(
-        BufferedInputFile(pdf_content, filename=pdf_name),
-        caption=f"Checklist report #{checklist.id}",
-    )
+    if pdf_name and pdf_content:
+        await callback.message.answer_document(
+            BufferedInputFile(pdf_content, filename=pdf_name),
+            caption=f"Checklist report #{checklist.id}",
+        )
+    else:
+        await callback.message.answer("Checklist saved, but PDF generation failed. Supervisors can still review the submission.")
 
     # Notify required recipients
     selected_supervisor_id = data.get("supervisor_id")
@@ -569,11 +577,12 @@ async def process_post_task_3(callback: CallbackQuery, state: FSMContext):
                 f"Site: {checklist.site_address}\n"
                 f"Safe to proceed: {'YES' if checklist.final_is_safe else 'NO'}",
             )
-            await callback.bot.send_document(
-                recipient.telegram_id,
-                BufferedInputFile(pdf_content, filename=pdf_name),
-                caption=f"Safety checklist #{checklist.id}",
-            )
+            if pdf_name and pdf_content:
+                await callback.bot.send_document(
+                    recipient.telegram_id,
+                    BufferedInputFile(pdf_content, filename=pdf_name),
+                    caption=f"Safety checklist #{checklist.id}",
+                )
         except Exception:
             continue
 
@@ -667,16 +676,20 @@ async def download_checklist_pdf(callback: CallbackQuery):
         await callback.answer("Checklist not found", show_alert=True)
         return
 
-    pdf_name, pdf_content = await SafetyChecklistPdfService.build_pdf(
-        checklist,
-        bot=callback.bot,
-        company_logo_path=os.path.join(os.getcwd(), "attached_assets", "company_logo.png"),
-    )
-    await callback.message.answer_document(
-        BufferedInputFile(pdf_content, filename=pdf_name),
-        caption=f"Safety checklist #{checklist.id}",
-    )
-    await callback.answer("PDF sent")
+    try:
+        pdf_name, pdf_content = await SafetyChecklistPdfService.build_pdf(
+            checklist,
+            bot=callback.bot,
+            company_logo_path=os.path.join(os.getcwd(), "attached_assets", "company_logo.png"),
+        )
+        await callback.message.answer_document(
+            BufferedInputFile(pdf_content, filename=pdf_name),
+            caption=f"Safety checklist #{checklist.id}",
+        )
+        await callback.answer("PDF sent")
+    except Exception as exc:
+        logger.exception("Failed to download safety checklist PDF %s: %s", checklist.id, exc)
+        await callback.answer("Could not generate PDF for this checklist right now.", show_alert=True)
 
 
 @router.callback_query(F.data.startswith("safety_review:"))
