@@ -679,11 +679,6 @@ async def view_job_details_supervisor(callback: CallbackQuery):
     if job.photos:
         details += "\n *Photo Evidence available*"
     
-    if job.rating:
-        details += f"\n *Rating:* {job.rating}/5"
-        if job.rating_comment:
-            details += f"\n *Comment:* {job.rating_comment}"
-    
     details += f"\n*Created:* {job.created_at.strftime('%Y-%m-%d %H:%M')}"
     
     keyboard = get_supervisor_job_actions_keyboard(job.id, job.status.value, job.job_type.value)
@@ -931,17 +926,9 @@ async def supervisor_complete_job(callback: CallbackQuery, state: FSMContext):
     success, msg = await JobService.complete_job(job_id, callback.from_user.id, is_supervisor=True)
     
     if success:
-        from aiogram.utils.keyboard import InlineKeyboardBuilder
-        kb = InlineKeyboardBuilder()
-        for i in range(1, 6):
-            kb.button(text=f"{i} ", callback_data=f"rate:{job_id}:{i}")
-        kb.adjust(5)
-        
         await callback.message.edit_text(
             f"*Job Completed*\n\n"
-            f"Job #{job_id} has been marked as complete.\n\n"
-            "Please rate the subcontractor's work:",
-            reply_markup=kb.as_markup(),
+            f"Job #{job_id} has been marked as complete.",
             parse_mode="Markdown"
         )
         await callback.answer("Job completed!")
@@ -950,67 +937,12 @@ async def supervisor_complete_job(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data.startswith("rate:"))
 async def process_rating_selection(callback: CallbackQuery, state: FSMContext):
-    parts = callback.data.split(":")
-    job_id = int(parts[1])
-    rating = int(parts[2])
-    
-    await state.update_data(rating_job_id=job_id, rating_value=rating)
-    await callback.message.edit_text(
-        f"*Rating: {rating} *\n\n"
-        "Please provide a short comment about the work (or send /skip):",
-        parse_mode="Markdown"
-    )
-    await state.set_state(RatingStates.waiting_for_comment)
-    await callback.answer()
+    await state.clear()
+    await callback.answer("Job ratings are temporarily disabled.", show_alert=True)
 
 @router.message(StateFilter(RatingStates.waiting_for_comment))
 async def process_rating_comment(message: Message, state: FSMContext):
-    data = await state.get_data()
-    job_id = data.get('rating_job_id')
-    rating = data.get('rating_value')
-    comment = None if message.text == "/skip" else message.text
-    
-    subcontractor_tg_id = None
-    job_title = ""
-    
-    async with async_session() as session:
-        result = await session.execute(select(Job).where(Job.id == job_id))
-        job = result.scalar_one_or_none()
-        if job:
-            job.rating = rating
-            job.rating_comment = comment
-            job_title = job.title
-            
-            # Get subcontractor's telegram_id
-            if job.subcontractor_id:
-                sub_result = await session.execute(
-                    select(User).where(User.id == job.subcontractor_id)
-                )
-                sub = sub_result.scalar_one_or_none()
-                if sub:
-                    subcontractor_tg_id = sub.telegram_id
-            
-            await session.commit()
-    
-    # Notify subcontractor of the rating
-    if subcontractor_tg_id:
-        bot = message.bot
-        if bot:
-            try:
-                stars = "" * rating
-                comment_text = f"\nComment: {comment}" if comment else ""
-                await bot.send_message(
-                    subcontractor_tg_id,
-                    f" *Job Completed & Rated!*\n\n"
-                    f"Job #{job_id}: {job_title}\n\n"
-                    f"Your rating: {stars} ({rating}/5){comment_text}\n\n"
-                    f"Thank you for your work!",
-                    parse_mode="Markdown"
-                )
-            except Exception as e:
-                logger.error(f"Failed to notify subcontractor {subcontractor_tg_id} of rating: {e}")
-            
-    await message.answer(f"Thank you! Rating of {rating}  saved for Job #{job_id}.")
+    await message.answer("Job ratings are temporarily disabled.")
     await state.clear()
 
 @router.callback_query(F.data == "back:sup")

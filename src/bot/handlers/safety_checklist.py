@@ -33,6 +33,7 @@ HAZARD_ITEMS = [
 
 
 class SafetyChecklistStates(StatesGroup):
+    selecting_supervisor = State()
     selecting_job = State()
     waiting_site_address = State()
     waiting_task_description = State()
@@ -95,6 +96,14 @@ def _job_select_keyboard(jobs: list) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
+def _supervisor_select_keyboard(supervisors: list[User]) -> InlineKeyboardMarkup:
+    buttons = []
+    for supervisor in supervisors[:20]:
+        name = supervisor.first_name or supervisor.username or f"User {supervisor.telegram_id}"
+        buttons.append([InlineKeyboardButton(text=name, callback_data=f"safety_sup:{supervisor.id}")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
 def _review_actions_keyboard(checklist_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="Download PDF", callback_data=f"safety_pdf:{checklist_id}")],
@@ -118,21 +127,49 @@ async def btn_site_safety_checklist(message: Message, state: FSMContext):
         await message.answer("Only subcontractors can submit site safety checklists.")
         return
 
-    jobs = await SafetyChecklistService.get_subcontractor_active_jobs(message.from_user.id)
-    has_any_request = await SafetyChecklistService.has_pending_request(user.id)
-    if not has_any_request:
-        await message.answer(
-            "No checklist request found for you yet.\n"
-            "Please wait until a manager or supervisor requests a Site Safety Checklist."
-        )
+    supervisors = await SafetyChecklistService.list_supervisors_for_subcontractor(user)
+    if not supervisors:
+        await message.answer("No supervisors are available for your account yet.")
         return
 
+    jobs = await SafetyChecklistService.get_subcontractor_active_jobs(message.from_user.id)
     await state.clear()
-    await state.set_state(SafetyChecklistStates.selecting_job)
+    await state.update_data(available_jobs=[job.id for job in jobs])
+    await state.set_state(SafetyChecklistStates.selecting_supervisor)
     await message.answer(
-        "Site Safety Checklist\n\nSelect the related job before starting:",
+        "Site Safety Checklist\n\nSelect supervisor to send this form to:",
+        reply_markup=_supervisor_select_keyboard(supervisors),
+    )
+
+
+@router.callback_query(F.data.startswith("safety_sup:"), StateFilter(SafetyChecklistStates.selecting_supervisor))
+async def process_selected_supervisor(callback: CallbackQuery, state: FSMContext):
+    try:
+        supervisor_id = int(callback.data.split(":")[1])
+    except (IndexError, ValueError):
+        await callback.answer("Invalid supervisor selection", show_alert=True)
+        return
+
+    user = await _get_current_user(callback.from_user.id)
+    if not user:
+        await callback.answer("User not found", show_alert=True)
+        await state.clear()
+        return
+
+    supervisors = await SafetyChecklistService.list_supervisors_for_subcontractor(user)
+    allowed_supervisor_ids = {sup.id for sup in supervisors}
+    if supervisor_id not in allowed_supervisor_ids:
+        await callback.answer("Supervisor unavailable", show_alert=True)
+        return
+
+    jobs = await SafetyChecklistService.get_subcontractor_active_jobs(callback.from_user.id)
+    await state.update_data(supervisor_id=supervisor_id)
+    await state.set_state(SafetyChecklistStates.selecting_job)
+    await callback.message.edit_text(
+        "Select the related job before starting:",
         reply_markup=_job_select_keyboard(jobs),
     )
+    await callback.answer()
 
 
 @router.callback_query(F.data.startswith("safety_job:"), StateFilter(SafetyChecklistStates.selecting_job))
@@ -160,11 +197,6 @@ async def process_selected_job(callback: CallbackQuery, state: FSMContext):
 
     if not job:
         await callback.answer("Job unavailable", show_alert=True)
-        return
-
-    has_request = await SafetyChecklistService.has_pending_request(user.id, job.id)
-    if not has_request:
-        await callback.answer("Checklist not requested for this job yet", show_alert=True)
         return
 
     await state.update_data(
@@ -521,7 +553,11 @@ async def process_post_task_3(callback: CallbackQuery, state: FSMContext):
     )
 
     # Notify required recipients
-    recipients = await SafetyChecklistService.list_notification_recipients(checklist)
+    selected_supervisor_id = data.get("supervisor_id")
+    recipients = await SafetyChecklistService.list_notification_recipients(
+        checklist,
+        selected_supervisor_id=selected_supervisor_id,
+    )
     sender_name = user.first_name or user.username or f"User {user.id}"
     for recipient in recipients:
         try:

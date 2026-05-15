@@ -298,17 +298,13 @@ async def show_help(message: Message):
                 " *View Quotes* - Compare quotes from subcontractors\n"
                 " *Accept Quote* - Select winning quote\n"
                 " *Cancel Job* - Cancel unstarted jobs\n"
-                " *Mark Complete* - Close job with star rating\n"
+                " *Mark Complete* - Close completed jobs\n"
                 " *Not Satisfied* - Request revision with feedback\n\n"
                 
                 "*COMMUNICATION*\n"
                 " *Send Message* - Message subcontractors\n"
                 " *View Availability* - Check subcontractor schedules\n"
-                " *Create Subcontractor Code* - Add new workers\n\n"
-                
-                "*STAR RATINGS*\n"
-                "When marking complete, rate 1-5 stars.\n"
-                "Ratings help track subcontractor performance."
+                " *Create Subcontractor Code* - Add new workers"
             )
         else:  # SUBCONTRACTOR
             help_text = (

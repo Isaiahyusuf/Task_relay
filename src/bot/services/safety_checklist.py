@@ -138,6 +138,18 @@ class SafetyChecklistService:
             return list(result.scalars().all())
 
     @staticmethod
+    async def list_supervisors_for_subcontractor(subcontractor: User) -> list[User]:
+        if not async_session:
+            return []
+        async with async_session() as session:
+            q = select(User).where(User.role == UserRole.SUPERVISOR, User.is_active == True)
+            if subcontractor.team_id:
+                q = q.where(User.team_id == subcontractor.team_id)
+            q = q.order_by(User.first_name)
+            result = await session.execute(q)
+            return list(result.scalars().all())
+
+    @staticmethod
     async def list_subcontractor_checklists(subcontractor_id: int, limit: int = 10) -> list[SafetyChecklist]:
         if not async_session:
             return []
@@ -248,14 +260,28 @@ class SafetyChecklistService:
             return True
 
     @staticmethod
-    async def list_notification_recipients(checklist: SafetyChecklist) -> list[User]:
+    async def list_notification_recipients(
+        checklist: SafetyChecklist,
+        selected_supervisor_id: int | None = None,
+    ) -> list[User]:
         if not async_session:
             return []
         async with async_session() as session:
             recipients: dict[int, User] = {}
 
             # Assigned supervisor for the job
-            if checklist.job_id:
+            if selected_supervisor_id:
+                supervisor_result = await session.execute(
+                    select(User).where(
+                        User.id == selected_supervisor_id,
+                        User.role == UserRole.SUPERVISOR,
+                        User.is_active == True,
+                    )
+                )
+                selected_supervisor = supervisor_result.scalar_one_or_none()
+                if selected_supervisor and selected_supervisor.telegram_id:
+                    recipients[selected_supervisor.id] = selected_supervisor
+            elif checklist.job_id:
                 job_result = await session.execute(select(Job).where(Job.id == checklist.job_id))
                 job = job_result.scalar_one_or_none()
                 if job and job.supervisor_id:
