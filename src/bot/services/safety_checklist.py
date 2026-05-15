@@ -11,6 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from src.bot.database import async_session, SafetyChecklist, SafetyChecklistAudit, SafetyChecklistRequest, User, Job
 from src.bot.database.models import UserRole, JobStatus
+from src.bot.utils.timezone import now_au_naive, format_au
 
 
 class SafetyChecklistService:
@@ -80,7 +81,7 @@ class SafetyChecklistService:
                     job_id=job_id,
                     note=note,
                     status="PENDING",
-                    requested_at=datetime.utcnow(),
+                    requested_at=now_au_naive(),
                 )
                 session.add(req)
                 await session.commit()
@@ -122,7 +123,7 @@ class SafetyChecklistService:
                 return
             req.status = "FULFILLED"
             req.checklist_id = checklist_id
-            req.fulfilled_at = datetime.utcnow()
+            req.fulfilled_at = now_au_naive()
             await session.commit()
 
     @staticmethod
@@ -165,7 +166,7 @@ class SafetyChecklistService:
     async def create_checklist(payload: dict[str, Any]) -> SafetyChecklist | None:
         if not async_session:
             return None
-        now = datetime.utcnow()
+        now = now_au_naive()
         async with async_session() as session:
             checklist = SafetyChecklist(
                 job_id=payload.get("job_id"),
@@ -245,9 +246,9 @@ class SafetyChecklistService:
 
             checklist.status = status
             checklist.reviewed_by_id = reviewer_id
-            checklist.reviewed_at = datetime.utcnow()
+            checklist.reviewed_at = now_au_naive()
             checklist.review_comment = comment
-            checklist.updated_at = datetime.utcnow()
+            checklist.updated_at = now_au_naive()
 
             audit = SafetyChecklistAudit(
                 checklist_id=checklist_id,
@@ -373,14 +374,14 @@ class SafetyChecklistPdfService:
         pdf.set_font("Helvetica", "B", 16)
         pdf.cell(0, 10, "Site Safety Checklist", ln=True)
         pdf.set_font("Helvetica", size=10)
-        pdf.cell(0, 8, f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}", ln=True)
+        pdf.cell(0, 8, f"Generated: {format_au(now_au_naive())} AEST/AEDT", ln=True)
         pdf.ln(2)
 
         pdf.set_font("Helvetica", "B", 11)
         pdf.cell(0, 8, f"Checklist ID: {checklist.id}", ln=True)
         pdf.set_font("Helvetica", size=11)
         write_line(f"Site Address: {cls._safe(checklist.site_address)}")
-        write_line(f"Date Time: {checklist.checklist_datetime.strftime('%Y-%m-%d %H:%M')}")
+        write_line(f"Date Time: {format_au(checklist.checklist_datetime)}")
         write_line(f"Task Description: {cls._safe(checklist.task_description)}")
         write_line(f"Final Site Safe: {'YES' if checklist.final_is_safe else 'NO'}")
         write_line(f"Signature: {cls._safe(checklist.signature_type)} - {cls._safe(checklist.signature_value)}")

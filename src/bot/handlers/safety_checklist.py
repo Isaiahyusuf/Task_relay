@@ -12,6 +12,7 @@ from sqlalchemy import select
 from src.bot.database import async_session, User, SafetyChecklist
 from src.bot.database.models import UserRole
 from src.bot.services.safety_checklist import SafetyChecklistService, SafetyChecklistPdfService
+from src.bot.utils.timezone import now_au_naive, format_au
 
 
 router = Router()
@@ -500,7 +501,7 @@ async def process_post_task_3(callback: CallbackQuery, state: FSMContext):
         "job_id": data.get("job_id"),
         "subcontractor_id": user.id,
         "site_address": data.get("site_address"),
-        "checklist_datetime": datetime.utcnow(),
+        "checklist_datetime": now_au_naive(),
         "task_description": data.get("task_description"),
         "geo_location": data.get("geo_location"),
         "hazard_answers": data.get("hazard_answers", []),
@@ -543,7 +544,7 @@ async def process_post_task_3(callback: CallbackQuery, state: FSMContext):
             db_checklist = db_result.scalar_one_or_none()
             if db_checklist:
                 db_checklist.pdf_filename = pdf_name
-                db_checklist.updated_at = datetime.utcnow()
+                db_checklist.updated_at = now_au_naive()
                 await session.commit()
     except Exception as exc:
         logger.exception("Safety checklist PDF generation failed for checklist %s: %s", checklist.id, exc)
@@ -609,7 +610,7 @@ async def btn_my_submissions(message: Message):
     text = "My Safety Submissions\n\n"
     for row in rows:
         text += (
-            f"ID {row.id} | {row.status} | {row.created_at.strftime('%Y-%m-%d %H:%M')}\n"
+            f"ID {row.id} | {row.status} | {format_au(row.created_at)}\n"
             f"Site: {row.site_address}\n\n"
         )
     await message.answer(text)
@@ -631,7 +632,7 @@ async def btn_safety_submissions(message: Message):
         await message.answer(
             f"Checklist #{row.id}\n"
             f"Site: {row.site_address}\n"
-            f"Created: {row.created_at.strftime('%Y-%m-%d %H:%M')}\n"
+            f"Created: {format_au(row.created_at)}\n"
             f"Status: {row.status}",
             reply_markup=_review_actions_keyboard(row.id),
         )
@@ -663,7 +664,7 @@ async def process_filter_keyword(message: Message, state: FSMContext):
             f"Checklist #{row.id}\n"
             f"Site: {row.site_address}\n"
             f"Status: {row.status}\n"
-            f"Created: {row.created_at.strftime('%Y-%m-%d %H:%M')}",
+            f"Created: {format_au(row.created_at)}",
             reply_markup=_review_actions_keyboard(row.id),
         )
 

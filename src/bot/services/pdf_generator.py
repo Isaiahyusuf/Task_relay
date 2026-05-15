@@ -6,6 +6,7 @@ from typing import Any
 from fpdf import FPDF
 
 from src.bot.database.models import Job, JobType
+from src.bot.utils.timezone import format_au, now_au_naive
 
 
 class JobPdfService:
@@ -21,7 +22,7 @@ class JobPdfService:
 
     @staticmethod
     def _fmt_dt(value: datetime | None) -> str:
-        return value.strftime("%Y-%m-%d %H:%M") if value else "N/A"
+        return format_au(value)
 
     @staticmethod
     def _soft_wrap_long_tokens(text: str, token_len: int = 40) -> str:
@@ -100,7 +101,7 @@ class JobPdfService:
         pdf.cell(0, 10, cls._safe(title), ln=True)
         pdf.ln(3)
         pdf.set_font("Helvetica", size=11)
-        pdf.cell(0, 8, f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}", ln=True)
+        pdf.cell(0, 8, f"Generated: {format_au(now_au_naive())} AEST/AEDT", ln=True)
         pdf.ln(2)
         return pdf
 
@@ -167,7 +168,7 @@ class JobPdfService:
         cls._add_field(pdf, "Submitted Notes:", notes)
         cls._add_field(pdf, "Submitted Photos:", str(photo_count))
         cls._add_field(pdf, "Accepted At:", cls._fmt_dt(job.accepted_at))
-        cls._add_field(pdf, "Submitted At:", datetime.utcnow().strftime("%Y-%m-%d %H:%M"))
+        cls._add_field(pdf, "Submitted At:", format_au(now_au_naive()))
         await cls._add_photo_gallery(
             pdf,
             bot,
