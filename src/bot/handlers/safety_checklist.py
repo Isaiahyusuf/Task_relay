@@ -64,13 +64,28 @@ class SafetyRequestStates(StatesGroup):
     waiting_note = State()
 
 
-def _yes_no_keyboard(prefix: str) -> InlineKeyboardMarkup:
+def _form_nav_keyboard(back_data: str, cancel_data: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="Back", callback_data=back_data),
+            InlineKeyboardButton(text="Cancel", callback_data=cancel_data),
+        ]
+    ])
+
+
+def _yes_no_keyboard(prefix: str, back_data: str | None = None, cancel_data: str | None = None) -> InlineKeyboardMarkup:
+    rows = [
         [
             InlineKeyboardButton(text="YES", callback_data=f"{prefix}:yes"),
             InlineKeyboardButton(text="NO", callback_data=f"{prefix}:no"),
         ]
-    ])
+    ]
+    if back_data and cancel_data:
+        rows.append([
+            InlineKeyboardButton(text="Back", callback_data=back_data),
+            InlineKeyboardButton(text="Cancel", callback_data=cancel_data),
+        ])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def _hazard_status_keyboard() -> InlineKeyboardMarkup:
@@ -78,7 +93,11 @@ def _hazard_status_keyboard() -> InlineKeyboardMarkup:
         [
             InlineKeyboardButton(text="SAFE", callback_data="haz_status:safe"),
             InlineKeyboardButton(text="UNSAFE", callback_data="haz_status:unsafe"),
-        ]
+        ],
+        [
+            InlineKeyboardButton(text="Back", callback_data="safety_form_back"),
+            InlineKeyboardButton(text="Cancel", callback_data="safety_form_cancel"),
+        ],
     ])
 
 
@@ -86,6 +105,10 @@ def _signature_method_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="Use Telegram username", callback_data="sig:username")],
         [InlineKeyboardButton(text="Type signature", callback_data="sig:typed")],
+        [
+            InlineKeyboardButton(text="Back", callback_data="safety_form_back"),
+            InlineKeyboardButton(text="Cancel", callback_data="safety_form_cancel"),
+        ],
     ])
 
 
@@ -94,6 +117,10 @@ def _job_select_keyboard(jobs: list) -> InlineKeyboardMarkup:
     for job in jobs[:12]:
         buttons.append([InlineKeyboardButton(text=f"Job #{job.id}: {job.title[:30]}", callback_data=f"safety_job:{job.id}")])
     buttons.append([InlineKeyboardButton(text="Manual entry (no job)", callback_data="safety_job:none")])
+    buttons.append([
+        InlineKeyboardButton(text="Back", callback_data="safety_form_back"),
+        InlineKeyboardButton(text="Cancel", callback_data="safety_form_cancel"),
+    ])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
@@ -102,6 +129,7 @@ def _supervisor_select_keyboard(supervisors: list[User]) -> InlineKeyboardMarkup
     for supervisor in supervisors[:20]:
         name = supervisor.first_name or supervisor.username or f"User {supervisor.telegram_id}"
         buttons.append([InlineKeyboardButton(text=name, callback_data=f"safety_sup:{supervisor.id}")])
+    buttons.append([InlineKeyboardButton(text="Cancel", callback_data="safety_form_cancel")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
@@ -119,6 +147,258 @@ async def _get_current_user(telegram_id: int) -> User | None:
     async with async_session() as session:
         result = await session.execute(select(User).where(User.telegram_id == telegram_id, User.is_active == True))
         return result.scalar_one_or_none()
+
+
+async def _prompt_safety_state(message: Message, state: FSMContext, target_state: State, user: User | None = None):
+    data = await state.get_data()
+
+    if target_state == SafetyChecklistStates.selecting_supervisor:
+        if not user:
+            user = await _get_current_user(message.chat.id)
+        if not user:
+            await message.answer("User not found. Please restart checklist.")
+            await state.clear()
+            return
+        supervisors = await SafetyChecklistService.list_supervisors_for_subcontractor(user)
+        if not supervisors:
+            await message.answer("No supervisors are available for your account yet.")
+            await state.clear()
+            return
+        await message.answer(
+            "Site Safety Checklist\n\nSelect supervisor to send this form to:",
+            reply_markup=_supervisor_select_keyboard(supervisors),
+        )
+        return
+
+    if target_state == SafetyChecklistStates.selecting_job:
+        jobs = await SafetyChecklistService.get_subcontractor_active_jobs(message.chat.id)
+        await message.answer("Select the related job before starting:", reply_markup=_job_select_keyboard(jobs))
+        return
+
+    if target_state == SafetyChecklistStates.waiting_site_address:
+        site_address = data.get("site_address")
+        if site_address:
+            await message.answer(
+                f"Current site address: {site_address}\nType site address or /skip to keep current:",
+                reply_markup=_form_nav_keyboard("safety_form_back", "safety_form_cancel"),
+            )
+        else:
+            await message.answer(
+                "Enter site address:",
+                reply_markup=_form_nav_keyboard("safety_form_back", "safety_form_cancel"),
+            )
+        return
+
+    if target_state == SafetyChecklistStates.waiting_task_description:
+        default_task = data.get("task_description")
+        if default_task:
+            await message.answer(
+                f"Current task description: {default_task}\nType new task description or /skip:",
+                reply_markup=_form_nav_keyboard("safety_form_back", "safety_form_cancel"),
+            )
+        else:
+            await message.answer(
+                "Enter job/task description:",
+                reply_markup=_form_nav_keyboard("safety_form_back", "safety_form_cancel"),
+            )
+        return
+
+    if target_state == SafetyChecklistStates.waiting_geo:
+        await message.answer(
+            "Send location for geo-tagging now, or type /skip.",
+            reply_markup=_form_nav_keyboard("safety_form_back", "safety_form_cancel"),
+        )
+        return
+
+    if target_state == SafetyChecklistStates.waiting_hazard_status:
+        await _ask_next_hazard(message, state)
+        return
+
+    if target_state == SafetyChecklistStates.waiting_hazard_notes:
+        await message.answer(
+            "Enter notes/concerns or /skip.",
+            reply_markup=_form_nav_keyboard("safety_form_back", "safety_form_cancel"),
+        )
+        return
+
+    if target_state == SafetyChecklistStates.waiting_hazard_corrective:
+        await message.answer(
+            "Enter corrective actions or /skip.",
+            reply_markup=_form_nav_keyboard("safety_form_back", "safety_form_cancel"),
+        )
+        return
+
+    if target_state == SafetyChecklistStates.waiting_final_safe:
+        await message.answer(
+            "Final Safety Confirmation\n\nIs the site safe to complete the assigned task?",
+            reply_markup=_yes_no_keyboard("final_safe", "safety_form_back", "safety_form_cancel"),
+        )
+        return
+
+    if target_state == SafetyChecklistStates.waiting_unsafe_explanation:
+        await message.answer(
+            "Site marked unsafe. Enter explanation:",
+            reply_markup=_form_nav_keyboard("safety_form_back", "safety_form_cancel"),
+        )
+        return
+
+    if target_state == SafetyChecklistStates.waiting_unsafe_photos:
+        await message.answer(
+            "Send image evidence for unsafe condition, then type /done (or /skip).",
+            reply_markup=_form_nav_keyboard("safety_form_back", "safety_form_cancel"),
+        )
+        return
+
+    if target_state == SafetyChecklistStates.waiting_signature_method:
+        await message.answer("Select signature method:", reply_markup=_signature_method_keyboard())
+        return
+
+    if target_state == SafetyChecklistStates.waiting_typed_signature:
+        await message.answer(
+            "Type your signature name:",
+            reply_markup=_form_nav_keyboard("safety_form_back", "safety_form_cancel"),
+        )
+        return
+
+    if target_state == SafetyChecklistStates.waiting_add_workers:
+        await message.answer(
+            "Add additional worker signatures?",
+            reply_markup=_yes_no_keyboard("workers", "safety_form_back", "safety_form_cancel"),
+        )
+        return
+
+    if target_state == SafetyChecklistStates.waiting_worker_name:
+        await message.answer(
+            "Enter worker name (or /done to stop adding workers):",
+            reply_markup=_form_nav_keyboard("safety_form_back", "safety_form_cancel"),
+        )
+        return
+
+    if target_state == SafetyChecklistStates.waiting_worker_signature:
+        await message.answer(
+            "Enter this worker signature:",
+            reply_markup=_form_nav_keyboard("safety_form_back", "safety_form_cancel"),
+        )
+        return
+
+    if target_state == SafetyChecklistStates.waiting_post_task_1:
+        await message.answer(
+            "Post-task check: Waste/rubbish removed?",
+            reply_markup=_yes_no_keyboard("post1", "safety_form_back", "safety_form_cancel"),
+        )
+        return
+
+    if target_state == SafetyChecklistStates.waiting_post_task_2:
+        await message.answer(
+            "Post-task check: Vehicle cleaned?",
+            reply_markup=_yes_no_keyboard("post2", "safety_form_back", "safety_form_cancel"),
+        )
+        return
+
+    if target_state == SafetyChecklistStates.waiting_post_task_3:
+        await message.answer(
+            "Post-task check: Site left safe and secure?",
+            reply_markup=_yes_no_keyboard("post3", "safety_form_back", "safety_form_cancel"),
+        )
+
+
+@router.callback_query(F.data == "safety_form_cancel", StateFilter(SafetyChecklistStates))
+async def cancel_safety_form(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
+    await callback.message.edit_text("Safety checklist cancelled.")
+    await callback.answer()
+
+
+@router.callback_query(F.data == "safety_form_back", StateFilter(SafetyChecklistStates))
+async def back_safety_form(callback: CallbackQuery, state: FSMContext):
+    current_state = await state.get_state()
+    if not current_state:
+        await callback.answer()
+        return
+
+    state_name = current_state.split(":")[-1]
+    data = await state.get_data()
+
+    if state_name == "selecting_supervisor":
+        await callback.answer("Already at the first step", show_alert=True)
+        return
+    if state_name == "selecting_job":
+        target_state = SafetyChecklistStates.selecting_supervisor
+    elif state_name == "waiting_site_address":
+        target_state = SafetyChecklistStates.selecting_job
+    elif state_name == "waiting_task_description":
+        target_state = SafetyChecklistStates.waiting_site_address
+    elif state_name == "waiting_geo":
+        target_state = SafetyChecklistStates.waiting_task_description
+    elif state_name == "waiting_hazard_status":
+        if data.get("hazard_index", 0) > 0:
+            hazard_answers = data.get("hazard_answers", [])
+            if hazard_answers:
+                hazard_answers.pop()
+            await state.update_data(
+                hazard_answers=hazard_answers,
+                hazard_index=max(0, data.get("hazard_index", 0) - 1),
+            )
+        target_state = SafetyChecklistStates.waiting_geo
+    elif state_name == "waiting_hazard_notes":
+        hazard_answers = data.get("hazard_answers", [])
+        if hazard_answers:
+            hazard_answers[-1]["notes"] = ""
+            await state.update_data(hazard_answers=hazard_answers)
+        target_state = SafetyChecklistStates.waiting_hazard_status
+    elif state_name == "waiting_hazard_corrective":
+        hazard_answers = data.get("hazard_answers", [])
+        if hazard_answers:
+            hazard_answers[-1]["corrective"] = ""
+            await state.update_data(hazard_answers=hazard_answers)
+        target_state = SafetyChecklistStates.waiting_hazard_notes
+    elif state_name == "waiting_final_safe":
+        hazard_answers = data.get("hazard_answers", [])
+        if hazard_answers:
+            hazard_answers.pop()
+        await state.update_data(
+            hazard_answers=hazard_answers,
+            hazard_index=max(0, len(HAZARD_ITEMS) - 1),
+            final_is_safe=None,
+            unsafe_explanation=None,
+            unsafe_photos=[],
+        )
+        target_state = SafetyChecklistStates.waiting_hazard_status
+    elif state_name == "waiting_unsafe_explanation":
+        await state.update_data(final_is_safe=None)
+        target_state = SafetyChecklistStates.waiting_final_safe
+    elif state_name == "waiting_unsafe_photos":
+        await state.update_data(unsafe_photos=[])
+        target_state = SafetyChecklistStates.waiting_unsafe_explanation
+    elif state_name == "waiting_signature_method":
+        await state.update_data(signature_type=None, signature_value=None)
+        target_state = SafetyChecklistStates.waiting_final_safe
+    elif state_name == "waiting_typed_signature":
+        target_state = SafetyChecklistStates.waiting_signature_method
+    elif state_name == "waiting_add_workers":
+        await state.update_data(workers=[], current_worker_name=None)
+        target_state = SafetyChecklistStates.waiting_signature_method
+    elif state_name == "waiting_worker_name":
+        target_state = SafetyChecklistStates.waiting_add_workers
+    elif state_name == "waiting_worker_signature":
+        target_state = SafetyChecklistStates.waiting_worker_name
+    elif state_name == "waiting_post_task_1":
+        await state.update_data(post_task_waste_removed=None)
+        target_state = SafetyChecklistStates.waiting_add_workers
+    elif state_name == "waiting_post_task_2":
+        await state.update_data(post_task_vehicle_cleaned=None)
+        target_state = SafetyChecklistStates.waiting_post_task_1
+    elif state_name == "waiting_post_task_3":
+        await state.update_data(post_task_site_secure=None)
+        target_state = SafetyChecklistStates.waiting_post_task_2
+    else:
+        await callback.answer("Cannot go back from this step", show_alert=True)
+        return
+
+    await state.set_state(target_state)
+    user = await _get_current_user(callback.from_user.id)
+    await _prompt_safety_state(callback.message, state, target_state, user=user)
+    await callback.answer()
 
 
 @router.message(F.text == "Site Safety Checklist")
@@ -179,7 +459,10 @@ async def process_selected_job(callback: CallbackQuery, state: FSMContext):
 
     if value == "none":
         await state.update_data(job_id=None)
-        await callback.message.edit_text("Enter site address:")
+        await callback.message.edit_text(
+            "Enter site address:",
+            reply_markup=_form_nav_keyboard("safety_form_back", "safety_form_cancel"),
+        )
         await state.set_state(SafetyChecklistStates.waiting_site_address)
         await callback.answer()
         return
@@ -208,7 +491,8 @@ async def process_selected_job(callback: CallbackQuery, state: FSMContext):
     await callback.message.edit_text(
         f"Selected Job #{job.id}\n\n"
         f"Current site address: {job.address or 'None'}\n"
-        "Type site address or /skip to keep current:"
+        "Type site address or /skip to keep current:",
+        reply_markup=_form_nav_keyboard("safety_form_back", "safety_form_cancel"),
     )
     await state.set_state(SafetyChecklistStates.waiting_site_address)
     await callback.answer()
@@ -231,9 +515,15 @@ async def process_site_address(message: Message, state: FSMContext):
 
     default_task = data.get("task_description")
     if default_task:
-        await message.answer(f"Current task description: {default_task}\nType new task description or /skip:")
+        await message.answer(
+            f"Current task description: {default_task}\nType new task description or /skip:",
+            reply_markup=_form_nav_keyboard("safety_form_back", "safety_form_cancel"),
+        )
     else:
-        await message.answer("Enter job/task description:")
+        await message.answer(
+            "Enter job/task description:",
+            reply_markup=_form_nav_keyboard("safety_form_back", "safety_form_cancel"),
+        )
     await state.set_state(SafetyChecklistStates.waiting_task_description)
 
 
@@ -252,7 +542,9 @@ async def process_task_description(message: Message, state: FSMContext):
 
     await state.update_data(task_description=task_description)
     await message.answer(
-        "Send location for geo-tagging now, or type /skip.")
+        "Send location for geo-tagging now, or type /skip.",
+        reply_markup=_form_nav_keyboard("safety_form_back", "safety_form_cancel"),
+    )
     await state.set_state(SafetyChecklistStates.waiting_geo)
 
 
@@ -283,9 +575,15 @@ async def _ask_next_hazard(message_or_callback: Message | CallbackQuery, state: 
             "Is the site safe to complete the assigned task?"
         )
         if isinstance(message_or_callback, CallbackQuery):
-            await message_or_callback.message.edit_text(text, reply_markup=_yes_no_keyboard("final_safe"))
+            await message_or_callback.message.edit_text(
+                text,
+                reply_markup=_yes_no_keyboard("final_safe", "safety_form_back", "safety_form_cancel"),
+            )
         else:
-            await message_or_callback.answer(text, reply_markup=_yes_no_keyboard("final_safe"))
+            await message_or_callback.answer(
+                text,
+                reply_markup=_yes_no_keyboard("final_safe", "safety_form_back", "safety_form_cancel"),
+            )
         await state.set_state(SafetyChecklistStates.waiting_final_safe)
         return
 
@@ -321,7 +619,8 @@ async def process_hazard_status(callback: CallbackQuery, state: FSMContext):
     await state.update_data(hazard_answers=hazard_answers)
     await callback.message.edit_text(
         f"{category} / {item} = {status}\n\n"
-        "Enter notes/concerns or /skip."
+        "Enter notes/concerns or /skip.",
+        reply_markup=_form_nav_keyboard("safety_form_back", "safety_form_cancel"),
     )
     await state.set_state(SafetyChecklistStates.waiting_hazard_notes)
     await callback.answer()
@@ -339,7 +638,10 @@ async def process_hazard_notes(message: Message, state: FSMContext):
 
     hazard_answers[-1]["notes"] = "" if text.lower() == "/skip" else text
     await state.update_data(hazard_answers=hazard_answers)
-    await message.answer("Enter corrective actions or /skip.")
+    await message.answer(
+        "Enter corrective actions or /skip.",
+        reply_markup=_form_nav_keyboard("safety_form_back", "safety_form_cancel"),
+    )
     await state.set_state(SafetyChecklistStates.waiting_hazard_corrective)
 
 
@@ -368,7 +670,10 @@ async def process_final_safe(callback: CallbackQuery, state: FSMContext):
         await callback.message.edit_text("Select signature method:", reply_markup=_signature_method_keyboard())
         await state.set_state(SafetyChecklistStates.waiting_signature_method)
     else:
-        await callback.message.edit_text("Site marked unsafe. Enter explanation:")
+        await callback.message.edit_text(
+            "Site marked unsafe. Enter explanation:",
+            reply_markup=_form_nav_keyboard("safety_form_back", "safety_form_cancel"),
+        )
         await state.set_state(SafetyChecklistStates.waiting_unsafe_explanation)
     await callback.answer()
 
@@ -381,7 +686,10 @@ async def process_unsafe_explanation(message: Message, state: FSMContext):
         return
 
     await state.update_data(unsafe_explanation=explanation, unsafe_photos=[])
-    await message.answer("Send image evidence for unsafe condition, then type /done (or /skip).")
+    await message.answer(
+        "Send image evidence for unsafe condition, then type /done (or /skip).",
+        reply_markup=_form_nav_keyboard("safety_form_back", "safety_form_cancel"),
+    )
     await state.set_state(SafetyChecklistStates.waiting_unsafe_photos)
 
 
@@ -413,7 +721,10 @@ async def process_signature_method(callback: CallbackQuery, state: FSMContext):
         await callback.message.edit_text("Add additional worker signatures?", reply_markup=_yes_no_keyboard("workers"))
         await state.set_state(SafetyChecklistStates.waiting_add_workers)
     else:
-        await callback.message.edit_text("Type your signature name:")
+        await callback.message.edit_text(
+            "Type your signature name:",
+            reply_markup=_form_nav_keyboard("safety_form_back", "safety_form_cancel"),
+        )
         await state.set_state(SafetyChecklistStates.waiting_typed_signature)
     await callback.answer()
 
@@ -425,7 +736,10 @@ async def process_typed_signature(message: Message, state: FSMContext):
         await message.answer("Typed signature is too short.")
         return
     await state.update_data(signature_type="typed", signature_value=signature)
-    await message.answer("Add additional worker signatures?", reply_markup=_yes_no_keyboard("workers"))
+    await message.answer(
+        "Add additional worker signatures?",
+        reply_markup=_yes_no_keyboard("workers", "safety_form_back", "safety_form_cancel"),
+    )
     await state.set_state(SafetyChecklistStates.waiting_add_workers)
 
 
@@ -433,11 +747,17 @@ async def process_typed_signature(message: Message, state: FSMContext):
 async def process_add_workers(callback: CallbackQuery, state: FSMContext):
     if callback.data.endswith(":yes"):
         await state.update_data(workers=[])
-        await callback.message.edit_text("Enter worker name (or /done to stop adding workers):")
+        await callback.message.edit_text(
+            "Enter worker name (or /done to stop adding workers):",
+            reply_markup=_form_nav_keyboard("safety_form_back", "safety_form_cancel"),
+        )
         await state.set_state(SafetyChecklistStates.waiting_worker_name)
     else:
         await state.update_data(workers=[])
-        await callback.message.edit_text("Post-task check: Waste/rubbish removed?", reply_markup=_yes_no_keyboard("post1"))
+        await callback.message.edit_text(
+            "Post-task check: Waste/rubbish removed?",
+            reply_markup=_yes_no_keyboard("post1", "safety_form_back", "safety_form_cancel"),
+        )
         await state.set_state(SafetyChecklistStates.waiting_post_task_1)
     await callback.answer()
 
@@ -446,12 +766,18 @@ async def process_add_workers(callback: CallbackQuery, state: FSMContext):
 async def process_worker_name(message: Message, state: FSMContext):
     text = message.text.strip()
     if text.lower() == "/done":
-        await message.answer("Post-task check: Waste/rubbish removed?", reply_markup=_yes_no_keyboard("post1"))
+        await message.answer(
+            "Post-task check: Waste/rubbish removed?",
+            reply_markup=_yes_no_keyboard("post1", "safety_form_back", "safety_form_cancel"),
+        )
         await state.set_state(SafetyChecklistStates.waiting_post_task_1)
         return
 
     await state.update_data(current_worker_name=text)
-    await message.answer("Enter this worker signature:")
+    await message.answer(
+        "Enter this worker signature:",
+        reply_markup=_form_nav_keyboard("safety_form_back", "safety_form_cancel"),
+    )
     await state.set_state(SafetyChecklistStates.waiting_worker_signature)
 
 
@@ -465,14 +791,20 @@ async def process_worker_signature(message: Message, state: FSMContext):
         "signature": signature,
     })
     await state.update_data(workers=workers, current_worker_name=None)
-    await message.answer("Worker saved. Enter another worker name or /done.")
+    await message.answer(
+        "Worker saved. Enter another worker name or /done.",
+        reply_markup=_form_nav_keyboard("safety_form_back", "safety_form_cancel"),
+    )
     await state.set_state(SafetyChecklistStates.waiting_worker_name)
 
 
 @router.callback_query(F.data.startswith("post1:"), StateFilter(SafetyChecklistStates.waiting_post_task_1))
 async def process_post_task_1(callback: CallbackQuery, state: FSMContext):
     await state.update_data(post_task_waste_removed=callback.data.endswith(":yes"))
-    await callback.message.edit_text("Post-task check: Vehicle cleaned?", reply_markup=_yes_no_keyboard("post2"))
+    await callback.message.edit_text(
+        "Post-task check: Vehicle cleaned?",
+        reply_markup=_yes_no_keyboard("post2", "safety_form_back", "safety_form_cancel"),
+    )
     await state.set_state(SafetyChecklistStates.waiting_post_task_2)
     await callback.answer()
 
@@ -480,7 +812,10 @@ async def process_post_task_1(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("post2:"), StateFilter(SafetyChecklistStates.waiting_post_task_2))
 async def process_post_task_2(callback: CallbackQuery, state: FSMContext):
     await state.update_data(post_task_vehicle_cleaned=callback.data.endswith(":yes"))
-    await callback.message.edit_text("Post-task check: Site left safe and secure?", reply_markup=_yes_no_keyboard("post3"))
+    await callback.message.edit_text(
+        "Post-task check: Site left safe and secure?",
+        reply_markup=_yes_no_keyboard("post3", "safety_form_back", "safety_form_cancel"),
+    )
     await state.set_state(SafetyChecklistStates.waiting_post_task_3)
     await callback.answer()
 
@@ -812,6 +1147,24 @@ async def process_request_subcontractor(callback: CallbackQuery, state: FSMConte
     await state.set_state(SafetyRequestStates.waiting_note)
     await callback.message.edit_text(
         "Enter request note (job/task context), or type /skip:",
+        reply_markup=_form_nav_keyboard("safety_req_back", "safety_req_cancel"),
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "safety_req_back", StateFilter(SafetyRequestStates.waiting_note))
+async def back_safety_request_note(callback: CallbackQuery, state: FSMContext):
+    requester = await _get_current_user(callback.from_user.id)
+    if not requester or requester.role not in [UserRole.ADMIN, UserRole.SUPERVISOR]:
+        await state.clear()
+        await callback.answer("Not authorized", show_alert=True)
+        return
+
+    subs = await SafetyChecklistService.list_subcontractors_for_requester(requester)
+    await state.set_state(SafetyRequestStates.selecting_subcontractor)
+    await callback.message.edit_text(
+        "Select subcontractor to request a Site Safety Checklist:",
+        reply_markup=_request_subcontractor_keyboard(subs),
     )
     await callback.answer()
 
