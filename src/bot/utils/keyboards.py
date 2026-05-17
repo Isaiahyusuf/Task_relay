@@ -109,17 +109,22 @@ def get_subcontractor_selection_keyboard(subcontractors: list, include_skip: boo
     
     # Add "Send to All" option at the top
     if subcontractors:
-        buttons.append([InlineKeyboardButton(text="Send to All Available", callback_data="assign:all")])
+        buttons.append([InlineKeyboardButton(text="Send to All Available ✅", callback_data="assign:all")])
     
     for sub in subcontractors:
         name = sub.first_name or sub.username or f"User {sub.telegram_id}"
-        avail = "" if sub.availability_status == AvailabilityStatus.AVAILABLE else "" if sub.availability_status == AvailabilityStatus.BUSY else ""
+        if sub.availability_status == AvailabilityStatus.AVAILABLE:
+            avail = "[AVAILABLE]"
+        elif sub.availability_status == AvailabilityStatus.BUSY:
+            avail = "[BUSY]"
+        else:
+            avail = "[AWAY]"
         buttons.append([InlineKeyboardButton(text=f"{avail} {name}", callback_data=f"assign:{sub.id}")])
     
     if include_skip:
-        buttons.append([InlineKeyboardButton(text="Save without sending", callback_data="assign:none")])
+        buttons.append([InlineKeyboardButton(text="Save without sending 📌", callback_data="assign:none")])
     
-    buttons.append([InlineKeyboardButton(text="Cancel", callback_data="job_cancel")])
+    buttons.append([InlineKeyboardButton(text="Cancel ✖", callback_data="job_cancel")])
     
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -381,13 +386,13 @@ def get_supervisor_availability_keyboard() -> InlineKeyboardMarkup:
 def get_message_target_keyboard(sender_role: UserRole | None = None) -> InlineKeyboardMarkup:
     rows = []
     if sender_role == UserRole.SUPER_ADMIN:
-        rows.append([InlineKeyboardButton(text="Everyone on Bot", callback_data="msg_target:all_users")])
+        rows.append([InlineKeyboardButton(text="Everyone on Bot 🌐", callback_data="msg_target:all_users")])
     rows.extend([
-        [InlineKeyboardButton(text="All Subcontractors", callback_data="msg_target:all_subs")],
-        [InlineKeyboardButton(text="North/West Team", callback_data="msg_target:northwest")],
-        [InlineKeyboardButton(text="South/East Team", callback_data="msg_target:southeast")],
-        [InlineKeyboardButton(text="Select Specific Users", callback_data="msg_target:select")],
-        [InlineKeyboardButton(text="Cancel", callback_data="msg_cancel")]
+        [InlineKeyboardButton(text="All Subcontractors 👷", callback_data="msg_target:all_subs")],
+        [InlineKeyboardButton(text="North/West Team 🧭", callback_data="msg_target:northwest")],
+        [InlineKeyboardButton(text="South/East Team 🗺", callback_data="msg_target:southeast")],
+        [InlineKeyboardButton(text="Select Specific Users ☑", callback_data="msg_target:select")],
+        [InlineKeyboardButton(text="Cancel ✖", callback_data="msg_cancel")]
     ])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -397,14 +402,14 @@ def get_subcontractor_select_keyboard(subcontractors: list, selected_ids: list =
     
     for sub in subcontractors:
         name = sub.first_name or sub.username or f"User {sub.telegram_id}"
-        check = " " if sub.id in selected_ids else ""
+        check = "☑" if sub.id in selected_ids else "☐"
         buttons.append([InlineKeyboardButton(
-            text=f"{check}{name}",
+            text=f"{check} {name}",
             callback_data=f"msg_select:{sub.id}"
         )])
     
-    buttons.append([InlineKeyboardButton(text="Send Message", callback_data="msg_send")])
-    buttons.append([InlineKeyboardButton(text="Cancel", callback_data="msg_cancel")])
+    buttons.append([InlineKeyboardButton(text="Send Message ✅", callback_data="msg_send")])
+    buttons.append([InlineKeyboardButton(text="Cancel ✖", callback_data="msg_cancel")])
     
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
