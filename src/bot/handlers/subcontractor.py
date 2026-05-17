@@ -145,15 +145,15 @@ async def btn_my_availability(message: Message):
         # Build selected days list
         selected_days = []
         if availability.monday_available:
-            selected_days.append("monday")
+            selected_days.append("mon")
         if availability.tuesday_available:
-            selected_days.append("tuesday")
+            selected_days.append("tue")
         if availability.wednesday_available:
-            selected_days.append("wednesday")
+            selected_days.append("wed")
         if availability.thursday_available:
-            selected_days.append("thursday")
+            selected_days.append("thu")
         if availability.friday_available:
-            selected_days.append("friday")
+            selected_days.append("fri")
         
         # Calculate dates for display
         mon_date = week_start.strftime("%d/%m")
@@ -167,14 +167,15 @@ async def btn_my_availability(message: Message):
         
         await message.answer(
             f" *My Weekly Availability*\n\n"
-            f"Week of {week_start.strftime('%d/%m/%Y')}\n"
+            f"Week: {week_start.strftime('%d/%m/%Y')}\n"
             f"Status: {status_text}\n\n"
-            f"Tap the days you're available:\n\n"
-            f"Monday {mon_date}\n"
-            f"Tuesday {tue_date}\n"
-            f"Wednesday {wed_date}\n"
-            f"Thursday {thu_date}\n"
-            f"Friday {fri_date}",
+            "Tap day buttons to toggle your availability.\n"
+            "Ticked = available, unticked = unavailable.\n\n"
+            f"Monday ({mon_date})\n"
+            f"Tuesday ({tue_date})\n"
+            f"Wednesday ({wed_date})\n"
+            f"Thursday ({thu_date})\n"
+            f"Friday ({fri_date})",
             reply_markup=get_weekly_availability_keyboard(availability.id, selected_days),
             parse_mode="Markdown"
         )
@@ -1142,12 +1143,13 @@ async def handle_weekly_availability_response(callback: CallbackQuery, state: FS
             try:
                 await callback.message.edit_text(
                     f" *Weekly Availability Survey*\n\n"
-                    f"Please tick the days you will be available to work next week:\n\n"
-                    f"Monday {mon_date}\n"
-                    f"Tuesday {tue_date}\n"
-                    f"Wednesday {wed_date}\n"
-                    f"Thursday {thu_date}\n"
-                    f"Friday {fri_date}",
+                    "Tap day buttons to toggle your availability.\n"
+                    "Ticked = available, unticked = unavailable.\n\n"
+                    f"Monday ({mon_date})\n"
+                    f"Tuesday ({tue_date})\n"
+                    f"Wednesday ({wed_date})\n"
+                    f"Thursday ({thu_date})\n"
+                    f"Friday ({fri_date})",
                     reply_markup=get_weekly_availability_keyboard(avail_id, selected_days),
                     parse_mode="Markdown"
                 )

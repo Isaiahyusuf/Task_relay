@@ -1,4 +1,4 @@
-import asyncio
+﻿import asyncio
 from datetime import datetime, timedelta
 from sqlalchemy import select, and_
 from src.bot.database import async_session, Job, User, WeeklyAvailability
@@ -144,7 +144,7 @@ class SchedulerService:
                     deadline_str = job.deadline.strftime("%d/%m/%Y") if job.deadline else "Unknown"
                     await cls.bot.send_message(
                         user.telegram_id,
-                        f"⏰ *Deadline Reminder*\n\n"
+                        f" *Deadline Reminder*\n\n"
                         f"Job #{job.id}: {job.title}\n"
                         f"Deadline: *{deadline_str}*\n\n"
                         f"This job is due soon. Please complete it on time.",
@@ -213,13 +213,14 @@ class SchedulerService:
                     
                     await cls.bot.send_message(
                         sub.telegram_id,
-                        f"📅 *Weekly Availability Survey*\n\n"
-                        f"Please tick the days you will be available to work next week:\n\n"
-                        f"Monday {mon_date}\n"
-                        f"Tuesday {tue_date}\n"
-                        f"Wednesday {wed_date}\n"
-                        f"Thursday {thu_date}\n"
-                        f"Friday {fri_date}",
+                        f" *Weekly Availability Survey*\n\n"
+                        "Tap day buttons to toggle your availability.\n"
+                        "Ticked = available, unticked = unavailable.\n\n"
+                        f"Monday ({mon_date})\n"
+                        f"Tuesday ({tue_date})\n"
+                        f"Wednesday ({wed_date})\n"
+                        f"Thursday ({thu_date})\n"
+                        f"Friday ({fri_date})",
                         reply_markup=get_weekly_availability_keyboard(availability.id, []),
                         parse_mode="Markdown"
                     )
@@ -307,14 +308,15 @@ class SchedulerService:
                     
                     await cls.bot.send_message(
                         user.telegram_id,
-                        f"⏰ *Reminder: Weekly Availability*\n\n"
-                        f"You haven't submitted your availability for this week yet.\n\n"
-                        f"Please tick the days you will be available to work:\n\n"
-                        f"Monday {mon_date}\n"
-                        f"Tuesday {tue_date}\n"
-                        f"Wednesday {wed_date}\n"
-                        f"Thursday {thu_date}\n"
-                        f"Friday {fri_date}",
+                        f" *Reminder: Weekly Availability*\n\n"
+                        "You haven't submitted your availability for this week yet.\n\n"
+                        "Tap day buttons to toggle your availability.\n"
+                        "Ticked = available, unticked = unavailable.\n\n"
+                        f"Monday ({mon_date})\n"
+                        f"Tuesday ({tue_date})\n"
+                        f"Wednesday ({wed_date})\n"
+                        f"Thursday ({thu_date})\n"
+                        f"Friday ({fri_date})",
                         reply_markup=get_weekly_availability_keyboard(avail.id, selected_days),
                         parse_mode="Markdown"
                     )
@@ -390,16 +392,16 @@ class SchedulerService:
                 ("fri", "Friday", 4)
             ]
             
-            message = f"📊 *Weekly Availability Report*\nWeek of {week_start.strftime('%d/%m/%Y')}\n\n"
+            message = f" *Weekly Availability Report*\nWeek of {week_start.strftime('%d/%m/%Y')}\n\n"
             
             for day_code, day_name, offset in day_names:
                 day_date = (week_start + timedelta(days=offset)).strftime("%d/%m")
                 available = days_data[day_code]["available"]
                 message += f"*{day_name} {day_date}:*\n"
-                message += f"✅ {', '.join(available) if available else 'None'}\n\n"
+                message += f" {', '.join(available) if available else 'None'}\n\n"
             
             if no_response:
-                message += f"⚠️ *No Response:* {', '.join(no_response)}"
+                message += f" *No Response:* {', '.join(no_response)}"
             
             # Get all admins and super admins
             admin_result = await session.execute(
@@ -416,3 +418,4 @@ class SchedulerService:
                     )
                 except Exception as e:
                     logger.error(f"Failed to notify admin {admin.telegram_id} of availability: {e}")
+

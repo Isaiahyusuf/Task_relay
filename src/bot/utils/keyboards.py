@@ -363,13 +363,13 @@ def get_weekly_availability_keyboard(week_id: int, selected_days: list = None) -
     ]
     buttons = []
     for day_name, day_code in days:
-        check = "[x]" if day_code in selected_days else "[ ]"
+        check = "☑" if day_code in selected_days else "☐"
         buttons.append([InlineKeyboardButton(
-            text=f"{check}{day_name}",
+            text=f"{check} {day_name}",
             callback_data=f"weekly_avail:{week_id}:toggle:{day_code}"
         )])
-    buttons.append([InlineKeyboardButton(text="Save Availability", callback_data=f"weekly_avail:{week_id}:save")])
-    buttons.append([InlineKeyboardButton(text="Add Notes", callback_data=f"weekly_avail:{week_id}:notes")])
+    buttons.append([InlineKeyboardButton(text="Save Availability ✅", callback_data=f"weekly_avail:{week_id}:save")])
+    buttons.append([InlineKeyboardButton(text="Add Notes 📝", callback_data=f"weekly_avail:{week_id}:notes")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def get_supervisor_availability_keyboard() -> InlineKeyboardMarkup:
