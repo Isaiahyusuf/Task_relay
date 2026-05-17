@@ -3,6 +3,7 @@ from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message, CallbackQuery
+from aiogram.exceptions import TelegramBadRequest
 from sqlalchemy import select
 from src.bot.database import async_session, User, Job
 from src.bot.database.models import UserRole, JobType, JobStatus, AvailabilityStatus
@@ -1138,17 +1139,21 @@ async def handle_weekly_availability_response(callback: CallbackQuery, state: FS
             thu_date = (week_start + timedelta(days=3)).strftime("%d/%m")
             fri_date = (week_start + timedelta(days=4)).strftime("%d/%m")
             
-            await callback.message.edit_text(
-                f" *Weekly Availability Survey*\n\n"
-                f"Please tick the days you will be available to work next week:\n\n"
-                f"Monday {mon_date}\n"
-                f"Tuesday {tue_date}\n"
-                f"Wednesday {wed_date}\n"
-                f"Thursday {thu_date}\n"
-                f"Friday {fri_date}",
-                reply_markup=get_weekly_availability_keyboard(avail_id, selected_days),
-                parse_mode="Markdown"
-            )
+            try:
+                await callback.message.edit_text(
+                    f" *Weekly Availability Survey*\n\n"
+                    f"Please tick the days you will be available to work next week:\n\n"
+                    f"Monday {mon_date}\n"
+                    f"Tuesday {tue_date}\n"
+                    f"Wednesday {wed_date}\n"
+                    f"Thursday {thu_date}\n"
+                    f"Friday {fri_date}",
+                    reply_markup=get_weekly_availability_keyboard(avail_id, selected_days),
+                    parse_mode="Markdown"
+                )
+            except TelegramBadRequest as exc:
+                if "message is not modified" not in str(exc).lower():
+                    raise
             await callback.answer()
             
         elif action == "save":

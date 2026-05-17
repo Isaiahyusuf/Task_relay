@@ -11,6 +11,7 @@ def get_main_menu_keyboard(role: UserRole) -> ReplyKeyboardMarkup:
             [KeyboardButton(text="Export Safety CSV")],
             [KeyboardButton(text="Weekly Availability")],
             [KeyboardButton(text="All Access Codes")],
+            [KeyboardButton(text="Manage Access Codes")],
             [KeyboardButton(text="Create Manager Code"), KeyboardButton(text="Create Supervisor Code")],
             [KeyboardButton(text="Create Subcontractor Code")],
             [KeyboardButton(text="View By Teams"), KeyboardButton(text="View Regions")],
@@ -29,6 +30,7 @@ def get_main_menu_keyboard(role: UserRole) -> ReplyKeyboardMarkup:
             [KeyboardButton(text="Safety Submissions"), KeyboardButton(text="Filter Safety Submissions")],
             [KeyboardButton(text="Export Safety CSV")],
             [KeyboardButton(text="Weekly Availability")],
+            [KeyboardButton(text="Manage Access Codes")],
             [KeyboardButton(text="Create Access Code"), KeyboardButton(text="View Archived")],
             [KeyboardButton(text="View By Teams"), KeyboardButton(text="View Regions")],
             [KeyboardButton(text="Manage Teams"), KeyboardButton(text="Manage Regions")],
@@ -44,6 +46,7 @@ def get_main_menu_keyboard(role: UserRole) -> ReplyKeyboardMarkup:
             [KeyboardButton(text="Request Safety Checklist")],
             [KeyboardButton(text="Safety Submissions"), KeyboardButton(text="Filter Safety Submissions")],
             [KeyboardButton(text="Export Safety CSV")],
+            [KeyboardButton(text="Manage Access Codes")],
             [KeyboardButton(text="Send Message"), KeyboardButton(text="Create Subcontractor Code")],
             [KeyboardButton(text="Help"), KeyboardButton(text="About")],
             [KeyboardButton(text="Delete My Account")]
@@ -360,7 +363,7 @@ def get_weekly_availability_keyboard(week_id: int, selected_days: list = None) -
     ]
     buttons = []
     for day_name, day_code in days:
-        check = " " if day_code in selected_days else " "
+        check = "[x]" if day_code in selected_days else "[ ]"
         buttons.append([InlineKeyboardButton(
             text=f"{check}{day_name}",
             callback_data=f"weekly_avail:{week_id}:toggle:{day_code}"
