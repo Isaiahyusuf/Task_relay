@@ -5,7 +5,8 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy import select
-from src.bot.database import async_session, User, Job
+from sqlalchemy.orm import aliased
+from src.bot.database import async_session, User, Job, AccessCode
 from src.bot.database.models import UserRole, JobStatus, JobType, TeamType, Team, BroadcastMessage
 from src.bot.services.jobs import JobService
 from src.bot.services.archive import ArchiveService
@@ -234,7 +235,8 @@ async def cmd_create_code(message: Message, state: FSMContext):
         success = await AccessCodeService.create_access_code(
             code=code,
             role=target_role,
-            team_id=user.team_id if user else None
+            team_id=user.team_id if user else None,
+            created_by_id=user.id if user else None
         )
         
         if success:
@@ -305,11 +307,11 @@ async def start_code_creation(message: Message, state: FSMContext):
     await state.set_state(CreateCodeStates.waiting_for_code)
 
 MENU_BUTTON_TEXTS = {
-    " View Supervisors", " View Subcontractors", " View Admins", " View Managers",
-    " All Users", " All Access Codes", " Create Access Code",
-    " Create Admin Code", " Create Manager Code", " Create Supervisor Code", " Create Subcontractor Code",
-    " View Jobs", " Create Job", " Job History", " Main Menu",
-    " View By Teams", " Back", " Cancel"
+    "View Supervisors", "View Subcontractors", "View Admins", "View Managers",
+    "All Users", "All Access Codes", "Manage Access Codes", "Create Access Code",
+    "Create Admin Code", "Create Manager Code", "Create Supervisor Code", "Create Subcontractor Code",
+    "View Jobs", "Create Job", "Job History", "Main Menu",
+    "View By Teams", "Back", "Cancel"
 }
 
 @router.message(StateFilter(CreateCodeStates.waiting_for_code), ~F.text.in_(MENU_BUTTON_TEXTS))
@@ -340,7 +342,8 @@ async def process_code_input(message: Message, state: FSMContext):
         success = await AccessCodeService.create_access_code(
             code=code,
             role=forced_role,
-            team_id=user.team_id if user else None
+            team_id=user.team_id if user else None,
+            created_by_id=user.id if user else None
         )
         
         if success:
@@ -529,6 +532,7 @@ async def finalize_code_creation(callback: CallbackQuery, state: FSMContext, reg
     team_name = data.get('team_name')
     
     region_name = None
+    creator_user_id = None
     if region_id:
         async with async_session() as session:
             result = await session.execute(
@@ -537,12 +541,27 @@ async def finalize_code_creation(callback: CallbackQuery, state: FSMContext, reg
             region = result.scalar_one_or_none()
             if region:
                 region_name = region.name
+            creator_result = await session.execute(
+                select(User).where(User.telegram_id == callback.from_user.id)
+            )
+            creator = creator_result.scalar_one_or_none()
+            if creator:
+                creator_user_id = creator.id
+    else:
+        async with async_session() as session:
+            creator_result = await session.execute(
+                select(User).where(User.telegram_id == callback.from_user.id)
+            )
+            creator = creator_result.scalar_one_or_none()
+            if creator:
+                creator_user_id = creator.id
     
     success = await AccessCodeService.create_access_code(
         code=code,
         role=role,
         team_id=team_id,
-        region_id=region_id
+        region_id=region_id,
+        created_by_id=creator_user_id
     )
     
     if success:
@@ -771,38 +790,162 @@ async def btn_manage_users(message: Message):
         return
     await show_user_list(message)
 
+def get_effective_role(user: User) -> UserRole:
+    if user.super_admin_code and user.super_admin_code == config.SUPER_ADMIN_CODE:
+        return UserRole.SUPER_ADMIN
+    return user.role
+
+
+def can_delete_access_code(actor: User, code: AccessCode, creator: User | None) -> bool:
+    actor_role = get_effective_role(actor)
+
+    if actor_role == UserRole.SUPER_ADMIN:
+        return True
+
+    if actor_role == UserRole.ADMIN:
+        if code.created_by_id == actor.id:
+            return True
+        if creator and creator.role == UserRole.SUPERVISOR:
+            if actor.team_id is None:
+                return True
+            return code.team_id == actor.team_id
+        return False
+
+    if actor_role == UserRole.SUPERVISOR:
+        return code.created_by_id == actor.id
+
+    return False
+
+
+def creator_display_name(creator: User | None) -> str:
+    if not creator:
+        return "Unknown"
+    return creator.first_name or creator.username or f"User {creator.telegram_id}"
+
+
 async def show_all_access_codes(message: Message):
-    from src.bot.database import AccessCode
-    
+    await show_manage_access_codes(message, telegram_user_id=message.from_user.id)
+
+
+async def show_manage_access_codes(message: Message, telegram_user_id: int, edit: bool = False):
+    creator_alias = aliased(User)
+
     async with async_session() as session:
+        actor_result = await session.execute(
+            select(User).where(User.telegram_id == telegram_user_id)
+        )
+        actor = actor_result.scalar_one_or_none()
+
+        if not actor:
+            if edit:
+                await message.edit_text("User record not found.")
+            else:
+                await message.answer("User record not found.")
+            return
+
+        role = get_effective_role(actor)
+        if role not in [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SUPERVISOR]:
+            if edit:
+                await message.edit_text("You don't have permission to manage access codes.")
+            else:
+                await message.answer("You don't have permission to manage access codes.")
+            return
+
         result = await session.execute(
-            select(AccessCode).where(
-                AccessCode.is_active == True,
-                AccessCode.current_uses < AccessCode.max_uses
-            ).order_by(AccessCode.role, AccessCode.code)
+            select(AccessCode, creator_alias)
+            .outerjoin(creator_alias, AccessCode.created_by_id == creator_alias.id)
+            .where(AccessCode.is_active == True)
+            .order_by(AccessCode.role, AccessCode.code)
         )
-        codes = list(result.scalars().all())
-    
-    if not codes:
-        await message.answer(
-            "*All Access Codes*\n\n"
-            "No available access codes found.\n\n"
-            "Use 'Create Access Code' to create new codes.",
-            parse_mode="Markdown"
+        all_rows = list(result.all())
+
+    visible_rows = [row for row in all_rows if can_delete_access_code(actor, row[0], row[1])]
+
+    if not visible_rows:
+        text = (
+            "*Manage Access Codes*\n\n"
+            "No access codes are available for your role."
         )
+        if edit:
+            await message.edit_text(text, parse_mode="Markdown")
+        else:
+            await message.answer(text, parse_mode="Markdown")
         return
-    
-    code_text = ""
-    for code in codes:
-        role_emoji = {"admin": "", "supervisor": "", "subcontractor": "", "super_admin": ""}.get(code.role.value, "")
-        code_text += f"{role_emoji} `{code.code}` - {code.role.value.replace('_', ' ').title()}\n"
-    
-    await message.answer(
-        f"*All Access Codes* ({len(codes)} available)\n\n"
-        f"{code_text}\n"
-        "Share these codes privately with intended users.",
-        parse_mode="Markdown"
+
+    keyboard = InlineKeyboardBuilder()
+    lines = []
+
+    max_visible = 20
+    for code, creator in visible_rows[:max_visible]:
+        uses_text = f"{code.current_uses}/{code.max_uses}" if code.max_uses else str(code.current_uses)
+        lines.append(
+            f"- `{code.code}` | {role_display_name(code.role)} | Uses: {uses_text} | Created by: {creator_display_name(creator)}"
+        )
+        keyboard.row(
+            InlineKeyboardButton(
+                text=f"Delete {code.code}",
+                callback_data=f"delete_code:{code.id}"
+            )
+        )
+
+    if len(visible_rows) > max_visible:
+        lines.append(f"\nShowing first {max_visible} of {len(visible_rows)} codes.")
+
+    text = (
+        f"*Manage Access Codes* ({len(visible_rows)})\n\n"
+        + "\n".join(lines)
     )
+
+    if edit:
+        await message.edit_text(text, reply_markup=keyboard.as_markup(), parse_mode="Markdown")
+    else:
+        await message.answer(text, reply_markup=keyboard.as_markup(), parse_mode="Markdown")
+
+
+@router.callback_query(F.data.startswith("delete_code:"))
+async def delete_access_code(callback: CallbackQuery):
+    code_id = int(callback.data.split(":")[1])
+    creator_alias = aliased(User)
+
+    async with async_session() as session:
+        actor_result = await session.execute(
+            select(User).where(User.telegram_id == callback.from_user.id)
+        )
+        actor = actor_result.scalar_one_or_none()
+        if not actor:
+            await callback.answer("User not found.", show_alert=True)
+            return
+
+        code_result = await session.execute(
+            select(AccessCode, creator_alias)
+            .outerjoin(creator_alias, AccessCode.created_by_id == creator_alias.id)
+            .where(AccessCode.id == code_id)
+        )
+        row = code_result.one_or_none()
+        if not row:
+            await callback.answer("Code not found.", show_alert=True)
+            return
+
+        code, creator = row
+        if not code.is_active:
+            await callback.answer("Code already deleted.", show_alert=True)
+            return
+
+        if not can_delete_access_code(actor, code, creator):
+            await callback.answer("You cannot delete this code.", show_alert=True)
+            return
+
+        code.is_active = False
+        await session.commit()
+
+    await callback.answer("Access code deleted.")
+    await show_manage_access_codes(callback.message, telegram_user_id=callback.from_user.id, edit=True)
+
+
+@router.message(F.text == "Manage Access Codes")
+async def btn_manage_access_codes(message: Message, state: FSMContext):
+    await state.clear()
+    await show_manage_access_codes(message, telegram_user_id=message.from_user.id)
 
 @router.message(F.text == "View By Teams")
 async def btn_view_by_teams(message: Message, state: FSMContext):
@@ -819,8 +962,8 @@ async def btn_view_by_teams(message: Message, state: FSMContext):
         await message.answer("Only admins can view team members.")
         return
     
-    # Super admins see all teams, admins only see their own team
-    is_super_admin = user.role == UserRole.SUPER_ADMIN
+    # Super admins see all teams, admins only see their own team.
+    is_super_admin = get_effective_role(user) == UserRole.SUPER_ADMIN
     await show_team_hierarchy(message, user_team_id=user.team_id if not is_super_admin else None, is_super_admin=is_super_admin)
 
 async def show_team_hierarchy(message: Message, user_team_id: int = None, is_super_admin: bool = False):
@@ -1244,7 +1387,7 @@ async def handle_manage_user(callback: CallbackQuery):
         
         # Extract all needed data within the session
         is_self = user.telegram_id == callback.from_user.id
-        role_text = user.role.value.title()
+        role_text = role_display_name(user.role)
         name = user.first_name or user.username or f"User {user.telegram_id}"
         username = user.username or 'N/A'
         is_active = user.is_active
@@ -1409,6 +1552,50 @@ async def back_to_users(callback: CallbackQuery):
         f"*Manage Users* ({len(users)} total)\n\n"
         "Select a user to manage:",
         reply_markup=get_user_list_keyboard(users),
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "back_to_regions")
+async def back_to_regions(callback: CallbackQuery):
+    async with async_session() as session:
+        result = await session.execute(
+            select(Region).where(Region.is_active == True).order_by(Region.name)
+        )
+        regions = list(result.scalars().all())
+
+    keyboard = InlineKeyboardBuilder()
+    keyboard.row(InlineKeyboardButton(text=" Create New Region", callback_data="create_region"))
+    for region in regions:
+        keyboard.row(InlineKeyboardButton(text=f" {region.name}", callback_data=f"view_region:{region.id}"))
+
+    await callback.message.edit_text(
+        "* Manage Regions*\n\n"
+        f"You have {len(regions)} region(s).\n\n"
+        "Regions let you organize users and jobs by geographic area.",
+        reply_markup=keyboard.as_markup(),
+        parse_mode="Markdown"
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "back_to_teams")
+async def back_to_teams(callback: CallbackQuery):
+    async with async_session() as session:
+        result = await session.execute(select(Team).order_by(Team.name))
+        teams = list(result.scalars().all())
+
+    keyboard = InlineKeyboardBuilder()
+    keyboard.row(InlineKeyboardButton(text=" Create New Team", callback_data="create_team"))
+    for team in teams:
+        keyboard.row(InlineKeyboardButton(text=f" {team.name}", callback_data=f"view_team:{team.id}"))
+
+    await callback.message.edit_text(
+        "* Manage Teams*\n\n"
+        f"You have {len(teams)} team(s).\n\n"
+        "Teams help organize subcontractors into groups.",
+        reply_markup=keyboard.as_markup(),
         parse_mode="Markdown"
     )
     await callback.answer()
@@ -2188,7 +2375,10 @@ async def view_region(callback: CallbackQuery):
         [InlineKeyboardButton(text=" Back", callback_data="back_to_regions")]
     ])
     
-    user_list = "\n".join([f" {u.first_name or u.username or 'Unknown'} ({u.role.value})" for u in users[:10]])
+    user_list = "\n".join([
+        f" {u.first_name or u.username or 'Unknown'} ({role_display_name(u.role)})"
+        for u in users[:10]
+    ])
     if len(users) > 10:
         user_list += f"\n... and {len(users) - 10} more"
     
@@ -2305,7 +2495,10 @@ async def view_team_details(callback: CallbackQuery):
         [InlineKeyboardButton(text=" Back", callback_data="back_to_teams")]
     ])
     
-    user_list = "\n".join([f" {u.first_name or u.username or 'Unknown'} ({u.role.value})" for u in users[:10]])
+    user_list = "\n".join([
+        f" {u.first_name or u.username or 'Unknown'} ({role_display_name(u.role)})"
+        for u in users[:10]
+    ])
     if len(users) > 10:
         user_list += f"\n... and {len(users) - 10} more"
     

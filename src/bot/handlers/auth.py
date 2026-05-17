@@ -192,8 +192,6 @@ async def btn_about(message: Message):
         "- CANCELLED or ARCHIVED: Closed out\n\n"
         "*Safety Flow*\n"
         "Subcontractors can submit Site Safety Checklists from the menu and choose the supervisor recipient. Managers and supervisors can review, filter, and export submissions.\n\n"
-        "*Time Zone*\n"
-        "User-facing checklist and PDF times are shown in Australian local time.\n\n"
         "_TaskRelay - Operations first, chat-native workflow._"
     )
     await message.answer(about_text, parse_mode="Markdown")
