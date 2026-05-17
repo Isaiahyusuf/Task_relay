@@ -186,7 +186,7 @@ async def btn_about(message: Message):
         "- CREATED: Drafted and not yet sent\n"
         "- SENT: Available to target subcontractor(s)\n"
         "- ACCEPTED: Taken by a subcontractor\n"
-        "- IN_PROGRESS: Work has started\n"
+        "- IN-PROGRESS: Work has started\n"
         "- SUBMITTED: Sent for supervisor review\n"
         "- COMPLETED: Closed\n"
         "- CANCELLED or ARCHIVED: Closed out\n\n"
