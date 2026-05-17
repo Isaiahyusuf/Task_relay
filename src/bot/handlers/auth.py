@@ -277,7 +277,7 @@ async def show_help(message: Message):
                 "*Availability and Contact*\n"
                 "- Use `Available`, `Busy`, `Away` for live status\n"
                 "- Update `My Availability` and use `Report Unavailability`\n"
-                "- Use `Contact Supervisor` when you need direction\n\n"
+                "- Use job updates and message replies when direction is needed\n\n"
                 "*Tip*\n"
                 "Fast approvals come from clear photos and short, accurate notes."
             )

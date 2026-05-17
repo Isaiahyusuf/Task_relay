@@ -56,7 +56,6 @@ def get_main_menu_keyboard(role: UserRole) -> ReplyKeyboardMarkup:
             [KeyboardButton(text="Available Jobs"), KeyboardButton(text="My Active Jobs")],
             [KeyboardButton(text="Start Work"), KeyboardButton(text="Site Safety Checklist")],
             [KeyboardButton(text="Upload Site Photos"), KeyboardButton(text="My Submissions")],
-            [KeyboardButton(text="Contact Supervisor")],
             [KeyboardButton(text="Submit Job"), KeyboardButton(text="My Availability")],
             [KeyboardButton(text="Report Unavailability")],
             [KeyboardButton(text="Available"), KeyboardButton(text="Busy"), KeyboardButton(text="Away")],

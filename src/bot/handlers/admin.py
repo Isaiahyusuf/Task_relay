@@ -1151,7 +1151,7 @@ async def btn_switch_role_super_admin(message: Message, state: FSMContext):
             reply_markup=get_super_admin_switch_role_keyboard(),
             parse_mode="Markdown"
         )
-    elif user.super_admin_code:
+    elif user.super_admin_code and user.super_admin_code == config.SUPER_ADMIN_CODE:
         # User was a super admin, show return option
         await message.answer(
             "*Switch Role*\n\n"
