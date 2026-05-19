@@ -280,8 +280,9 @@ async def btn_create_subcontractor_code(message: Message, state: FSMContext):
             select(User).where(User.telegram_id == message.from_user.id)
         )
         user = result.scalar_one_or_none()
-    
-    if not user or not can_manage_role(user.role, UserRole.SUBCONTRACTOR):
+
+    effective_role = get_effective_role(user) if user else None
+    if not user or not can_manage_role(effective_role, UserRole.SUBCONTRACTOR):
         await message.answer("You don't have permission to create subcontractor codes.")
         return
     
@@ -1932,7 +1933,18 @@ async def send_broadcast_message(message: Message, state: FSMContext):
 @router.message(F.text == "Weekly Availability")
 async def btn_weekly_availability(message: Message):
     """View weekly availability responses for all subcontractors"""
-    if not await check_admin(message):
+    if not async_session:
+        await message.answer("Database not available.")
+        return
+
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == message.from_user.id)
+        )
+        user = result.scalar_one_or_none()
+
+    if not user or user.role != UserRole.ADMIN:
+        await message.answer("Only managers can view weekly availability.")
         return
     
     from datetime import datetime, timedelta

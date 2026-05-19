@@ -217,7 +217,7 @@ async def show_help(message: Message):
                 "*Daily Operations*\n"
                 "- `Job History`, `Archive Jobs`, `View Archived`\n"
                 "- `Safety Submissions`, `Filter Safety Submissions`, `Export Safety CSV`\n"
-                "- `Send Message` and `Weekly Availability`\n\n"
+                "- `Send Message`\n\n"
                 "*Access and People*\n"
                 "- `All Access Codes` and `Manage Access Codes`\n"
                 "- `Create Manager Code`, `Create Supervisor Code`, `Create Subcontractor Code`\n"
@@ -259,7 +259,7 @@ async def show_help(message: Message):
                 "*Access and Comms*\n"
                 "- `Create Subcontractor Code`\n"
                 "- `Manage Access Codes` for codes you are allowed to remove\n"
-                "- `Send Message` and `View Availability`\n\n"
+                "- `Send Message`\n\n"
                 "*Tip*\n"
                 "When reviewing submitted jobs, check photos and notes before closing."
             )

@@ -9,7 +9,6 @@ def get_main_menu_keyboard(role: UserRole) -> ReplyKeyboardMarkup:
             [KeyboardButton(text="Send Message")],
             [KeyboardButton(text="Safety Submissions"), KeyboardButton(text="Filter Safety Submissions")],
             [KeyboardButton(text="Export Safety CSV")],
-            [KeyboardButton(text="Weekly Availability")],
             [KeyboardButton(text="All Access Codes")],
             [KeyboardButton(text="Manage Access Codes")],
             [KeyboardButton(text="Create Manager Code"), KeyboardButton(text="Create Supervisor Code")],
@@ -42,7 +41,7 @@ def get_main_menu_keyboard(role: UserRole) -> ReplyKeyboardMarkup:
         buttons = [
             [KeyboardButton(text="New Job"), KeyboardButton(text="My Jobs")],
             [KeyboardButton(text="Pending Jobs"), KeyboardButton(text="Active Jobs")],
-            [KeyboardButton(text="Submitted Jobs"), KeyboardButton(text="View Availability")],
+            [KeyboardButton(text="Submitted Jobs")],
             [KeyboardButton(text="Request Safety Checklist")],
             [KeyboardButton(text="Safety Submissions"), KeyboardButton(text="Filter Safety Submissions")],
             [KeyboardButton(text="Export Safety CSV")],

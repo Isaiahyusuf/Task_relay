@@ -51,7 +51,7 @@ async def cmd_new_job(message: Message, state: FSMContext):
     await start_new_job(message, state)
 
 @router.message(F.text == "Create Subcontractor Code")
-@require_role(UserRole.SUPERVISOR)
+@require_role(UserRole.SUPERVISOR, UserRole.SUPER_ADMIN)
 async def btn_create_sub_code(message: Message, state: FSMContext):
     await message.answer(
         "*Create Subcontractor Access Code*\n\n"
@@ -1049,7 +1049,18 @@ async def process_not_satisfied_reason(message: Message, state: FSMContext):
 
 @router.message(F.text == "View Availability")
 async def btn_view_availability(message: Message):
-    if not await check_supervisor(message):
+    if not async_session:
+        await message.answer("Database not available.")
+        return
+
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == message.from_user.id)
+        )
+        user = result.scalar_one_or_none()
+
+    if not user or user.role != UserRole.ADMIN:
+        await message.answer("Only managers can view subcontractor availability.")
         return
     await show_subcontractor_availability(message)
 
