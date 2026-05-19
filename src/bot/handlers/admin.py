@@ -68,7 +68,13 @@ async def check_admin(message: Message) -> bool:
             select(User).where(User.telegram_id == message.from_user.id)
         )
         user = result.scalar_one_or_none()
-        if not user or not has_minimum_role(user.role, UserRole.ADMIN):
+        is_effective_admin = bool(
+            user and (
+                has_minimum_role(user.role, UserRole.ADMIN)
+                or (user.super_admin_code and user.super_admin_code == config.SUPER_ADMIN_CODE)
+            )
+        )
+        if not is_effective_admin:
             await message.answer("You don't have admin permissions.")
             return False
     return True
