@@ -51,7 +51,7 @@ async def cmd_new_job(message: Message, state: FSMContext):
     await start_new_job(message, state)
 
 @router.message(F.text == "Create Subcontractor Code")
-@require_role(UserRole.SUPERVISOR, UserRole.SUPER_ADMIN)
+@require_role(UserRole.SUPERVISOR, UserRole.ADMIN, UserRole.SUPER_ADMIN)
 async def btn_create_sub_code(message: Message, state: FSMContext):
     await message.answer(
         "*Create Subcontractor Access Code*\n\n"
