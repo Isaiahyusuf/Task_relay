@@ -2134,7 +2134,7 @@ async def btn_weekly_availability(message: Message):
             await message.answer(
                 " *Weekly Availability*\n\n"
                 "No availability data for this week yet.\n\n"
-                "Subcontractors receive availability surveys every thursday.",
+                "Use `Request Availability` to ask selected subcontractors to submit.",
                 parse_mode="Markdown"
             )
             return

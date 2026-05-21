@@ -160,76 +160,8 @@ class SchedulerService:
     
     @classmethod
     async def check_weekly_availability_survey(cls):
-        """Send weekly availability survey on Sundays for the following Mon-Fri"""
-        if not async_session or not cls.bot:
-            return
-        
-        today = datetime.utcnow().date()
-        
-        # Only send on Sundays (weekday 6)
-        if today.weekday() != 6:
-            return
-        
-        # Calculate tomorrow's Monday (start of the week)
-        next_week_monday = datetime.combine(today + timedelta(days=1), datetime.min.time())
-        
-        async with async_session() as session:
-            # Get all subcontractors
-            result = await session.execute(
-                select(User).where(User.role == UserRole.SUBCONTRACTOR)
-            )
-            subcontractors = result.scalars().all()
-            
-            for sub in subcontractors:
-                try:
-                    # Check if we already created a survey for this week
-                    existing = await session.execute(
-                        select(WeeklyAvailability).where(
-                            and_(
-                                WeeklyAvailability.subcontractor_id == sub.id,
-                                WeeklyAvailability.week_start == next_week_monday
-                            )
-                        )
-                    )
-                    if existing.scalar_one_or_none():
-                        continue
-                    
-                    # Create availability record
-                    availability = WeeklyAvailability(
-                        subcontractor_id=sub.id,
-                        week_start=next_week_monday,
-                        created_at=datetime.utcnow()
-                    )
-                    session.add(availability)
-                    await session.flush()
-                    
-                    # Send survey message with all weekdays
-                    from src.bot.utils.keyboards import get_weekly_availability_keyboard
-                    mon_date = next_week_monday.strftime("%d/%m")
-                    tue_date = (next_week_monday + timedelta(days=1)).strftime("%d/%m")
-                    wed_date = (next_week_monday + timedelta(days=2)).strftime("%d/%m")
-                    thu_date = (next_week_monday + timedelta(days=3)).strftime("%d/%m")
-                    fri_date = (next_week_monday + timedelta(days=4)).strftime("%d/%m")
-                    
-                    await cls.bot.send_message(
-                        sub.telegram_id,
-                        f" *Weekly Availability Survey*\n\n"
-                        "Tap day buttons to toggle your availability.\n"
-                        "Ticked = available, unticked = unavailable.\n\n"
-                        f"Monday ({mon_date})\n"
-                        f"Tuesday ({tue_date})\n"
-                        f"Wednesday ({wed_date})\n"
-                        f"Thursday ({thu_date})\n"
-                        f"Friday ({fri_date})",
-                        reply_markup=get_weekly_availability_keyboard(availability.id, []),
-                        parse_mode="Markdown"
-                    )
-                    
-                    logger.info(f"Sent weekly availability survey to user {sub.telegram_id}")
-                except Exception as e:
-                    logger.error(f"Failed to send weekly survey to user {sub.telegram_id}: {e}")
-            
-            await session.commit()
+        # Weekly availability requests are manager-driven via "Request Availability".
+        return
     
     @classmethod
     async def reset_weekly_availability(cls):
@@ -247,91 +179,8 @@ class SchedulerService:
     
     @classmethod
     async def check_availability_reminder(cls):
-        """Send reminder to subcontractors who haven't responded to availability survey"""
-        if not async_session or not cls.bot:
-            return
-        
-        today = datetime.utcnow().date()
-        
-        # Only send reminders on Monday, Tuesday, Wednesday (weekdays 0, 1, 2)
-        # This gives subcontractors time to respond after Sunday survey
-        if today.weekday() not in [0, 1, 2]:
-            return
-        
-        # Get current week's Monday
-        days_since_monday = today.weekday()
-        current_monday = datetime.combine(today - timedelta(days=days_since_monday), datetime.min.time())
-        
-        async with async_session() as session:
-            # Get all availability records for this week that haven't been responded to
-            result = await session.execute(
-                select(WeeklyAvailability, User).join(
-                    User, WeeklyAvailability.subcontractor_id == User.id
-                ).where(
-                    and_(
-                        WeeklyAvailability.week_start == current_monday,
-                        WeeklyAvailability.responded_at == None
-                    )
-                )
-            )
-            pending_responses = result.all()
-            
-            for avail, user in pending_responses:
-                try:
-                    # Check if we already sent a reminder today (use notes field to track)
-                    last_reminder = avail.notes
-                    today_str = today.strftime("%Y-%m-%d")
-                    
-                    if last_reminder and f"reminder_sent:{today_str}" in last_reminder:
-                        continue  # Already reminded today
-                    
-                    # Send reminder
-                    from src.bot.utils.keyboards import get_weekly_availability_keyboard
-                    mon_date = current_monday.strftime("%d/%m")
-                    tue_date = (current_monday + timedelta(days=1)).strftime("%d/%m")
-                    wed_date = (current_monday + timedelta(days=2)).strftime("%d/%m")
-                    thu_date = (current_monday + timedelta(days=3)).strftime("%d/%m")
-                    fri_date = (current_monday + timedelta(days=4)).strftime("%d/%m")
-                    
-                    # Build selected days list for current state
-                    selected_days = []
-                    if avail.monday_available:
-                        selected_days.append("mon")
-                    if avail.tuesday_available:
-                        selected_days.append("tue")
-                    if avail.wednesday_available:
-                        selected_days.append("wed")
-                    if avail.thursday_available:
-                        selected_days.append("thu")
-                    if avail.friday_available:
-                        selected_days.append("fri")
-                    
-                    await cls.bot.send_message(
-                        user.telegram_id,
-                        f" *Reminder: Weekly Availability*\n\n"
-                        "You haven't submitted your availability for this week yet.\n\n"
-                        "Tap day buttons to toggle your availability.\n"
-                        "Ticked = available, unticked = unavailable.\n\n"
-                        f"Monday ({mon_date})\n"
-                        f"Tuesday ({tue_date})\n"
-                        f"Wednesday ({wed_date})\n"
-                        f"Thursday ({thu_date})\n"
-                        f"Friday ({fri_date})",
-                        reply_markup=get_weekly_availability_keyboard(avail.id, selected_days),
-                        parse_mode="Markdown"
-                    )
-                    
-                    # Mark that we sent a reminder today
-                    if avail.notes:
-                        avail.notes = f"{avail.notes}|reminder_sent:{today_str}"
-                    else:
-                        avail.notes = f"reminder_sent:{today_str}"
-                    
-                    logger.info(f"Sent availability reminder to user {user.telegram_id}")
-                except Exception as e:
-                    logger.error(f"Failed to send availability reminder to user {user.telegram_id}: {e}")
-            
-            await session.commit()
+        # Reminders are intentionally disabled because availability is requested manually by managers.
+        return
     
     @classmethod
     async def notify_admins_of_availability(cls, week_start: datetime):
