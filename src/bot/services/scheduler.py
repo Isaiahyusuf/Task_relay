@@ -335,7 +335,7 @@ class SchedulerService:
     
     @classmethod
     async def notify_admins_of_availability(cls, week_start: datetime):
-        """Notify admins of subcontractor availability for the week"""
+        """Notify managers of subcontractor availability for the week"""
         if not async_session or not cls.bot:
             return
         
@@ -403,19 +403,19 @@ class SchedulerService:
             if no_response:
                 message += f" *No Response:* {', '.join(no_response)}"
             
-            # Get all admins and super admins
-            admin_result = await session.execute(
-                select(User).where(User.role.in_([UserRole.ADMIN, UserRole.SUPER_ADMIN]))
+            # Get managers only
+            manager_result = await session.execute(
+                select(User).where(User.role == UserRole.ADMIN)
             )
-            admins = admin_result.scalars().all()
+            managers = manager_result.scalars().all()
             
-            for admin in admins:
+            for manager in managers:
                 try:
                     await cls.bot.send_message(
-                        admin.telegram_id,
+                        manager.telegram_id,
                         message,
                         parse_mode="Markdown"
                     )
                 except Exception as e:
-                    logger.error(f"Failed to notify admin {admin.telegram_id} of availability: {e}")
+                    logger.error(f"Failed to notify manager {manager.telegram_id} of availability: {e}")
 

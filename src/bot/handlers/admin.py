@@ -1091,8 +1091,6 @@ async def btn_all_users_v2(message: Message, state: FSMContext):
     await show_user_list(message, is_super_admin=True)
 
 async def show_users_by_role(message: Message, role: UserRole, role_name: str):
-    from src.bot.services.jobs import JobService
-    
     async with async_session() as session:
         result = await session.execute(
             select(User).where(User.is_active == True, User.role == role).order_by(User.first_name)
@@ -1111,14 +1109,7 @@ async def show_users_by_role(message: Message, role: UserRole, role_name: str):
         text = f"*{role_name}* ({len(users)} total)\n\n"
         for u in users:
             name = u.first_name or "Unknown"
-            avg_rating, count = await JobService.get_subcontractor_average_rating(u.id)
-            if avg_rating:
-                # Use round() for proper star display
-                full_stars = round(avg_rating)
-                stars = "" * full_stars + "" * (5 - full_stars)
-                text += f" {name} - {stars} ({avg_rating}/5 from {count} jobs)\n"
-            else:
-                text += f" {name} - No ratings yet\n"
+            text += f" {name}\n"
         text += "\nSelect a user to manage:"
         await message.answer(
             text,
@@ -1371,8 +1362,6 @@ async def show_user_list(message: Message, is_super_admin: bool = False):
 
 @router.callback_query(F.data.startswith("manage_user:"))
 async def handle_manage_user(callback: CallbackQuery):
-    from src.bot.services.jobs import JobService
-    
     user_id = int(callback.data.split(":")[1])
     
     async with async_session() as session:
@@ -1402,18 +1391,8 @@ async def handle_manage_user(callback: CallbackQuery):
         user_role = user.role
         stored_user_id = user.id
     
-    rating_text = ""
     safety_text = ""
     if user_role == UserRole.SUBCONTRACTOR:
-        avg_rating, count = await JobService.get_subcontractor_average_rating(stored_user_id)
-        if avg_rating:
-            # Use round() for proper star display
-            full_stars = round(avg_rating)
-            stars = "" * full_stars + "" * (5 - full_stars)
-            rating_text = f"*Rating:* {stars} ({avg_rating}/5 from {count} jobs)\n"
-        else:
-            rating_text = "*Rating:* No ratings yet\n"
-
         # General Manager can see this subcontractor's submitted checklist history.
         if admin and admin.role == UserRole.SUPER_ADMIN:
             checklists = await SafetyChecklistService.list_subcontractor_checklists(stored_user_id, limit=5)
@@ -1434,7 +1413,6 @@ async def handle_manage_user(callback: CallbackQuery):
         f"*Name:* {name}\n"
         f"*Username:* {username_display}\n"
         f"*Role:* {role_text}\n"
-        f"{rating_text}"
         f"*Status:* {'Active' if is_active else 'Inactive'}\n"
         f"*Joined:* {created_date}\n\n"
         f"{safety_text}"

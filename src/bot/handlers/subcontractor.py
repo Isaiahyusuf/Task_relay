@@ -1184,11 +1184,11 @@ async def handle_weekly_availability_response(callback: CallbackQuery, state: FS
             
             days_text = ", ".join(days_available) if days_available else "No days selected"
             
-            # Notify all admins and supervisors
+            # Notify managers only
             bot = callback.bot
             if bot:
                 notify_result = await session.execute(
-                    select(User).where(User.role.in_([UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.SUPERVISOR]))
+                    select(User).where(User.role == UserRole.ADMIN)
                 )
                 notify_users = notify_result.scalars().all()
                 
@@ -1208,14 +1208,14 @@ async def handle_weekly_availability_response(callback: CallbackQuery, state: FS
                 await callback.message.edit_text(
                     f" *Availability Saved*\n\n"
                     f"You are available on: {days_text}\n\n"
-                    f"Supervisors and admins have been notified.",
+                    f"Managers have been notified.",
                     parse_mode="Markdown"
                 )
             else:
                 await callback.message.edit_text(
                     " *Availability Saved*\n\n"
                     "You are not available any day this week.\n\n"
-                    "Supervisors and admins have been notified.",
+                    "Managers have been notified.",
                     parse_mode="Markdown"
                 )
             await callback.answer("Availability saved!")

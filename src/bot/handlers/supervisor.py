@@ -35,10 +35,6 @@ class NewJobStates(StatesGroup):
     waiting_for_subcontractor = State()
     confirming = State()
 
-class RatingStates(StatesGroup):
-    waiting_for_rating = State()
-    waiting_for_comment = State()
-
 class DeclineQuoteStates(StatesGroup):
     waiting_for_reason = State()
 
@@ -934,16 +930,6 @@ async def supervisor_complete_job(callback: CallbackQuery, state: FSMContext):
         await callback.answer("Job completed!")
     else:
         await callback.answer(msg, show_alert=True)
-
-@router.callback_query(F.data.startswith("rate:"))
-async def process_rating_selection(callback: CallbackQuery, state: FSMContext):
-    await state.clear()
-    await callback.answer("Job ratings are temporarily disabled.", show_alert=True)
-
-@router.message(StateFilter(RatingStates.waiting_for_comment))
-async def process_rating_comment(message: Message, state: FSMContext):
-    await message.answer("Job ratings are temporarily disabled.")
-    await state.clear()
 
 @router.callback_query(F.data == "back:sup")
 async def back_to_my_jobs(callback: CallbackQuery):
