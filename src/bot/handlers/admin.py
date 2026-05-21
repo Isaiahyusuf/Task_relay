@@ -20,7 +20,8 @@ from src.bot.utils.keyboards import (
     get_user_list_keyboard, get_user_actions_keyboard, get_switch_role_keyboard,
     get_confirm_delete_keyboard, get_main_menu_keyboard, get_supervisor_job_actions_keyboard,
     get_confirm_job_delete_keyboard, get_team_selection_keyboard, get_message_target_keyboard,
-    get_subcontractor_select_keyboard
+    get_subcontractor_select_keyboard, get_availability_request_select_keyboard,
+    get_weekly_availability_keyboard
 )
 from src.bot.database import WeeklyAvailability
 import logging
@@ -46,6 +47,10 @@ class MessageStates(StatesGroup):
 
 class WeeklyAvailabilityNotes(StatesGroup):
     waiting_for_notes = State()
+
+
+class AvailabilityRequestStates(StatesGroup):
+    selecting_users = State()
 
 @router.message(Command("history"))
 @require_role(UserRole.ADMIN)
@@ -1911,6 +1916,184 @@ async def send_broadcast_message(message: Message, state: FSMContext):
         parse_mode="Markdown"
     )
     await state.clear()
+
+
+@router.message(F.text == "Request Availability")
+async def btn_request_availability(message: Message, state: FSMContext):
+    """Manager-only flow to request weekly availability from selected subcontractors."""
+    if not async_session:
+        await message.answer("Database not available.")
+        return
+
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == message.from_user.id)
+        )
+        user = result.scalar_one_or_none()
+
+        if not user or user.role != UserRole.ADMIN:
+            await message.answer("Only managers can request availability.")
+            return
+
+        subs_result = await session.execute(
+            select(User).where(User.role == UserRole.SUBCONTRACTOR, User.is_active == True)
+        )
+        subcontractors = list(subs_result.scalars().all())
+
+    if not subcontractors:
+        await message.answer("No active subcontractors found.")
+        return
+
+    await state.update_data(selected_ids=[])
+    await message.answer(
+        "*Request Availability*\n\n"
+        "Select subcontractors to request availability from:",
+        reply_markup=get_availability_request_select_keyboard(subcontractors, []),
+        parse_mode="Markdown"
+    )
+    await state.set_state(AvailabilityRequestStates.selecting_users)
+
+
+@router.callback_query(F.data.startswith("avail_req_select:"), StateFilter(AvailabilityRequestStates.selecting_users))
+async def toggle_availability_request_selection(callback: CallbackQuery, state: FSMContext):
+    if not async_session:
+        await callback.answer("Database not available.", show_alert=True)
+        return
+
+    user_id = int(callback.data.split(":")[1])
+    data = await state.get_data()
+    selected_ids = data.get("selected_ids", [])
+
+    if user_id in selected_ids:
+        selected_ids.remove(user_id)
+    else:
+        selected_ids.append(user_id)
+
+    await state.update_data(selected_ids=selected_ids)
+
+    async with async_session() as session:
+        result = await session.execute(
+            select(User).where(User.role == UserRole.SUBCONTRACTOR, User.is_active == True)
+        )
+        subcontractors = list(result.scalars().all())
+
+    await callback.message.edit_reply_markup(
+        reply_markup=get_availability_request_select_keyboard(subcontractors, selected_ids)
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "avail_req_cancel", StateFilter(AvailabilityRequestStates.selecting_users))
+async def cancel_availability_request(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
+    await callback.message.edit_text("Availability request cancelled.")
+    await callback.answer()
+
+
+@router.callback_query(F.data == "avail_req_send", StateFilter(AvailabilityRequestStates.selecting_users))
+async def send_availability_request(callback: CallbackQuery, state: FSMContext):
+    if not async_session:
+        await callback.answer("Database not available.", show_alert=True)
+        return
+
+    data = await state.get_data()
+    selected_ids = data.get("selected_ids", [])
+    if not selected_ids:
+        await callback.answer("Select at least one subcontractor.", show_alert=True)
+        return
+
+    from datetime import datetime, timedelta
+
+    bot = callback.bot
+    sent_count = 0
+    failed_count = 0
+
+    today = datetime.utcnow().date()
+    days_since_monday = today.weekday()
+    current_monday = datetime.combine(today - timedelta(days=days_since_monday), datetime.min.time())
+
+    async with async_session() as session:
+        requester_result = await session.execute(
+            select(User).where(User.telegram_id == callback.from_user.id)
+        )
+        requester = requester_result.scalar_one_or_none()
+        if not requester or requester.role != UserRole.ADMIN:
+            await callback.answer("Only managers can request availability.", show_alert=True)
+            return
+
+        result = await session.execute(
+            select(User).where(
+                User.id.in_(selected_ids),
+                User.role == UserRole.SUBCONTRACTOR,
+                User.is_active == True,
+            )
+        )
+        recipients = list(result.scalars().all())
+
+        for sub in recipients:
+            avail_result = await session.execute(
+                select(WeeklyAvailability).where(
+                    WeeklyAvailability.subcontractor_id == sub.id,
+                    WeeklyAvailability.week_start == current_monday,
+                )
+            )
+            availability = avail_result.scalar_one_or_none()
+            if not availability:
+                availability = WeeklyAvailability(
+                    subcontractor_id=sub.id,
+                    week_start=current_monday,
+                )
+                session.add(availability)
+                await session.flush()
+
+            selected_days = []
+            if availability.monday_available:
+                selected_days.append("mon")
+            if availability.tuesday_available:
+                selected_days.append("tue")
+            if availability.wednesday_available:
+                selected_days.append("wed")
+            if availability.thursday_available:
+                selected_days.append("thu")
+            if availability.friday_available:
+                selected_days.append("fri")
+
+            mon_date = current_monday.strftime("%d/%m")
+            tue_date = (current_monday + timedelta(days=1)).strftime("%d/%m")
+            wed_date = (current_monday + timedelta(days=2)).strftime("%d/%m")
+            thu_date = (current_monday + timedelta(days=3)).strftime("%d/%m")
+            fri_date = (current_monday + timedelta(days=4)).strftime("%d/%m")
+
+            try:
+                await bot.send_message(
+                    sub.telegram_id,
+                    "*Availability Request*\n\n"
+                    "Your manager requested your weekly availability.\n"
+                    "Tap day buttons to toggle your availability, then tap Save.\n\n"
+                    f"Monday ({mon_date})\n"
+                    f"Tuesday ({tue_date})\n"
+                    f"Wednesday ({wed_date})\n"
+                    f"Thursday ({thu_date})\n"
+                    f"Friday ({fri_date})",
+                    reply_markup=get_weekly_availability_keyboard(availability.id, selected_days),
+                    parse_mode="Markdown",
+                )
+                sent_count += 1
+            except Exception as e:
+                logger.error(f"Failed to send availability request to {sub.telegram_id}: {e}")
+                failed_count += 1
+
+        await session.commit()
+
+    await callback.message.edit_text(
+        "*Availability Requests Sent*\n\n"
+        f"Requested: {len(selected_ids)}\n"
+        f"Delivered: {sent_count}\n"
+        f"Failed: {failed_count}",
+        parse_mode="Markdown",
+    )
+    await state.clear()
+    await callback.answer()
 
 # ============= WEEKLY AVAILABILITY VIEW =============
 

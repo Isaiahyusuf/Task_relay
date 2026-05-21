@@ -242,7 +242,7 @@ async def show_help(message: Message):
                 "- `Manage Access Codes`, `Manage Users`\n"
                 "- `Manage Teams`, `Manage Regions`, `View By Teams`, `View Regions`\n\n"
                 "*Communication*\n"
-                "- `Send Message` and `Weekly Availability`\n\n"
+                "- `Send Message`, `Request Availability`, `Weekly Availability`\n\n"
                 "*Tip*\n"
                 "Use `Switch Role` only to check role-specific menu behavior."
             )

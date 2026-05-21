@@ -25,6 +25,7 @@ def get_main_menu_keyboard(role: UserRole) -> ReplyKeyboardMarkup:
         buttons = [
             [KeyboardButton(text="Job History"), KeyboardButton(text="Archive Jobs")],
             [KeyboardButton(text="New Job"), KeyboardButton(text="Send Message")],
+            [KeyboardButton(text="Request Availability")],
             [KeyboardButton(text="Request Safety Checklist")],
             [KeyboardButton(text="Safety Submissions"), KeyboardButton(text="Filter Safety Submissions")],
             [KeyboardButton(text="Export Safety CSV")],
@@ -409,6 +410,23 @@ def get_subcontractor_select_keyboard(subcontractors: list, selected_ids: list =
     buttons.append([InlineKeyboardButton(text="Send Message ✅", callback_data="msg_send")])
     buttons.append([InlineKeyboardButton(text="Cancel ✖", callback_data="msg_cancel")])
     
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+def get_availability_request_select_keyboard(subcontractors: list, selected_ids: list = None) -> InlineKeyboardMarkup:
+    selected_ids = selected_ids or []
+    buttons = []
+
+    for sub in subcontractors:
+        name = sub.first_name or sub.username or f"User {sub.telegram_id}"
+        check = "☑" if sub.id in selected_ids else "☐"
+        buttons.append([InlineKeyboardButton(
+            text=f"{check} {name}",
+            callback_data=f"avail_req_select:{sub.id}"
+        )])
+
+    buttons.append([InlineKeyboardButton(text="Request Availability ✅", callback_data="avail_req_send")])
+    buttons.append([InlineKeyboardButton(text="Cancel ✖", callback_data="avail_req_cancel")])
+
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def get_unavailability_job_keyboard(jobs: list) -> InlineKeyboardMarkup:
