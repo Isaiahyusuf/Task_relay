@@ -155,10 +155,321 @@ MESSAGES: dict[str, dict[str, str]] = {
         "ps": "✅ ဘာသာစကား မြန်မာသို့ပြောင်းလဲပြီး။",
         "my": "✅ ဘာသာစကား မြန်မာသို့ပြောင်းလဲပြီး။",
     },
+
+    # ── Notifications TO subcontractors (delivered in recipient's language) ──
+
+    "broadcast_header": {
+        "en": "📢 *Message from {sender}*\n\n",
+        "ps": "📢 *{sender} لخوا پیغام*\n\n",
+        "my": "📢 *{sender} ထံမှ မက်ဆေ့*\n\n",
+    },
+    "new_job_notification": {
+        "en": (
+            "🔔 *New Job Available*\n\n"
+            "Job #{job_id}: {title}\n"
+            "Location: {address}\n"
+            "Price: {price}{deadline}\n\n"
+            "Check 'Available Jobs' to accept this job!"
+        ),
+        "ps": (
+            "🔔 *نوی کار موجود دی*\n\n"
+            "کار #{job_id}: {title}\n"
+            "ځای: {address}\n"
+            "بیه: {price}{deadline}\n\n"
+            "'موجوده کارونه' وګورئ ترڅو دا کار ومنئ!"
+        ),
+        "my": (
+            "🔔 *အလုပ်အသစ်ရနိုင်သည်*\n\n"
+            "အလုပ် #{job_id}: {title}\n"
+            "နေရာ: {address}\n"
+            "လစာ: {price}{deadline}\n\n"
+            "'ရနိုင်သောအလုပ်များ' စစ်ဆေးပြီး ဤအလုပ်ကိုလက်ခံပါ!"
+        ),
+    },
+    "quote_accepted_notification": {
+        "en": (
+            "🎉 *Your Quote Was Accepted!*\n\n"
+            "Job #{job_id}: {title}\n"
+            "Your Quote: *{amount}*\n\n"
+            "Congratulations! The job is now assigned to you.\n"
+            "Check 'My Active Jobs' to start working on it."
+        ),
+        "ps": (
+            "🎉 *ستاسو نرخ نامه ومنل شوه!*\n\n"
+            "کار #{job_id}: {title}\n"
+            "ستاسو نرخ: *{amount}*\n\n"
+            "مبارک شه! دا کار اوس تاسو ته ورکول شوی دی.\n"
+            "'زما فعال کارونه' وګورئ ترڅو پرې کار پیل کړئ."
+        ),
+        "my": (
+            "🎉 *သင်၏ကိုးကားမှုလက်ခံပြီး!*\n\n"
+            "အလုပ် #{job_id}: {title}\n"
+            "သင်၏ကိုးကားမှု: *{amount}*\n\n"
+            "ဂုဏ်ယူပါသည်! ဤအလုပ်ကိုယခုသင့်ထံပေးအပ်ပြီး။\n"
+            "'ကျွန်ုပ်လက်ရှိအလုပ်များ' စစ်ဆေးပြီးစတင်ပါ။"
+        ),
+    },
+    "quote_declined_notification": {
+        "en": (
+            "❌ *Your Quote Was Declined*\n\n"
+            "Job #{job_id}: {title}\n"
+            "Amount: *{amount}*\n\n"
+            "*Reason:* {reason}\n\n"
+            "You can submit a new quote for this job if you wish."
+        ),
+        "ps": (
+            "❌ *ستاسو نرخ نامه رد شوه*\n\n"
+            "کار #{job_id}: {title}\n"
+            "مقدار: *{amount}*\n\n"
+            "*لامل:* {reason}\n\n"
+            "که غواړئ کولی شئ د دې کار لپاره نوې نرخ نامه وسپارئ."
+        ),
+        "my": (
+            "❌ *သင်၏ကိုးကားမှုငြင်းပယ်ခံရပြီး*\n\n"
+            "အလုပ် #{job_id}: {title}\n"
+            "ပမာဏ: *{amount}*\n\n"
+            "*အကြောင်းရင်း:* {reason}\n\n"
+            "လိုပါက ဤအလုပ်အတွက် ကိုးကားမှုအသစ်တင်သွင်းနိုင်သည်။"
+        ),
+    },
+    "availability_request": {
+        "en": (
+            "*Availability Request*\n\n"
+            "Your manager requested your weekly availability.\n"
+            "Tap day buttons to toggle your availability, then tap Save.\n\n"
+            "Monday ({mon})\n"
+            "Tuesday ({tue})\n"
+            "Wednesday ({wed})\n"
+            "Thursday ({thu})\n"
+            "Friday ({fri})"
+        ),
+        "ps": (
+            "*د شتون غوښتنه*\n\n"
+            "ستاسو مدیر ستاسو اونیز شتون غواړي.\n"
+            "د خپل شتون لپاره د ورځې تڼۍ فشار ورکړئ، بیا خوندي کړئ.\n\n"
+            "دوشنبه ({mon})\n"
+            "سه شنبه ({tue})\n"
+            "چهارشنبه ({wed})\n"
+            "پنجشنبه ({thu})\n"
+            "جمعه ({fri})"
+        ),
+        "my": (
+            "*ရနိုင်မှုတောင်းဆိုမှု*\n\n"
+            "သင်၏မန်နေဂျာသည် သင်၏အပတ်ရနိုင်မှုကိုတောင်းသည်။\n"
+            "ရနိုင်မှုပြောင်းရန် နေ့ခလုတ်များနှိပ်ပြီး သိမ်းဆည်းပါ။\n\n"
+            "တနင်္လာ ({mon})\n"
+            "အင်္ဂါ ({tue})\n"
+            "ဗုဒ္ဓဟူး ({wed})\n"
+            "ကြာသပတေး ({thu})\n"
+            "သောကြာ ({fri})"
+        ),
+    },
+    "safety_checklist_request": {
+        "en": (
+            "🦺 Site Safety Checklist requested by {requester}.\n"
+            "Please open 'Site Safety Checklist' and complete it before starting work.\n"
+            "Note: {note}"
+        ),
+        "ps": (
+            "🦺 د {requester} لخوا د سایټ خوندیتوب چک لیست غوښتنه شوې.\n"
+            "مهرباني وکړئ 'د سایټ خوندیتوب چک لیست' پرانیزئ او د کار پیل کولو دمخه یې ډک کړئ.\n"
+            "یادداشت: {note}"
+        ),
+        "my": (
+            "🦺 {requester} မှ နေရာဘေးကင်းရေးစစ်ဆေးမှုတောင်းဆိုပြီး။\n"
+            "အလုပ်မစမီ 'နေရာဘေးကင်းရေးစစ်ဆေးမှု' ဖွင့်ပြီးဖြည့်ပါ။\n"
+            "မှတ်ချက်: {note}"
+        ),
+    },
+
+    # ── Notifications TO supervisors/admins (delivered in recipient's language) ──
+
+    "job_accepted_by_sub": {
+        "en": "✅ *Job Accepted*\n\nJob #{job_id} ({title}) has been accepted by *{sub_name}*.\nCompany: *{company}*",
+        "ps": "✅ *کار ومنل شو*\n\nکار #{job_id} ({title}) د *{sub_name}* لخوا منل شوی دی.\nشرکت: *{company}*",
+        "my": "✅ *အလုပ်လက်ခံပြီး*\n\nအလုပ် #{job_id} ({title}) ကို *{sub_name}* လက်ခံသည်။\nကုမ္ပဏီ: *{company}*",
+    },
+    "job_marked_done_by_sub": {
+        "en": (
+            "✅ *Job Marked Done*\n\n"
+            "Job #{job_id} ({title}) has been marked as done by *{sub_name}*.\n\n"
+            "Please investigate and mark as completed if satisfied."
+        ),
+        "ps": (
+            "✅ *کار بشپړ نښه شو*\n\n"
+            "کار #{job_id} ({title}) د *{sub_name}* لخوا بشپړ نښه شوی دی.\n\n"
+            "مهرباني وکړئ وڅیړئ او که راضي یاست بشپړ نښه یې کړئ."
+        ),
+        "my": (
+            "✅ *အလုပ်ပြီးစီးကြောင်းမှတ်သားပြီး*\n\n"
+            "အလုပ် #{job_id} ({title}) ကို *{sub_name}* ပြီးစီးကြောင်းမှတ်သားသည်။\n\n"
+            "ကျေးဇူးပြု၍စစ်ဆေးပြီးကျေနပ်ပါကပြီးစီးကြောင်းမှတ်သားပါ။"
+        ),
+    },
+    "job_submitted_by_sub": {
+        "en": (
+            "📋 *Job Submitted for Review*\n\n"
+            "Job #{job_id}: {title}\n"
+            "Submitted by: *{sub_name}*{company}{notes}\n\n"
+            "📎 Photos ({photo_count}) attached below.\n"
+            "Please review and mark as completed if satisfied."
+        ),
+        "ps": (
+            "📋 *کار د بیاکتنې لپاره سپارل شو*\n\n"
+            "کار #{job_id}: {title}\n"
+            "سپارونکی: *{sub_name}*{company}{notes}\n\n"
+            "📎 عکسونه ({photo_count}) لاندې ضمیمه دي.\n"
+            "مهرباني وکړئ وڅیړئ او که راضي یاست بشپړ نښه یې کړئ."
+        ),
+        "my": (
+            "📋 *အလုပ်သုံးသပ်ရန်တင်သွင်းပြီး*\n\n"
+            "အလုပ် #{job_id}: {title}\n"
+            "တင်သွင်းသူ: *{sub_name}*{company}{notes}\n\n"
+            "📎 ဓာတ်ပုံများ ({photo_count}) အောက်တွင်ပူးတွဲပြီး။\n"
+            "ကျေးဇူးပြု၍သုံးသပ်ပြီးကျေနပ်ပါကပြီးစီးကြောင်းမှတ်သားပါ။"
+        ),
+    },
+    "new_quote_received": {
+        "en": (
+            "💬 *New Quote Received!*\n\n"
+            "Job #{job_id}: {title}\n"
+            "From: *{sub_name}*\n"
+            "Quote Amount: *{amount}*{notes}\n\n"
+            "Use 'View Quotes' to review all quotes for this job."
+        ),
+        "ps": (
+            "💬 *نوې نرخ نامه راغله!*\n\n"
+            "کار #{job_id}: {title}\n"
+            "لخوا: *{sub_name}*\n"
+            "نرخ: *{amount}*{notes}\n\n"
+            "د دې کار ټولې نرخ نامې د 'نرخ نامې وګورئ' له لارې وڅیړئ."
+        ),
+        "my": (
+            "💬 *ကိုးကားမှုအသစ်ရောက်ရှိပြီး!*\n\n"
+            "အလုပ် #{job_id}: {title}\n"
+            "မှ: *{sub_name}*\n"
+            "ကိုးကားပမာဏ: *{amount}*{notes}\n\n"
+            "ဤအလုပ်၏ကိုးကားမှုများ 'ကိုးကားမှုများကြည့်ရန်' ကိုသုံးပါ။"
+        ),
+    },
+    "unavailability_job_specific": {
+        "en": (
+            "🔴 *Unavailability Notice*\n\n"
+            "*{sub_name}* has reported unavailability for:\n\n"
+            "Job #{job_id}: {title}\n"
+            "Reason: {reason}{dates}"
+        ),
+        "ps": (
+            "🔴 *د نه شتون خبرتیا*\n\n"
+            "*{sub_name}* د لاندې کار لپاره د نه شتون راپور ورکړی دی:\n\n"
+            "کار #{job_id}: {title}\n"
+            "لامل: {reason}{dates}"
+        ),
+        "my": (
+            "🔴 *မရနိုင်ကြောင်းသတိပေးချက်*\n\n"
+            "*{sub_name}* ဤအလုပ်အတွက် မရနိုင်ကြောင်းတင်ပြသည်:\n\n"
+            "အလုပ် #{job_id}: {title}\n"
+            "အကြောင်းရင်း: {reason}{dates}"
+        ),
+    },
+    "unavailability_general": {
+        "en": (
+            "🔴 *Unavailability Notice*\n\n"
+            "*{sub_name}* has reported {scope} unavailability.\n\n"
+            "{job_info}"
+            "Reason: {reason}{dates}"
+        ),
+        "ps": (
+            "🔴 *د نه شتون خبرتیا*\n\n"
+            "*{sub_name}* {scope} نه شتون راپور ورکړی دی.\n\n"
+            "{job_info}"
+            "لامل: {reason}{dates}"
+        ),
+        "my": (
+            "🔴 *မရနိုင်ကြောင်းသတိပေးချက်*\n\n"
+            "*{sub_name}* {scope} မရနိုင်ကြောင်းတင်ပြသည်။\n\n"
+            "{job_info}"
+            "အကြောင်းရင်း: {reason}{dates}"
+        ),
+    },
+    "unavailability_scope_job": {
+        "en": "job-specific",
+        "ps": "د ځانګړي کار",
+        "my": "သတ်မှတ်အလုပ်",
+    },
+    "unavailability_scope_general": {
+        "en": "general",
+        "ps": "عمومي",
+        "my": "ယေဘုယျ",
+    },
+    "availability_update": {
+        "en": "📅 *Availability Update*\n\n*{sub_name}* has submitted their weekly availability.\n\nAvailable days: {days}",
+        "ps": "📅 *د شتون تازه معلومات*\n\n*{sub_name}* خپل اونیز شتون سپارلی دی.\n\nموجود ورځې: {days}",
+        "my": "📅 *ရနိုင်မှုအပ်ဒိတ်*\n\n*{sub_name}* ၏အပတ်ရနိုင်မှုတင်သွင်းပြီး。\n\nရနိုင်သောနေ့များ: {days}",
+    },
+    "message_acknowledged": {
+        "en": "✅ *Message Acknowledged*\n\n*{responder}* has acknowledged your message:\n\n_{preview}_",
+        "ps": "✅ *پیغام تایید شو*\n\n*{responder}* ستاسو پیغام تایید کړ:\n\n_{preview}_",
+        "my": "✅ *မက်ဆေ့အတည်ပြုပြီး*\n\n*{responder}* သင်၏မက်ဆေ့ကိုအတည်ပြုသည်:\n\n_{preview}_",
+    },
+    "reply_received": {
+        "en": "💬 *Reply Received*\n\n*{responder}* replied to your message:\n\n*Original:*\n_{preview}_\n\n*Reply:*\n{reply}",
+        "ps": "💬 *ځواب راغی*\n\n*{responder}* ستاسو پیغام ته ځواب ورکړ:\n\n*اصلي:*\n_{preview}_\n\n*ځواب:*\n{reply}",
+        "my": "💬 *အဖြေရောက်ရှိပြီး*\n\n*{responder}* သင်၏မက်ဆေ့ကိုဖြေသည်:\n\n*မူရင်း:*\n_{preview}_\n\n*အဖြေ:*\n{reply}",
+    },
+    "revision_requested": {
+        "en": "🔄 *Revision Requested*\n\nJob #{job_id}: {title}\n\n*Supervisor Feedback:*\n{reason}\n\nPlease address the issues and resubmit your work.",
+        "ps": "🔄 *د بیاکتنې غوښتنه*\n\nکار #{job_id}: {title}\n\n*د سرپرست نظر:*\n{reason}\n\nمهرباني وکړئ ستونزې حل کړئ او بیا یې وسپارئ.",
+        "my": "🔄 *ပြင်ဆင်မှုတောင်းဆိုမှု*\n\nအလုပ် #{job_id}: {title}\n\n*ကြီးကြပ်သူမှတ်ချက်:*\n{reason}\n\nကျေးဇူးပြု၍ပြဿနာများဖြေရှင်းပြီးပြန်တင်သွင်းပါ။",
+    },
+    "supervisor_feedback": {
+        "en": "💬 *Supervisor Feedback*\n\n*{sup_name}* has responded to your unavailability notice:\n\n_{feedback}_",
+        "ps": "💬 *د سرپرست نظر*\n\n*{sup_name}* ستاسو د نه شتون خبرتیا ته ځواب ورکړ:\n\n_{feedback}_",
+        "my": "💬 *ကြီးကြပ်သူမှတ်ချက်*\n\n*{sup_name}* သင်၏မရနိုင်ကြောင်းသတိပေးချက်ကိုဖြေသည်:\n\n_{feedback}_",
+    },
+    "safety_checklist_submitted": {
+        "en": (
+            "🦺 New Site Safety Checklist submitted\n"
+            "Checklist ID: {checklist_id}\n"
+            "Subcontractor: {sub_name}\n"
+            "Site: {site}\n"
+            "Safe to proceed: {safe}"
+        ),
+        "ps": (
+            "🦺 د سایټ خوندیتوب نوی چک لیست سپارل شو\n"
+            "د چک لیست ID: {checklist_id}\n"
+            "مقاول: {sub_name}\n"
+            "سایټ: {site}\n"
+            "د مخکې تګ لپاره خوندي: {safe}"
+        ),
+        "my": (
+            "🦺 နေရာဘေးကင်းရေးစစ်ဆေးမှုအသစ်တင်သွင်းပြီး\n"
+            "စစ်ဆေးမှု ID: {checklist_id}\n"
+            "အကြွင်း: {sub_name}\n"
+            "နေရာ: {site}\n"
+            "ဆက်လက်ရန်ဘေးကင်း: {safe}"
+        ),
+    },
 }
 
 
-def msg(key: str, lang: str = DEFAULT_LANG, **kwargs: str) -> str:
+async def get_recipient_lang(telegram_id: int) -> str:
+    """Look up a user's stored language preference. Returns 'en' as fallback."""
+    try:
+        from src.bot.database import async_session
+        from src.bot.database.models import User
+        from sqlalchemy import select
+        async with async_session() as session:
+            result = await session.execute(
+                select(User.language).where(User.telegram_id == telegram_id)
+            )
+            lang = result.scalar_one_or_none()
+            return lang if lang in LANGUAGES else "en"
+    except Exception:
+        return "en"
+
+
+def msg(key: str, lang: str = DEFAULT_LANG, **kwargs) -> str:
     """Return a translated message string, with optional format kwargs."""
     translations = MESSAGES.get(key, {})
     text = translations.get(lang, translations.get("en", key))

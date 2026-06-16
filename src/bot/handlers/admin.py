@@ -26,7 +26,7 @@ from src.bot.utils.keyboards import (
 from src.bot.database import WeeklyAvailability
 import logging
 import sqlalchemy
-from src.bot.i18n import variants as tv, all_menu_variants
+from src.bot.i18n import variants as tv, all_menu_variants, msg as i18n_msg, get_recipient_lang
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -1894,10 +1894,11 @@ async def send_broadcast_message(message: Message, state: FSMContext):
         
         for recipient in recipients:
             try:
+                r_lang = await get_recipient_lang(recipient.telegram_id)
+                header = i18n_msg("broadcast_header", lang=r_lang, sender=sender_name)
                 await bot.send_message(
                     recipient.telegram_id,
-                    f" *Message from {sender_name}*\n\n"
-                    f"{message.text}",
+                    header + message.text,
                     reply_markup=get_message_reaction_keyboard(broadcast.id),
                     parse_mode="Markdown"
                 )
@@ -2063,16 +2064,15 @@ async def send_availability_request(callback: CallbackQuery, state: FSMContext):
             fri_date = (current_monday + timedelta(days=4)).strftime("%d/%m")
 
             try:
+                sub_lang = await get_recipient_lang(sub.telegram_id)
+                avail_text = i18n_msg(
+                    "availability_request", lang=sub_lang,
+                    mon=mon_date, tue=tue_date, wed=wed_date,
+                    thu=thu_date, fri=fri_date
+                )
                 await bot.send_message(
                     sub.telegram_id,
-                    "*Availability Request*\n\n"
-                    "Your manager requested your weekly availability.\n"
-                    "Tap day buttons to toggle your availability, then tap Save.\n\n"
-                    f"Monday ({mon_date})\n"
-                    f"Tuesday ({tue_date})\n"
-                    f"Wednesday ({wed_date})\n"
-                    f"Thursday ({thu_date})\n"
-                    f"Friday ({fri_date})",
+                    avail_text,
                     reply_markup=get_weekly_availability_keyboard(availability.id, selected_days),
                     parse_mode="Markdown",
                 )

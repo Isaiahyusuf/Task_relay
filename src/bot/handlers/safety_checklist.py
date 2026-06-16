@@ -11,7 +11,7 @@ from sqlalchemy import select
 
 from src.bot.database import async_session, User, SafetyChecklist
 from src.bot.database.models import UserRole
-from src.bot.i18n import variants as tv
+from src.bot.i18n import variants as tv, msg as i18n_msg, get_recipient_lang
 from src.bot.services.safety_checklist import SafetyChecklistService, SafetyChecklistPdfService
 from src.bot.utils.timezone import now_au_naive, format_au
 
@@ -906,13 +906,17 @@ async def process_post_task_3(callback: CallbackQuery, state: FSMContext):
     sender_name = user.first_name or user.username or f"User {user.id}"
     for recipient in recipients:
         try:
+            r_lang = await get_recipient_lang(recipient.telegram_id)
+            safe_str = "YES" if checklist.final_is_safe else "NO"
             await callback.bot.send_message(
                 recipient.telegram_id,
-                f"New Site Safety Checklist submitted\n"
-                f"Checklist ID: {checklist.id}\n"
-                f"Subcontractor: {sender_name}\n"
-                f"Site: {checklist.site_address}\n"
-                f"Safe to proceed: {'YES' if checklist.final_is_safe else 'NO'}",
+                i18n_msg(
+                    "safety_checklist_submitted", lang=r_lang,
+                    checklist_id=checklist.id,
+                    sub_name=sender_name,
+                    site=checklist.site_address,
+                    safe=safe_str
+                ),
             )
             if pdf_name and pdf_content:
                 await callback.bot.send_document(
@@ -1214,11 +1218,14 @@ async def process_request_note(message: Message, state: FSMContext):
     if sub and sub.telegram_id:
         requester_name = requester.first_name or requester.username or "Manager"
         try:
+            sub_lang = await get_recipient_lang(sub.telegram_id)
             await message.bot.send_message(
                 sub.telegram_id,
-                f"Site Safety Checklist requested by {requester_name}.\n"
-                f"Please open 'Site Safety Checklist' and complete it before starting work.\n"
-                f"Note: {note or 'No note provided.'}"
+                i18n_msg(
+                    "safety_checklist_request", lang=sub_lang,
+                    requester=requester_name,
+                    note=note or "No note provided."
+                )
             )
         except Exception as exc:
             logger.warning("Unable to notify subcontractor %s: %s", sub.telegram_id, exc)

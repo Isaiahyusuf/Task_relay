@@ -12,7 +12,7 @@ from src.bot.services.quotes import QuoteService
 from src.bot.services.access_codes import AccessCodeService
 from src.bot.services.pdf_generator import JobPdfService
 from src.bot.handlers.admin import CreateCodeStates
-from src.bot.i18n import variants as tv
+from src.bot.i18n import variants as tv, msg as i18n_msg, get_recipient_lang
 from src.bot.utils.permissions import require_role
 from src.bot.utils.keyboards import (
     get_job_type_keyboard, get_skip_keyboard,
@@ -452,13 +452,16 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
                 for sub in available_subs:
                     try:
                         logger.info(f"[NOTIFY] Sending to subcontractor id={sub.id}, telegram_id={sub.telegram_id}, name={sub.first_name}")
+                        sub_lang = await get_recipient_lang(sub.telegram_id)
                         await bot.send_message(
                             sub.telegram_id,
-                            f" *New Job Available*\n\n"
-                            f"Job #{job.id}: {job.title}\n"
-                            f"Location: {job.address or 'N/A'}\n"
-                            f"Price: {job.preset_price or 'N/A'}{deadline_text}\n\n"
-                            f"Check 'Available Jobs' to accept this job!",
+                            i18n_msg(
+                                "new_job_notification", lang=sub_lang,
+                                job_id=job.id, title=job.title,
+                                address=job.address or "N/A",
+                                price=job.preset_price or "N/A",
+                                deadline=deadline_text
+                            ),
                             parse_mode="Markdown"
                         )
 
@@ -760,13 +763,13 @@ async def accept_quote(callback: CallbackQuery):
             bot = callback.bot
             if bot:
                 try:
+                    sub_lang = await get_recipient_lang(sub_telegram_id)
                     await bot.send_message(
                         sub_telegram_id,
-                        f" *Your Quote Was Accepted!*\n\n"
-                        f"Job #{job_id}: {job_title}\n"
-                        f"Your Quote: *{quote_amount}*\n\n"
-                        f"Congratulations! The job is now assigned to you.\n"
-                        f"Check 'My Active Jobs' to start working on it.",
+                        i18n_msg(
+                            "quote_accepted_notification", lang=sub_lang,
+                            job_id=job_id, title=job_title, amount=quote_amount
+                        ),
                         parse_mode="Markdown"
                     )
 
@@ -849,13 +852,14 @@ async def process_decline_reason(message: Message, state: FSMContext):
             bot = message.bot
             if bot:
                 try:
+                    sub_lang = await get_recipient_lang(sub_telegram_id)
                     await bot.send_message(
                         sub_telegram_id,
-                        f" *Quote Declined*\n\n"
-                        f"Your quote for Job #{job_id}: {job_title}\n"
-                        f"Amount: *{quote_amount}*\n\n"
-                        f"*Reason:* {reason}\n\n"
-                        f"You can submit a new quote for this job if you wish.",
+                        i18n_msg(
+                            "quote_declined_notification", lang=sub_lang,
+                            job_id=job_id, title=job_title,
+                            amount=quote_amount, reason=reason
+                        ),
                         parse_mode="Markdown"
                     )
                 except Exception as e:
@@ -1013,12 +1017,13 @@ async def process_not_satisfied_reason(message: Message, state: FSMContext):
         if subcontractor:
             try:
                 bot = message.bot
+                sub_lang = await get_recipient_lang(subcontractor.telegram_id)
                 await bot.send_message(
                     subcontractor.telegram_id,
-                    f" *Revision Requested*\n\n"
-                    f"Job #{job_id}: {job.title}\n\n"
-                    f"*Supervisor Feedback:*\n{reason}\n\n"
-                    "Please address the issues and resubmit your work.",
+                    i18n_msg(
+                        "revision_requested", lang=sub_lang,
+                        job_id=job_id, title=job.title, reason=reason
+                    ),
                     parse_mode="Markdown"
                 )
             except Exception as e:
@@ -1183,11 +1188,13 @@ async def process_unavailability_feedback(message: Message, state: FSMContext):
             
             try:
                 bot = message.bot
+                sub_lang = await get_recipient_lang(subcontractor.telegram_id)
                 await bot.send_message(
                     subcontractor.telegram_id,
-                    f" *Supervisor Feedback*\n\n"
-                    f"*{sup_name}* has responded to your unavailability notice:\n\n"
-                    f"_{feedback}_",
+                    i18n_msg(
+                        "supervisor_feedback", lang=sub_lang,
+                        sup_name=sup_name, feedback=feedback
+                    ),
                     parse_mode="Markdown"
                 )
                 

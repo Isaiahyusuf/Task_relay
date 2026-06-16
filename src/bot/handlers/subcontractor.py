@@ -11,7 +11,7 @@ from src.bot.services.jobs import JobService
 from src.bot.services.quotes import QuoteService
 from src.bot.services.availability import AvailabilityService
 from src.bot.services.pdf_generator import JobPdfService
-from src.bot.i18n import variants as tv
+from src.bot.i18n import variants as tv, msg as i18n_msg, get_recipient_lang
 from src.bot.utils.permissions import require_role
 from src.bot.utils.keyboards import (
     get_job_actions_keyboard, get_decline_reason_keyboard, get_back_keyboard,
@@ -332,11 +332,14 @@ async def process_company_name_for_accept(message: Message, state: FSMContext):
             bot = message.bot
             if bot:
                 try:
+                    sup_lang = await get_recipient_lang(supervisor_tg_id)
                     await bot.send_message(
                         supervisor_tg_id,
-                        f" *Job Accepted*\n\n"
-                        f"Job #{job_id} ({job_title}) has been accepted by *{sub_name}*.\n"
-                        f"Company: *{company_name}*",
+                        i18n_msg(
+                            "job_accepted_by_sub", lang=sup_lang,
+                            job_id=job_id, title=job_title,
+                            sub_name=sub_name, company=company_name
+                        ),
                         parse_mode="Markdown"
                     )
                 except Exception as e:
@@ -401,11 +404,13 @@ async def mark_job_done_callback(callback: CallbackQuery):
             bot = callback.bot
             if bot:
                 try:
+                    sup_lang = await get_recipient_lang(supervisor_tg_id)
                     await bot.send_message(
                         supervisor_tg_id,
-                        f" *Job Marked Done*\n\n"
-                        f"Job #{job_id} ({job.title}) has been marked as done by *{sub_name}*.\n\n"
-                        f"Please investigate and mark as completed if satisfied.",
+                        i18n_msg(
+                            "job_marked_done_by_sub", lang=sup_lang,
+                            job_id=job_id, title=job.title, sub_name=sub_name
+                        ),
                         parse_mode="Markdown"
                     )
                 except Exception as e:
@@ -540,13 +545,18 @@ async def finish_photo_submission(message: Message, state: FSMContext):
                     notes_text = f"\nNotes: {notes}" if notes else ""
                     
                     logger.info(f"Sending notification message to supervisor {supervisor_tg_id}")
+                    sup_lang = await get_recipient_lang(supervisor_tg_id)
                     await bot.send_message(
                         supervisor_tg_id,
-                        f" *Job Submitted for Review*\n\n"
-                        f"Job #{job_id}: {job.title if job else 'Unknown'}\n"
-                        f"Submitted by: *{sub_name}*{company_name}{notes_text}\n\n"
-                        f" Photos ({len(photos)}) attached below.\n"
-                        f"Please review and mark as completed if satisfied.",
+                        i18n_msg(
+                            "job_submitted_by_sub", lang=sup_lang,
+                            job_id=job_id,
+                            title=job.title if job else "Unknown",
+                            sub_name=sub_name,
+                            company=company_name,
+                            notes=notes_text,
+                            photo_count=len(photos)
+                        ),
                         parse_mode="Markdown"
                     )
 
@@ -685,13 +695,15 @@ async def process_quote_notes(message: Message, state: FSMContext):
                     if bot:
                         try:
                             notes_text = f"\nNotes: {notes}" if notes else ""
+                            sup_lang = await get_recipient_lang(supervisor.telegram_id)
                             await bot.send_message(
                                 supervisor.telegram_id,
-                                f" *New Quote Received!*\n\n"
-                                f"Job #{job_id}: {job.title}\n"
-                                f"From: *{sub_name}*\n"
-                                f"Quote Amount: *{amount}*{notes_text}\n\n"
-                                f"Use 'View Quotes' to review all quotes for this job.",
+                                i18n_msg(
+                                    "new_quote_received", lang=sup_lang,
+                                    job_id=job_id, title=job.title,
+                                    sub_name=sub_name, amount=amount,
+                                    notes=notes_text
+                                ),
                                 parse_mode="Markdown"
                             )
                         except Exception as e:
@@ -988,12 +1000,14 @@ async def process_unavailability_dates(message: Message, state: FSMContext):
                 
                 if supervisor and bot:
                     try:
+                        sup_lang = await get_recipient_lang(supervisor.telegram_id)
                         await bot.send_message(
                             supervisor.telegram_id,
-                            f" *Unavailability Notice*\n\n"
-                            f"*{sub_name}* has reported unavailability for:\n\n"
-                            f"Job #{job.id}: {job.title}\n"
-                            f"Reason: {reason}{dates_text}",
+                            i18n_msg(
+                                "unavailability_job_specific", lang=sup_lang,
+                                sub_name=sub_name, job_id=job.id,
+                                title=job.title, reason=reason, dates=dates_text
+                            ),
                             reply_markup=get_unavailability_response_keyboard(notice.id, sub.id),
                             parse_mode="Markdown"
                         )
@@ -1016,11 +1030,15 @@ async def process_unavailability_dates(message: Message, state: FSMContext):
                 
                 if supervisor and bot:
                     try:
+                        sup_lang = await get_recipient_lang(supervisor.telegram_id)
+                        scope = i18n_msg("unavailability_scope_general", lang=sup_lang)
                         await bot.send_message(
                             supervisor.telegram_id,
-                            f" *Unavailability Notice*\n\n"
-                            f"*{sub_name}* has reported general unavailability.\n\n"
-                            f"Reason: {reason}{dates_text}",
+                            i18n_msg(
+                                "unavailability_general", lang=sup_lang,
+                                sub_name=sub_name, scope=scope,
+                                job_info="", reason=reason, dates=dates_text
+                            ),
                             reply_markup=get_unavailability_response_keyboard(notice.id, sub.id),
                             parse_mode="Markdown"
                         )
@@ -1045,12 +1063,19 @@ async def process_unavailability_dates(message: Message, state: FSMContext):
                         if job:
                             job_info = f"Job #{job.id}: {job.title}\n"
                     
+                    u_lang = await get_recipient_lang(user.telegram_id)
+                    scope = i18n_msg(
+                        "unavailability_scope_job" if job_id else "unavailability_scope_general",
+                        lang=u_lang
+                    )
                     await bot.send_message(
                         user.telegram_id,
-                        f" *Unavailability Notice*\n\n"
-                        f"*{sub_name}* has reported {'job-specific' if job_id else 'general'} unavailability.\n\n"
-                        f"{job_info}"
-                        f"Reason: {reason}{dates_text}",
+                        i18n_msg(
+                            "unavailability_general", lang=u_lang,
+                            sub_name=sub_name, scope=scope,
+                            job_info=job_info,
+                            reason=reason, dates=dates_text
+                        ),
                         reply_markup=get_unavailability_response_keyboard(notice.id, sub.id),
                         parse_mode="Markdown"
                     )
@@ -1195,11 +1220,13 @@ async def handle_weekly_availability_response(callback: CallbackQuery, state: FS
                 
                 for user in notify_users:
                     try:
+                        mgr_lang = await get_recipient_lang(user.telegram_id)
                         await bot.send_message(
                             user.telegram_id,
-                            f" *Availability Update*\n\n"
-                            f"*{sub_name}* has submitted their weekly availability.\n\n"
-                            f"Available days: {days_text}",
+                            i18n_msg(
+                                "availability_update", lang=mgr_lang,
+                                sub_name=sub_name, days=days_text
+                            ),
                             parse_mode="Markdown"
                         )
                     except Exception as e:
@@ -1318,11 +1345,14 @@ async def handle_message_acknowledge(callback: CallbackQuery):
         # Notify the sender
         if sender and bot:
             try:
+                sender_lang = await get_recipient_lang(sender.telegram_id)
+                preview = broadcast.message[:100] + ("..." if len(broadcast.message) > 100 else "")
                 await bot.send_message(
                     sender.telegram_id,
-                    f" *Message Acknowledged*\n\n"
-                    f"*{responder_name}* has acknowledged your message:\n\n"
-                    f"_{broadcast.message[:100]}{'...' if len(broadcast.message) > 100 else ''}_",
+                    i18n_msg(
+                        "message_acknowledged", lang=sender_lang,
+                        responder=responder_name, preview=preview
+                    ),
                     parse_mode="Markdown"
                 )
             except Exception as e:
@@ -1407,12 +1437,14 @@ async def process_message_reply(message: Message, state: FSMContext):
         # Notify the sender with the reply
         if sender and bot:
             try:
+                sender_lang = await get_recipient_lang(sender.telegram_id)
+                preview = broadcast.message[:100] + ("..." if len(broadcast.message) > 100 else "")
                 await bot.send_message(
                     sender.telegram_id,
-                    f" *Reply Received*\n\n"
-                    f"*{responder_name}* replied to your message:\n\n"
-                    f"*Original:*\n_{broadcast.message[:100]}{'...' if len(broadcast.message) > 100 else ''}_\n\n"
-                    f"*Reply:*\n{message.text}",
+                    i18n_msg(
+                        "reply_received", lang=sender_lang,
+                        responder=responder_name, preview=preview, reply=message.text
+                    ),
                     parse_mode="Markdown"
                 )
             except Exception as e:
