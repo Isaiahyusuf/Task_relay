@@ -2,67 +2,72 @@
 from src.bot.database.models import UserRole, JobStatus, AvailabilityStatus
 from src.bot.utils.roles import creatable_roles
 
-def get_main_menu_keyboard(role: UserRole) -> ReplyKeyboardMarkup:
+def get_main_menu_keyboard(role: UserRole, lang: str = "en") -> ReplyKeyboardMarkup:
+    from src.bot.i18n import get_text as t
     if role == UserRole.SUPER_ADMIN:
         buttons = [
-            [KeyboardButton(text="Job History"), KeyboardButton(text="Archive Jobs")],
-            [KeyboardButton(text="Send Message")],
-            [KeyboardButton(text="Safety Submissions"), KeyboardButton(text="Filter Safety Submissions")],
-            [KeyboardButton(text="Export Safety CSV")],
-            [KeyboardButton(text="All Access Codes")],
-            [KeyboardButton(text="Manage Access Codes")],
-            [KeyboardButton(text="Create Manager Code"), KeyboardButton(text="Create Supervisor Code")],
-            [KeyboardButton(text="Create Subcontractor Code")],
-            [KeyboardButton(text="View By Teams"), KeyboardButton(text="View Regions")],
-            [KeyboardButton(text="Manage Roles"), KeyboardButton(text="Manage Regions")],
-            [KeyboardButton(text="Manage Teams")],
-            [KeyboardButton(text="View Managers"), KeyboardButton(text="View Supervisors")],
-            [KeyboardButton(text="View Subcontractors"), KeyboardButton(text="All Users")],
-            [KeyboardButton(text="Switch Role"), KeyboardButton(text="View Archived")],
-            [KeyboardButton(text="Help"), KeyboardButton(text="About")]
+            [KeyboardButton(text=t("Job History", lang)), KeyboardButton(text=t("Archive Jobs", lang))],
+            [KeyboardButton(text=t("Send Message", lang))],
+            [KeyboardButton(text=t("Safety Submissions", lang)), KeyboardButton(text=t("Filter Safety Submissions", lang))],
+            [KeyboardButton(text=t("Export Safety CSV", lang))],
+            [KeyboardButton(text=t("All Access Codes", lang))],
+            [KeyboardButton(text=t("Manage Access Codes", lang))],
+            [KeyboardButton(text=t("Create Manager Code", lang)), KeyboardButton(text=t("Create Supervisor Code", lang))],
+            [KeyboardButton(text=t("Create Subcontractor Code", lang))],
+            [KeyboardButton(text=t("View By Teams", lang)), KeyboardButton(text=t("View Regions", lang))],
+            [KeyboardButton(text=t("Manage Roles", lang)), KeyboardButton(text=t("Manage Regions", lang))],
+            [KeyboardButton(text=t("Manage Teams", lang))],
+            [KeyboardButton(text=t("View Managers", lang)), KeyboardButton(text=t("View Supervisors", lang))],
+            [KeyboardButton(text=t("View Subcontractors", lang)), KeyboardButton(text=t("All Users", lang))],
+            [KeyboardButton(text=t("Switch Role", lang)), KeyboardButton(text=t("View Archived", lang))],
+            [KeyboardButton(text=t("Help", lang)), KeyboardButton(text=t("About", lang))],
+            [KeyboardButton(text=t("Language", lang))],
         ]
     elif role == UserRole.ADMIN:
         buttons = [
-            [KeyboardButton(text="Job History"), KeyboardButton(text="Archive Jobs")],
-            [KeyboardButton(text="New Job"), KeyboardButton(text="Send Message")],
-            [KeyboardButton(text="Request Availability")],
-            [KeyboardButton(text="Request Safety Checklist")],
-            [KeyboardButton(text="Safety Submissions"), KeyboardButton(text="Filter Safety Submissions")],
-            [KeyboardButton(text="Export Safety CSV")],
-            [KeyboardButton(text="Weekly Availability")],
-            [KeyboardButton(text="Manage Access Codes")],
-            [KeyboardButton(text="Create Access Code"), KeyboardButton(text="View Archived")],
-            [KeyboardButton(text="View By Teams"), KeyboardButton(text="View Regions")],
-            [KeyboardButton(text="Manage Teams"), KeyboardButton(text="Manage Regions")],
-            [KeyboardButton(text="Manage Users")],
-            [KeyboardButton(text="Switch Role")],
-            [KeyboardButton(text="Help"), KeyboardButton(text="About")]
+            [KeyboardButton(text=t("Job History", lang)), KeyboardButton(text=t("Archive Jobs", lang))],
+            [KeyboardButton(text=t("New Job", lang)), KeyboardButton(text=t("Send Message", lang))],
+            [KeyboardButton(text=t("Request Availability", lang))],
+            [KeyboardButton(text=t("Request Safety Checklist", lang))],
+            [KeyboardButton(text=t("Safety Submissions", lang)), KeyboardButton(text=t("Filter Safety Submissions", lang))],
+            [KeyboardButton(text=t("Export Safety CSV", lang))],
+            [KeyboardButton(text=t("Weekly Availability", lang))],
+            [KeyboardButton(text=t("Manage Access Codes", lang))],
+            [KeyboardButton(text=t("Create Access Code", lang)), KeyboardButton(text=t("View Archived", lang))],
+            [KeyboardButton(text=t("View By Teams", lang)), KeyboardButton(text=t("View Regions", lang))],
+            [KeyboardButton(text=t("Manage Teams", lang)), KeyboardButton(text=t("Manage Regions", lang))],
+            [KeyboardButton(text=t("Manage Users", lang))],
+            [KeyboardButton(text=t("Switch Role", lang))],
+            [KeyboardButton(text=t("Help", lang)), KeyboardButton(text=t("About", lang))],
+            [KeyboardButton(text=t("Language", lang))],
         ]
     elif role == UserRole.SUPERVISOR:
         buttons = [
-            [KeyboardButton(text="New Job"), KeyboardButton(text="My Jobs")],
-            [KeyboardButton(text="Pending Jobs"), KeyboardButton(text="Active Jobs")],
-            [KeyboardButton(text="Submitted Jobs")],
-            [KeyboardButton(text="Request Safety Checklist")],
-            [KeyboardButton(text="Safety Submissions"), KeyboardButton(text="Filter Safety Submissions")],
-            [KeyboardButton(text="Export Safety CSV")],
-            [KeyboardButton(text="Manage Access Codes")],
-            [KeyboardButton(text="Send Message"), KeyboardButton(text="Create Subcontractor Code")],
-            [KeyboardButton(text="Help"), KeyboardButton(text="About")],
-            [KeyboardButton(text="Delete My Account")]
+            [KeyboardButton(text=t("New Job", lang)), KeyboardButton(text=t("My Jobs", lang))],
+            [KeyboardButton(text=t("Pending Jobs", lang)), KeyboardButton(text=t("Active Jobs", lang))],
+            [KeyboardButton(text=t("Submitted Jobs", lang))],
+            [KeyboardButton(text=t("Request Safety Checklist", lang))],
+            [KeyboardButton(text=t("Safety Submissions", lang)), KeyboardButton(text=t("Filter Safety Submissions", lang))],
+            [KeyboardButton(text=t("Export Safety CSV", lang))],
+            [KeyboardButton(text=t("Manage Access Codes", lang))],
+            [KeyboardButton(text=t("Send Message", lang)), KeyboardButton(text=t("Create Subcontractor Code", lang))],
+            [KeyboardButton(text=t("Help", lang)), KeyboardButton(text=t("About", lang))],
+            [KeyboardButton(text=t("Language", lang))],
+            [KeyboardButton(text=t("Delete My Account", lang))],
         ]
     else:
         buttons = [
-            [KeyboardButton(text="Available Jobs"), KeyboardButton(text="My Active Jobs")],
-            [KeyboardButton(text="Start Work"), KeyboardButton(text="Site Safety Checklist")],
-            [KeyboardButton(text="Upload Site Photos"), KeyboardButton(text="My Submissions")],
-            [KeyboardButton(text="Submit Job"), KeyboardButton(text="My Availability")],
-            [KeyboardButton(text="Report Unavailability")],
-            [KeyboardButton(text="Available"), KeyboardButton(text="Busy"), KeyboardButton(text="Away")],
-            [KeyboardButton(text="Help"), KeyboardButton(text="About")],
-            [KeyboardButton(text="Delete My Account")]
+            [KeyboardButton(text=t("Available Jobs", lang)), KeyboardButton(text=t("My Active Jobs", lang))],
+            [KeyboardButton(text=t("Start Work", lang)), KeyboardButton(text=t("Site Safety Checklist", lang))],
+            [KeyboardButton(text=t("Upload Site Photos", lang)), KeyboardButton(text=t("My Submissions", lang))],
+            [KeyboardButton(text=t("Submit Job", lang)), KeyboardButton(text=t("My Availability", lang))],
+            [KeyboardButton(text=t("Report Unavailability", lang))],
+            [KeyboardButton(text=t("Available", lang)), KeyboardButton(text=t("Busy", lang)), KeyboardButton(text=t("Away", lang))],
+            [KeyboardButton(text=t("Help", lang)), KeyboardButton(text=t("About", lang))],
+            [KeyboardButton(text=t("Language", lang))],
+            [KeyboardButton(text=t("Delete My Account", lang))],
         ]
-    
+
     return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 
 def get_job_type_keyboard() -> InlineKeyboardMarkup:

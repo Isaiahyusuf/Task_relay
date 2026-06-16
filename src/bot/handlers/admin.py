@@ -26,6 +26,7 @@ from src.bot.utils.keyboards import (
 from src.bot.database import WeeklyAvailability
 import logging
 import sqlalchemy
+from src.bot.i18n import variants as tv, all_menu_variants
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -57,7 +58,7 @@ class AvailabilityRequestStates(StatesGroup):
 async def cmd_history(message: Message):
     await show_history(message)
 
-@router.message(F.text == "Job History")
+@router.message(F.text.in_(tv("Job History")))
 async def btn_history(message: Message):
     if not await check_admin(message):
         return
@@ -144,7 +145,7 @@ async def show_history(message: Message):
 async def cmd_archive(message: Message):
     await archive_jobs(message)
 
-@router.message(F.text == "Archive Jobs")
+@router.message(F.text.in_(tv("Archive Jobs")))
 async def btn_archive(message: Message):
     if not await check_admin(message):
         return
@@ -173,7 +174,7 @@ async def archive_jobs(message: Message):
 async def cmd_archived(message: Message):
     await show_archived(message)
 
-@router.message(F.text == "View Archived")
+@router.message(F.text.in_(tv("View Archived")))
 async def btn_archived(message: Message):
     if not await check_admin(message):
         return
@@ -264,26 +265,26 @@ async def cmd_create_code(message: Message, state: FSMContext):
     
     await start_code_creation(message, state)
 
-@router.message(F.text == "Create Access Code")
+@router.message(F.text.in_(tv("Create Access Code")))
 async def btn_create_code(message: Message, state: FSMContext):
     if not await check_admin(message):
         return
     await start_code_creation(message, state)
 
-@router.message(F.text == "Create Admin Code")
-@router.message(F.text == "Create Manager Code")
+@router.message(F.text.in_(tv("Create Admin Code")))
+@router.message(F.text.in_(tv("Create Manager Code")))
 async def btn_create_admin_code(message: Message, state: FSMContext):
     if not await check_super_admin(message):
         return
     await start_role_specific_code_creation(message, state, UserRole.ADMIN, "Manager")
 
-@router.message(F.text == "Create Supervisor Code")
+@router.message(F.text.in_(tv("Create Supervisor Code")))
 async def btn_create_supervisor_code(message: Message, state: FSMContext):
     if not await check_super_admin(message):
         return
     await start_role_specific_code_creation(message, state, UserRole.SUPERVISOR, "Supervisor")
 
-@router.message(F.text == "Create Subcontractor Code")
+@router.message(F.text.in_(tv("Create Subcontractor Code")))
 async def btn_create_subcontractor_code(message: Message, state: FSMContext):
     # Check role hierarchy for subcontractor-code creation.
     async with async_session() as session:
@@ -292,7 +293,10 @@ async def btn_create_subcontractor_code(message: Message, state: FSMContext):
         )
         user = result.scalar_one_or_none()
 
-    effective_role = get_effective_role(user) if user else None
+    if user and user.super_admin_code and user.super_admin_code == config.SUPER_ADMIN_CODE:
+        effective_role = UserRole.SUPER_ADMIN
+    else:
+        effective_role = user.role if user else None
     if not user or not can_manage_role(effective_role, UserRole.SUBCONTRACTOR):
         await message.answer("You don't have permission to create subcontractor codes.")
         return
@@ -318,13 +322,7 @@ async def start_code_creation(message: Message, state: FSMContext):
     )
     await state.set_state(CreateCodeStates.waiting_for_code)
 
-MENU_BUTTON_TEXTS = {
-    "View Supervisors", "View Subcontractors", "View Admins", "View Managers",
-    "All Users", "All Access Codes", "Manage Access Codes", "Create Access Code",
-    "Create Admin Code", "Create Manager Code", "Create Supervisor Code", "Create Subcontractor Code",
-    "View Jobs", "Create Job", "Job History", "Main Menu",
-    "View By Teams", "Back", "Cancel"
-}
+MENU_BUTTON_TEXTS = all_menu_variants() | {"Back", "Cancel"}
 
 @router.message(StateFilter(CreateCodeStates.waiting_for_code), ~F.text.in_(MENU_BUTTON_TEXTS))
 async def process_code_input(message: Message, state: FSMContext):
@@ -796,7 +794,7 @@ async def back_to_archived(callback: CallbackQuery):
     )
     await callback.answer()
 
-@router.message(F.text == "Manage Users")
+@router.message(F.text.in_(tv("Manage Users")))
 async def btn_manage_users(message: Message):
     if not await check_admin(message):
         return
@@ -954,12 +952,12 @@ async def delete_access_code(callback: CallbackQuery):
     await show_manage_access_codes(callback.message, telegram_user_id=callback.from_user.id, edit=True)
 
 
-@router.message(F.text == "Manage Access Codes")
+@router.message(F.text.in_(tv("Manage Access Codes")))
 async def btn_manage_access_codes(message: Message, state: FSMContext):
     await state.clear()
     await show_manage_access_codes(message, telegram_user_id=message.from_user.id)
 
-@router.message(F.text == "View By Teams")
+@router.message(F.text.in_(tv("View By Teams")))
 async def btn_view_by_teams(message: Message, state: FSMContext):
     await state.clear()
     
@@ -1059,36 +1057,36 @@ async def show_team_hierarchy(message: Message, user_team_id: int = None, is_sup
     
     await message.answer(text, parse_mode="Markdown")
 
-@router.message(F.text == "View Admins")
-@router.message(F.text == "View Managers")
+@router.message(F.text.in_(tv("View Admins")))
+@router.message(F.text.in_(tv("View Managers")))
 async def btn_view_admins(message: Message, state: FSMContext):
     await state.clear()
     if not await check_super_admin(message):
         return
     await show_users_by_role(message, UserRole.ADMIN, "Managers")
 
-@router.message(F.text == "View Supervisors")
+@router.message(F.text.in_(tv("View Supervisors")))
 async def btn_view_supervisors(message: Message, state: FSMContext):
     await state.clear()
     if not await check_super_admin(message):
         return
     await show_users_by_role(message, UserRole.SUPERVISOR, "Supervisors")
 
-@router.message(F.text == "View Subcontractors")
+@router.message(F.text.in_(tv("View Subcontractors")))
 async def btn_view_subcontractors(message: Message, state: FSMContext):
     await state.clear()
     if not await check_super_admin(message):
         return
     await show_users_by_role(message, UserRole.SUBCONTRACTOR, "Subcontractors")
 
-@router.message(F.text == "All Access Codes")
+@router.message(F.text.in_(tv("All Access Codes")))
 async def btn_all_access_codes_v2(message: Message, state: FSMContext):
     await state.clear()
     if not await check_super_admin(message):
         return
     await show_all_access_codes(message)
 
-@router.message(F.text == "All Users")
+@router.message(F.text.in_(tv("All Users")))
 async def btn_all_users_v2(message: Message, state: FSMContext):
     await state.clear()
     if not await check_super_admin(message):
@@ -1129,7 +1127,7 @@ async def show_users_by_role(message: Message, role: UserRole, role_name: str):
             parse_mode="Markdown"
         )
 
-@router.message(F.text == "Switch Role")
+@router.message(F.text.in_(tv("Switch Role")))
 async def btn_switch_role_super_admin(message: Message, state: FSMContext):
     await state.clear()
     
@@ -1310,8 +1308,8 @@ async def handle_switch_team_selection(callback: CallbackQuery):
     
     await callback.answer()
 
-@router.message(F.text == "Return to Super Admin")
-@router.message(F.text == "Return to General Manager")
+@router.message(F.text.in_(tv("Return to Super Admin")))
+@router.message(F.text.in_(tv("Return to General Manager")))
 async def btn_return_to_super_admin(message: Message, state: FSMContext):
     await state.clear()
     
@@ -1610,7 +1608,7 @@ async def handle_users_pagination(callback: CallbackQuery):
     )
     await callback.answer()
 
-@router.message(F.text == "Switch Role")
+@router.message(F.text.in_(tv("Switch Role")))
 async def btn_switch_role(message: Message):
     if not await check_admin(message):
         return
@@ -1680,7 +1678,7 @@ async def handle_switch_role(callback: CallbackQuery):
 
 # ============= ADMIN/SUPER ADMIN JOB CREATION =============
 
-@router.message(F.text == "New Job")
+@router.message(F.text.in_(tv("New Job")))
 async def btn_admin_new_job(message: Message, state: FSMContext):
     """Allow admins to create jobs (shared with supervisor flow)"""
     if not async_session:
@@ -1702,7 +1700,7 @@ async def btn_admin_new_job(message: Message, state: FSMContext):
 
 # ============= ADMIN MESSAGING =============
 
-@router.message(F.text == "Send Message")
+@router.message(F.text.in_(tv("Send Message")))
 async def btn_send_message(message: Message, state: FSMContext):
     """Start the messaging flow for admins and supervisors"""
     async with async_session() as session:
@@ -1918,7 +1916,7 @@ async def send_broadcast_message(message: Message, state: FSMContext):
     await state.clear()
 
 
-@router.message(F.text == "Request Availability")
+@router.message(F.text.in_(tv("Request Availability")))
 async def btn_request_availability(message: Message, state: FSMContext):
     """Manager-only flow to request weekly availability from selected subcontractors."""
     if not async_session:
@@ -2097,7 +2095,7 @@ async def send_availability_request(callback: CallbackQuery, state: FSMContext):
 
 # ============= WEEKLY AVAILABILITY VIEW =============
 
-@router.message(F.text == "Weekly Availability")
+@router.message(F.text.in_(tv("Weekly Availability")))
 async def btn_weekly_availability(message: Message):
     """View weekly availability responses for all subcontractors"""
     if not async_session:
@@ -2196,7 +2194,7 @@ class CreateTeamStates(StatesGroup):
 
 from src.bot.database.models import Region, CustomRole, RolePermission, AVAILABLE_PERMISSIONS
 
-@router.message(F.text == "Manage Roles")
+@router.message(F.text.in_(tv("Manage Roles")))
 @require_role(UserRole.SUPER_ADMIN)
 async def show_manage_roles(message: Message):
     async with async_session() as session:
@@ -2426,7 +2424,7 @@ async def cancel_role_create(callback: CallbackQuery, state: FSMContext):
 
 # ============= REGIONS MANAGEMENT =============
 
-@router.message(F.text == "Manage Regions")
+@router.message(F.text.in_(tv("Manage Regions")))
 @require_role(UserRole.SUPER_ADMIN, UserRole.ADMIN)
 async def show_manage_regions(message: Message):
     async with async_session() as session:
@@ -2452,7 +2450,7 @@ async def show_manage_regions(message: Message):
         parse_mode="Markdown"
     )
 
-@router.message(F.text == "View Regions")
+@router.message(F.text.in_(tv("View Regions")))
 @require_role(UserRole.SUPER_ADMIN, UserRole.ADMIN)
 async def view_regions_list(message: Message):
     async with async_session() as session:
@@ -2590,7 +2588,7 @@ async def delete_region(callback: CallbackQuery):
 
 # ============= TEAMS MANAGEMENT =============
 
-@router.message(F.text == "Manage Teams")
+@router.message(F.text.in_(tv("Manage Teams")))
 @require_role(UserRole.SUPER_ADMIN, UserRole.ADMIN)
 async def show_manage_teams(message: Message):
     async with async_session() as session:

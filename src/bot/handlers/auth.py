@@ -9,6 +9,7 @@ from src.bot.database.models import UserRole
 from src.bot.services.access_codes import AccessCodeService
 from src.bot.utils.keyboards import get_main_menu_keyboard, get_self_delete_confirm_keyboard
 from src.bot.utils.roles import role_display_name
+from src.bot.i18n import variants as tv
 from src.bot.config import config
 import logging
 
@@ -48,7 +49,8 @@ async def cmd_start(message: Message, state: FSMContext):
                     return
             
             role_name = role_display_name(user.role)
-            keyboard = get_main_menu_keyboard(user.role)
+            lang = getattr(user, "language", "en") or "en"
+            keyboard = get_main_menu_keyboard(user.role, lang=lang)
             await message.answer(
                 f"Welcome back, {message.from_user.first_name or 'there'}!\n\n"
                 f"You are logged in as: *{role_name}*\n\n"
@@ -86,7 +88,8 @@ async def process_access_code(message: Message, state: FSMContext):
             user = result.scalar_one_or_none()
         
         if user:
-            keyboard = get_main_menu_keyboard(user.role)
+            lang = getattr(user, "language", "en") or "en"
+            keyboard = get_main_menu_keyboard(user.role, lang=lang)
             await message.answer(
                 f"{response}\n\n"
                 "Use the menu below to get started:",
@@ -105,11 +108,11 @@ async def process_access_code(message: Message, state: FSMContext):
 async def cmd_help(message: Message):
     await show_help(message)
 
-@router.message(F.text == "Help")
+@router.message(F.text.in_(tv("Help")))
 async def btn_help(message: Message):
     await show_help(message)
 
-@router.message(F.text == "Delete My Account")
+@router.message(F.text.in_(tv("Delete My Account")))
 async def btn_delete_account(message: Message):
     if not async_session:
         await message.answer("Database not available.")
@@ -171,7 +174,7 @@ async def handle_cancel_self_delete(callback: CallbackQuery):
     await callback.message.edit_text("Account deletion cancelled.")
     await callback.answer()
 
-@router.message(F.text == "About")
+@router.message(F.text.in_(tv("About")))
 async def btn_about(message: Message):
     about_text = (
         "*About TaskRelay Bot*\n\n"

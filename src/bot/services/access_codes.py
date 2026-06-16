@@ -149,29 +149,31 @@ class AccessCodeService:
     
     @staticmethod
     async def create_access_code(
-        code: str, 
-        role: UserRole, 
-        team_id: int | None = None, 
+        code: str,
+        role: UserRole,
+        team_id: int | None = None,
         region_id: int | None = None,
         custom_role_id: int | None = None,
+        created_by_id: int | None = None,
         max_uses: int = 1
     ) -> bool:
         if not async_session:
             return False
-        
+
         async with async_session() as session:
             existing = await session.execute(
                 select(AccessCode).where(AccessCode.code == code)
             )
             if existing.scalar_one_or_none():
                 return False
-            
+
             access_code = AccessCode(
                 code=code,
                 role=role,
                 team_id=team_id,
                 region_id=region_id,
                 custom_role_id=custom_role_id,
+                created_by_id=created_by_id,
                 max_uses=max_uses,
                 is_active=True
             )

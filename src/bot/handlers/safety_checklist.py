@@ -11,6 +11,7 @@ from sqlalchemy import select
 
 from src.bot.database import async_session, User, SafetyChecklist
 from src.bot.database.models import UserRole
+from src.bot.i18n import variants as tv
 from src.bot.services.safety_checklist import SafetyChecklistService, SafetyChecklistPdfService
 from src.bot.utils.timezone import now_au_naive, format_au
 
@@ -401,7 +402,7 @@ async def back_safety_form(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
-@router.message(F.text == "Site Safety Checklist")
+@router.message(F.text.in_(tv("Site Safety Checklist")))
 async def btn_site_safety_checklist(message: Message, state: FSMContext):
     user = await _get_current_user(message.from_user.id)
     if not user or user.role != UserRole.SUBCONTRACTOR:
@@ -925,7 +926,7 @@ async def process_post_task_3(callback: CallbackQuery, state: FSMContext):
     await state.clear()
 
 
-@router.message(F.text == "My Submissions")
+@router.message(F.text.in_(tv("My Submissions")))
 async def btn_my_submissions(message: Message):
     user = await _get_current_user(message.from_user.id)
     if not user or user.role != UserRole.SUBCONTRACTOR:
@@ -951,7 +952,7 @@ async def btn_my_submissions(message: Message):
     await message.answer(text)
 
 
-@router.message(F.text == "Safety Submissions")
+@router.message(F.text.in_(tv("Safety Submissions")))
 async def btn_safety_submissions(message: Message):
     user = await _get_current_user(message.from_user.id)
     if not user or user.role not in [UserRole.SUPERVISOR, UserRole.ADMIN, UserRole.SUPER_ADMIN]:
@@ -973,7 +974,7 @@ async def btn_safety_submissions(message: Message):
         )
 
 
-@router.message(F.text == "Filter Safety Submissions")
+@router.message(F.text.in_(tv("Filter Safety Submissions")))
 async def btn_filter_safety_submissions(message: Message, state: FSMContext):
     user = await _get_current_user(message.from_user.id)
     if not user or user.role not in [UserRole.SUPERVISOR, UserRole.ADMIN, UserRole.SUPER_ADMIN]:
@@ -1053,7 +1054,7 @@ async def review_checklist(callback: CallbackQuery):
     await callback.answer("Review saved")
 
 
-@router.message(F.text == "Export Safety CSV")
+@router.message(F.text.in_(tv("Export Safety CSV")))
 async def export_safety_csv(message: Message):
     user = await _get_current_user(message.from_user.id)
     if not user or user.role not in [UserRole.SUPERVISOR, UserRole.ADMIN, UserRole.SUPER_ADMIN]:
@@ -1067,12 +1068,12 @@ async def export_safety_csv(message: Message):
     )
 
 
-@router.message(F.text == "Upload Site Photos")
+@router.message(F.text.in_(tv("Upload Site Photos")))
 async def btn_upload_site_photos(message: Message):
     await message.answer("Use Site Safety Checklist to upload unsafe-condition photos during submission.")
 
 
-@router.message(F.text == "Contact Supervisor")
+@router.message(F.text.in_(tv("Contact Supervisor")))
 async def btn_contact_supervisor(message: Message):
     await message.answer("Use Send Message to contact your supervisor directly.")
 
@@ -1086,7 +1087,7 @@ def _request_subcontractor_keyboard(subcontractors: list[User]) -> InlineKeyboar
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-@router.message(F.text == "Request Safety Checklist")
+@router.message(F.text.in_(tv("Request Safety Checklist")))
 async def btn_request_safety_checklist(message: Message, state: FSMContext):
     user = await _get_current_user(message.from_user.id)
     if not user or user.role not in [UserRole.ADMIN, UserRole.SUPERVISOR]:

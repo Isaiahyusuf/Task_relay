@@ -12,6 +12,7 @@ from src.bot.services.quotes import QuoteService
 from src.bot.services.access_codes import AccessCodeService
 from src.bot.services.pdf_generator import JobPdfService
 from src.bot.handlers.admin import CreateCodeStates
+from src.bot.i18n import variants as tv
 from src.bot.utils.permissions import require_role
 from src.bot.utils.keyboards import (
     get_job_type_keyboard, get_skip_keyboard,
@@ -46,7 +47,7 @@ class NotSatisfiedStates(StatesGroup):
 async def cmd_new_job(message: Message, state: FSMContext):
     await start_new_job(message, state)
 
-@router.message(F.text == "Create Subcontractor Code")
+@router.message(F.text.in_(tv("Create Subcontractor Code")))
 @require_role(UserRole.SUPERVISOR, UserRole.ADMIN, UserRole.SUPER_ADMIN)
 async def btn_create_sub_code(message: Message, state: FSMContext):
     await message.answer(
@@ -59,7 +60,7 @@ async def btn_create_sub_code(message: Message, state: FSMContext):
     # Use preset_role instead of forced_role to trigger team selection
     await state.update_data(preset_role=UserRole.SUBCONTRACTOR.value, preset_role_name="Subcontractor")
 
-@router.message(F.text == "New Job")
+@router.message(F.text.in_(tv("New Job")))
 async def btn_new_job(message: Message, state: FSMContext):
     if not async_session:
         await message.answer("Database not available.")
@@ -559,25 +560,25 @@ async def cancel_save_pending(callback: CallbackQuery, state: FSMContext):
 async def cmd_my_jobs(message: Message):
     await show_my_jobs(message)
 
-@router.message(F.text == "My Jobs")
+@router.message(F.text.in_(tv("My Jobs")))
 async def btn_my_jobs(message: Message):
     if not await check_supervisor(message):
         return
     await show_my_jobs(message)
 
-@router.message(F.text == "Pending Jobs")
+@router.message(F.text.in_(tv("Pending Jobs")))
 async def btn_pending_jobs(message: Message):
     if not await check_supervisor(message):
         return
     await show_filtered_jobs(message, [JobStatus.CREATED, JobStatus.SENT], "Pending Jobs")
 
-@router.message(F.text == "Active Jobs")
+@router.message(F.text.in_(tv("Active Jobs")))
 async def btn_active_jobs(message: Message):
     if not await check_supervisor(message):
         return
     await show_filtered_jobs(message, [JobStatus.ACCEPTED, JobStatus.IN_PROGRESS], "Active Jobs")
 
-@router.message(F.text == "Submitted Jobs")
+@router.message(F.text.in_(tv("Submitted Jobs")))
 async def btn_submitted_jobs(message: Message):
     if not await check_supervisor(message):
         return
@@ -1033,7 +1034,7 @@ async def process_not_satisfied_reason(message: Message, state: FSMContext):
 
 # ============= VIEW SUBCONTRACTOR AVAILABILITY =============
 
-@router.message(F.text == "View Availability")
+@router.message(F.text.in_(tv("View Availability")))
 async def btn_view_availability(message: Message):
     if not async_session:
         await message.answer("Database not available.")

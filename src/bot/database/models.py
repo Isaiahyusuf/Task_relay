@@ -60,6 +60,7 @@ class User(Base):
     super_admin_code = Column(String(100), nullable=True)
     is_active = Column(Boolean, default=True)
     availability_status = Column(Enum(AvailabilityStatus), default=AvailabilityStatus.AVAILABLE)
+    language = Column(String(10), default="en", nullable=False, server_default="en")
     created_at = Column(DateTime, default=datetime.utcnow)
     
     team = relationship("Team", back_populates="users")

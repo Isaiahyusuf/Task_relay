@@ -467,6 +467,15 @@ async def run_migration():
         except Exception as e:
             print(f"safety_checklist_requests table may already exist: {e}")
     
+        # Add language column to users table
+        try:
+            await conn.execute(text(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS language VARCHAR(10) NOT NULL DEFAULT 'en'"
+            ))
+            print("Added language column to users table")
+        except Exception as e:
+            print(f"language column may already exist: {e}")
+
     await engine.dispose()
     print("Migration completed!")
 

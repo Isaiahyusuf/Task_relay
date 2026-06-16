@@ -11,6 +11,7 @@ from src.bot.services.jobs import JobService
 from src.bot.services.quotes import QuoteService
 from src.bot.services.availability import AvailabilityService
 from src.bot.services.pdf_generator import JobPdfService
+from src.bot.i18n import variants as tv
 from src.bot.utils.permissions import require_role
 from src.bot.utils.keyboards import (
     get_job_actions_keyboard, get_decline_reason_keyboard, get_back_keyboard,
@@ -49,25 +50,25 @@ class UnavailabilityStates(StatesGroup):
 class WeeklyAvailabilityNotesStates(StatesGroup):
     waiting_for_notes = State()
 
-@router.message(F.text == "Available Jobs")
+@router.message(F.text.in_(tv("Available Jobs")))
 async def btn_available_jobs(message: Message):
     if not await check_subcontractor(message):
         return
     await show_available_jobs(message)
 
-@router.message(F.text == "My Active Jobs")
+@router.message(F.text.in_(tv("My Active Jobs")))
 async def btn_active_jobs(message: Message):
     if not await check_subcontractor(message):
         return
     await show_active_jobs(message)
 
-@router.message(F.text == "Start Work")
+@router.message(F.text.in_(tv("Start Work")))
 async def btn_start_work(message: Message):
     if not await check_subcontractor(message):
         return
     await show_active_jobs(message)
 
-@router.message(F.text == "Available")
+@router.message(F.text.in_(tv("Available")))
 async def btn_set_available(message: Message):
     if not await check_subcontractor(message):
         return
@@ -76,7 +77,7 @@ async def btn_set_available(message: Message):
     )
     await message.answer(f" {msg}" if success else f"Error: {msg}")
 
-@router.message(F.text == "Busy")
+@router.message(F.text.in_(tv("Busy")))
 async def btn_set_busy(message: Message):
     if not await check_subcontractor(message):
         return
@@ -85,7 +86,7 @@ async def btn_set_busy(message: Message):
     )
     await message.answer(f" {msg}" if success else f"Error: {msg}")
 
-@router.message(F.text == "Away")
+@router.message(F.text.in_(tv("Away")))
 async def btn_set_away(message: Message):
     if not await check_subcontractor(message):
         return
@@ -94,7 +95,7 @@ async def btn_set_away(message: Message):
     )
     await message.answer(f" {msg}" if success else f"Error: {msg}")
 
-@router.message(F.text == "My Availability")
+@router.message(F.text.in_(tv("My Availability")))
 async def btn_my_availability(message: Message):
     """Show subcontractor's own weekly availability"""
     if not await check_subcontractor(message):
@@ -414,7 +415,7 @@ async def mark_job_done_callback(callback: CallbackQuery):
     else:
         await callback.answer(msg, show_alert=True)
 
-@router.message(F.text == "Submit Job")
+@router.message(F.text.in_(tv("Submit Job")))
 async def btn_submit_job_menu(message: Message):
     if not await check_subcontractor(message):
         return
@@ -842,7 +843,7 @@ async def process_custom_decline_reason(message: Message, state: FSMContext):
 
 # ============= UNAVAILABILITY NOTIFICATION =============
 
-@router.message(F.text == "Report Unavailability")
+@router.message(F.text.in_(tv("Report Unavailability")))
 async def btn_report_unavailability(message: Message, state: FSMContext):
     """Start the unavailability notification flow"""
     if not await check_subcontractor(message):
