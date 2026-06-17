@@ -4,9 +4,11 @@ fpdf2>=2.8.2
 asyncpg>=0.27.0
 python-dotenv>=1.0.0
 alembic>=1.10.0
+deep-translator>=1.11.4
 aiogram
 alembic
 asyncpg
 fpdf2
 python-dotenv
 sqlalchemy
+deep-translator

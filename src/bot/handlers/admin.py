@@ -1894,11 +1894,13 @@ async def send_broadcast_message(message: Message, state: FSMContext):
         
         for recipient in recipients:
             try:
+                from src.bot.utils.translate import translate_text
                 r_lang = await get_recipient_lang(recipient.telegram_id)
                 header = i18n_msg("broadcast_header", lang=r_lang, sender=sender_name)
+                body = await translate_text(message.text, target_lang=r_lang)
                 await bot.send_message(
                     recipient.telegram_id,
-                    header + message.text,
+                    header + body,
                     reply_markup=get_message_reaction_keyboard(broadcast.id),
                     parse_mode="Markdown"
                 )

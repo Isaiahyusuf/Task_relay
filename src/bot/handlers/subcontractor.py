@@ -541,11 +541,16 @@ async def finish_photo_submission(message: Message, state: FSMContext):
                         company_name = f"\nCompany: {job_obj.company_name}"
                 
                 try:
+                    from src.bot.utils.translate import translate_text
                     job = await JobService.get_job_by_id(job_id)
-                    notes_text = f"\nNotes: {notes}" if notes else ""
+                    sup_lang = await get_recipient_lang(supervisor_tg_id)
+                    if notes:
+                        translated_notes = await translate_text(notes, target_lang=sup_lang)
+                        notes_text = f"\nNotes: {translated_notes}"
+                    else:
+                        notes_text = ""
                     
                     logger.info(f"Sending notification message to supervisor {supervisor_tg_id}")
-                    sup_lang = await get_recipient_lang(supervisor_tg_id)
                     await bot.send_message(
                         supervisor_tg_id,
                         i18n_msg(
@@ -1434,16 +1439,18 @@ async def process_message_reply(message: Message, state: FSMContext):
         
         responder_name = responder.first_name or responder.username or "Subcontractor"
         
-        # Notify the sender with the reply
+        # Notify the sender with the reply (translated to sender's language)
         if sender and bot:
             try:
+                from src.bot.utils.translate import translate_text
                 sender_lang = await get_recipient_lang(sender.telegram_id)
                 preview = broadcast.message[:100] + ("..." if len(broadcast.message) > 100 else "")
+                translated_reply = await translate_text(message.text, target_lang=sender_lang)
                 await bot.send_message(
                     sender.telegram_id,
                     i18n_msg(
                         "reply_received", lang=sender_lang,
-                        responder=responder_name, preview=preview, reply=message.text
+                        responder=responder_name, preview=preview, reply=translated_reply
                     ),
                     parse_mode="Markdown"
                 )
