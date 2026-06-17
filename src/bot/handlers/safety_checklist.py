@@ -1218,13 +1218,16 @@ async def process_request_note(message: Message, state: FSMContext):
     if sub and sub.telegram_id:
         requester_name = requester.first_name or requester.username or "Manager"
         try:
+            from src.bot.utils.translate import translate_text
             sub_lang = await get_recipient_lang(sub.telegram_id)
+            raw_note = note or "No note provided."
+            translated_note = await translate_text(raw_note, target_lang=sub_lang)
             await message.bot.send_message(
                 sub.telegram_id,
                 i18n_msg(
                     "safety_checklist_request", lang=sub_lang,
                     requester=requester_name,
-                    note=note or "No note provided."
+                    note=translated_note
                 )
             )
         except Exception as exc:

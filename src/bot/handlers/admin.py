@@ -1892,12 +1892,15 @@ async def send_broadcast_message(message: Message, state: FSMContext):
         session.add(broadcast)
         await session.flush()  # Get the broadcast ID
         
+        from src.bot.utils.translate import translate_text
+        _body_cache: dict[str, str] = {}
         for recipient in recipients:
             try:
-                from src.bot.utils.translate import translate_text
                 r_lang = await get_recipient_lang(recipient.telegram_id)
+                if r_lang not in _body_cache:
+                    _body_cache[r_lang] = await translate_text(message.text, target_lang=r_lang)
                 header = i18n_msg("broadcast_header", lang=r_lang, sender=sender_name)
-                body = await translate_text(message.text, target_lang=r_lang)
+                body = _body_cache[r_lang]
                 await bot.send_message(
                     recipient.telegram_id,
                     header + body,
