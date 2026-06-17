@@ -852,13 +852,15 @@ async def process_decline_reason(message: Message, state: FSMContext):
             bot = message.bot
             if bot:
                 try:
+                    from src.bot.utils.translate import translate_text
                     sub_lang = await get_recipient_lang(sub_telegram_id)
+                    translated_reason = await translate_text(reason, target_lang=sub_lang)
                     await bot.send_message(
                         sub_telegram_id,
                         i18n_msg(
                             "quote_declined_notification", lang=sub_lang,
                             job_id=job_id, title=job_title,
-                            amount=quote_amount, reason=reason
+                            amount=quote_amount, reason=translated_reason
                         ),
                         parse_mode="Markdown"
                     )
@@ -1016,13 +1018,15 @@ async def process_not_satisfied_reason(message: Message, state: FSMContext):
         # Notify subcontractor
         if subcontractor:
             try:
+                from src.bot.utils.translate import translate_text
                 bot = message.bot
                 sub_lang = await get_recipient_lang(subcontractor.telegram_id)
+                translated_reason = await translate_text(reason, target_lang=sub_lang)
                 await bot.send_message(
                     subcontractor.telegram_id,
                     i18n_msg(
                         "revision_requested", lang=sub_lang,
-                        job_id=job_id, title=job.title, reason=reason
+                        job_id=job_id, title=job.title, reason=translated_reason
                     ),
                     parse_mode="Markdown"
                 )
@@ -1187,13 +1191,15 @@ async def process_unavailability_feedback(message: Message, state: FSMContext):
             sup_name = supervisor.first_name or supervisor.username or "Your supervisor" if supervisor else "Your supervisor"
             
             try:
+                from src.bot.utils.translate import translate_text
                 bot = message.bot
                 sub_lang = await get_recipient_lang(subcontractor.telegram_id)
+                translated_feedback = await translate_text(feedback, target_lang=sub_lang)
                 await bot.send_message(
                     subcontractor.telegram_id,
                     i18n_msg(
                         "supervisor_feedback", lang=sub_lang,
-                        sup_name=sup_name, feedback=feedback
+                        sup_name=sup_name, feedback=translated_feedback
                     ),
                     parse_mode="Markdown"
                 )

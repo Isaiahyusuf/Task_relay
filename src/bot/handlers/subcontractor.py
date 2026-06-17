@@ -699,8 +699,13 @@ async def process_quote_notes(message: Message, state: FSMContext):
                     bot = message.bot
                     if bot:
                         try:
-                            notes_text = f"\nNotes: {notes}" if notes else ""
+                            from src.bot.utils.translate import translate_text
                             sup_lang = await get_recipient_lang(supervisor.telegram_id)
+                            if notes:
+                                translated_quote_notes = await translate_text(notes, target_lang=sup_lang)
+                                notes_text = f"\nNotes: {translated_quote_notes}"
+                            else:
+                                notes_text = ""
                             await bot.send_message(
                                 supervisor.telegram_id,
                                 i18n_msg(
@@ -1005,13 +1010,15 @@ async def process_unavailability_dates(message: Message, state: FSMContext):
                 
                 if supervisor and bot:
                     try:
+                        from src.bot.utils.translate import translate_text
                         sup_lang = await get_recipient_lang(supervisor.telegram_id)
+                        t_reason = await translate_text(reason, target_lang=sup_lang)
                         await bot.send_message(
                             supervisor.telegram_id,
                             i18n_msg(
                                 "unavailability_job_specific", lang=sup_lang,
                                 sub_name=sub_name, job_id=job.id,
-                                title=job.title, reason=reason, dates=dates_text
+                                title=job.title, reason=t_reason, dates=dates_text
                             ),
                             reply_markup=get_unavailability_response_keyboard(notice.id, sub.id),
                             parse_mode="Markdown"
@@ -1035,14 +1042,16 @@ async def process_unavailability_dates(message: Message, state: FSMContext):
                 
                 if supervisor and bot:
                     try:
+                        from src.bot.utils.translate import translate_text
                         sup_lang = await get_recipient_lang(supervisor.telegram_id)
                         scope = i18n_msg("unavailability_scope_general", lang=sup_lang)
+                        t_reason = await translate_text(reason, target_lang=sup_lang)
                         await bot.send_message(
                             supervisor.telegram_id,
                             i18n_msg(
                                 "unavailability_general", lang=sup_lang,
                                 sub_name=sub_name, scope=scope,
-                                job_info="", reason=reason, dates=dates_text
+                                job_info="", reason=t_reason, dates=dates_text
                             ),
                             reply_markup=get_unavailability_response_keyboard(notice.id, sub.id),
                             parse_mode="Markdown"
@@ -1062,6 +1071,7 @@ async def process_unavailability_dates(message: Message, state: FSMContext):
                 continue  # Don't notify twice
             if bot:
                 try:
+                    from src.bot.utils.translate import translate_text
                     job_info = ""
                     if job_id:
                         job = await JobService.get_job(job_id)
@@ -1073,13 +1083,14 @@ async def process_unavailability_dates(message: Message, state: FSMContext):
                         "unavailability_scope_job" if job_id else "unavailability_scope_general",
                         lang=u_lang
                     )
+                    t_reason = await translate_text(reason, target_lang=u_lang)
                     await bot.send_message(
                         user.telegram_id,
                         i18n_msg(
                             "unavailability_general", lang=u_lang,
                             sub_name=sub_name, scope=scope,
                             job_info=job_info,
-                            reason=reason, dates=dates_text
+                            reason=t_reason, dates=dates_text
                         ),
                         reply_markup=get_unavailability_response_keyboard(notice.id, sub.id),
                         parse_mode="Markdown"
