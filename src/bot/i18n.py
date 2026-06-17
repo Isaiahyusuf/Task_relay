@@ -417,6 +417,201 @@ MESSAGES: dict[str, dict[str, str]] = {
         "ps": "💬 *ځواب راغی*\n\n*{responder}* ستاسو پیغام ته ځواب ورکړ:\n\n*اصلي:*\n_{preview}_\n\n*ځواب:*\n{reply}",
         "my": "💬 *အဖြေရောက်ရှိပြီး*\n\n*{responder}* သင်၏မက်ဆေ့ကိုဖြေသည်:\n\n*မူရင်း:*\n_{preview}_\n\n*အဖြေ:*\n{reply}",
     },
+    "btn_accept": {
+        "en": "✅ Accept",
+        "ps": "✅ قبول",
+        "my": "✅ လက်ခံသည်",
+    },
+    "btn_decline": {
+        "en": "❌ Decline",
+        "ps": "❌ رد",
+        "my": "❌ ငြင်းပယ်သည်",
+    },
+    "btn_start_job": {
+        "en": "▶️ Start Job",
+        "ps": "▶️ کار پیل کول",
+        "my": "▶️ အလုပ်စတင်မည်",
+    },
+    "btn_submit_job": {
+        "en": "📤 Submit Job",
+        "ps": "📤 کار وسپارئ",
+        "my": "📤 အလုပ်တင်သွင်းမည်",
+    },
+    "btn_submit_quote": {
+        "en": "💰 Submit Quote",
+        "ps": "💰 وړاندیز وسپارئ",
+        "my": "💰 ကိုးကားစာ တင်မည်",
+    },
+    "btn_back": {
+        "en": "⬅️ Back",
+        "ps": "⬅️ شاته",
+        "my": "⬅️ နောက်သို့",
+    },
+    "btn_cancel": {
+        "en": "✖️ Cancel",
+        "ps": "✖️ لغوه",
+        "my": "✖️ ဖျက်သိမ်းမည်",
+    },
+    "btn_skip": {
+        "en": "⏭ Skip",
+        "ps": "⏭ پریږدئ",
+        "my": "⏭ ကျော်သည်",
+    },
+    "btn_skip_photos": {
+        "en": "⏭ Skip Photos",
+        "ps": "⏭ عکسونه پریږدئ",
+        "my": "⏭ ဓာတ်ပုံများကျော်မည်",
+    },
+    "btn_no_deadline": {
+        "en": "📅 No Deadline",
+        "ps": "📅 هیڅ وروستۍ نیټه نشته",
+        "my": "📅 နောက်ဆုံးရက်မရှိ",
+    },
+    "btn_quote_job": {
+        "en": "💬 Quote Job",
+        "ps": "💬 د وړاندیز کار",
+        "my": "💬 ကိုးကားစာအလုပ်",
+    },
+    "btn_preset_price_job": {
+        "en": "💵 Preset Price Job",
+        "ps": "💵 ټاکلی بیه کار",
+        "my": "💵 ကြိုတင်သတ်မှတ်ဈေးနှုန်းအလုပ်",
+    },
+    "btn_view_quotes": {
+        "en": "📋 View Quotes",
+        "ps": "📋 وړاندیزونه وګورئ",
+        "my": "📋 ကိုးကားစာများကြည့်မည်",
+    },
+    "btn_cancel_job": {
+        "en": "🚫 Cancel Job",
+        "ps": "🚫 کار لغوه کول",
+        "my": "🚫 အလုပ်ဖျက်သိမ်းမည်",
+    },
+    "btn_view_submission": {
+        "en": "📂 View Submission",
+        "ps": "📂 سپارل شوی وګورئ",
+        "my": "📂 တင်သွင်းမှုကြည့်မည်",
+    },
+    "btn_mark_complete": {
+        "en": "✅ Mark Complete",
+        "ps": "✅ بشپړ شوی وښایاست",
+        "my": "✅ ပြီးစီးကြောင်းမှတ်သားမည်",
+    },
+    "btn_not_satisfied": {
+        "en": "🔄 Not Satisfied",
+        "ps": "🔄 نه راضي",
+        "my": "🔄 မကျေနပ်ပါ",
+    },
+    "btn_accept_quote": {
+        "en": "✅ Accept This Quote",
+        "ps": "✅ دا وړاندیز قبول کول",
+        "my": "✅ ဤကိုးကားစာလက်ခံမည်",
+    },
+    "btn_decline_quote": {
+        "en": "❌ Decline Quote",
+        "ps": "❌ وړاندیز رد کول",
+        "my": "❌ ကိုးကားစာငြင်းပယ်မည်",
+    },
+    "btn_back_to_quotes": {
+        "en": "⬅️ Back to Quotes",
+        "ps": "⬅️ وړاندیزونو ته شاته",
+        "my": "⬅️ ကိုးကားစာများသို့ပြန်မည်",
+    },
+    "btn_previous": {
+        "en": "⬅️ Previous",
+        "ps": "⬅️ مخکینی",
+        "my": "⬅️ ယခင်",
+    },
+    "btn_next": {
+        "en": "Next ➡️",
+        "ps": "بعدی ➡️",
+        "my": "နောက်တစ်ခု ➡️",
+    },
+    "btn_decline_schedule": {
+        "en": "🗓 Scheduling conflict",
+        "ps": "🗓 د وخت تعارض",
+        "my": "🗓 အချိန်ဇယားတိုက်ခိုက်မှု",
+    },
+    "btn_decline_location": {
+        "en": "📍 Location too far",
+        "ps": "📍 ځای ډیر لیرې دی",
+        "my": "📍 တည်နေရာအလွန်ဝေးသည်",
+    },
+    "btn_decline_busy": {
+        "en": "⏰ Too busy",
+        "ps": "⏰ ډیر مصروف",
+        "my": "⏰ အလွန်အမင်းအလုပ်ရှုပ်သည်",
+    },
+    "btn_decline_custom": {
+        "en": "✏️ Custom reason",
+        "ps": "✏️ ځانګړی لامل",
+        "my": "✏️ ကိုယ်ပိုင်အကြောင်းပြချက်",
+    },
+    "btn_available_inline": {
+        "en": "🟢 Available",
+        "ps": "🟢 شتون",
+        "my": "🟢 ရနိုင်သည်",
+    },
+    "btn_busy_inline": {
+        "en": "🟡 Busy",
+        "ps": "🟡 مصروف",
+        "my": "🟡 အလုပ်ရှုပ်သည်",
+    },
+    "btn_away_inline": {
+        "en": "🔴 Away",
+        "ps": "🔴 غایب",
+        "my": "🔴 ထွက်ခွာသည်",
+    },
+    "btn_monday": {
+        "en": "Monday",
+        "ps": "دوشنبه",
+        "my": "တနင်္လာ",
+    },
+    "btn_tuesday": {
+        "en": "Tuesday",
+        "ps": "سه‌شنبه",
+        "my": "အင်္ဂါ",
+    },
+    "btn_wednesday": {
+        "en": "Wednesday",
+        "ps": "چارشنبه",
+        "my": "ဗုဒ္ဓဟူး",
+    },
+    "btn_thursday": {
+        "en": "Thursday",
+        "ps": "پنجشنبه",
+        "my": "ကြာသပတေး",
+    },
+    "btn_friday": {
+        "en": "Friday",
+        "ps": "جمعه",
+        "my": "သောကြာ",
+    },
+    "btn_save_availability": {
+        "en": "Save Availability ✅",
+        "ps": "شتون خوندي کول ✅",
+        "my": "ရနိုင်မှုသိမ်းဆည်းမည် ✅",
+    },
+    "btn_add_notes": {
+        "en": "Add Notes 📝",
+        "ps": "یادداشتونه اضافه کول 📝",
+        "my": "မှတ်စုထည့်မည် 📝",
+    },
+    "btn_general_unavailability": {
+        "en": "📢 General Unavailability",
+        "ps": "📢 عمومي نه شتون",
+        "my": "📢 ယေဘုယျမရနိုင်မှု",
+    },
+    "btn_yes_delete_account": {
+        "en": "⚠️ Yes, Delete My Account",
+        "ps": "⚠️ هو، زما حساب ړنګ کړئ",
+        "my": "⚠️ ဟုတ်သည်၊ ကျွန်ုပ်၏အကောင့်ဖျက်သည်",
+    },
+    "btn_no_cancel": {
+        "en": "❌ No, Cancel",
+        "ps": "❌ نه، لغوه",
+        "my": "❌ မဟုတ်ပါ၊ ဖျက်သိမ်းမည်",
+    },
     "btn_acknowledge": {
         "en": "✅ Acknowledge",
         "ps": "✅ تایید",

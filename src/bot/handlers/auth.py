@@ -130,7 +130,7 @@ async def btn_delete_account(message: Message):
     user_lang = getattr(user, "language", "en") or "en"
     await message.answer(
         i18n_msg("account_delete_confirm", lang=user_lang),
-        reply_markup=get_self_delete_confirm_keyboard(user.id),
+        reply_markup=get_self_delete_confirm_keyboard(user.id, lang=user_lang),
         parse_mode="Markdown"
     )
 

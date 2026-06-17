@@ -96,10 +96,11 @@ async def process_job_title(message: Message, state: FSMContext):
     
     await state.update_data(title=message.text.strip())
     
+    sup_lang = await get_recipient_lang(message.from_user.id)
     await message.answer(
         "*Creating a New Job*\n\n"
         "Step 2/5: Select the job type:",
-        reply_markup=get_job_type_keyboard(),
+        reply_markup=get_job_type_keyboard(lang=sup_lang),
         parse_mode="Markdown"
     )
     await state.set_state(NewJobStates.waiting_for_type)
@@ -118,13 +119,13 @@ async def process_job_type(callback: CallbackQuery, state: FSMContext):
     await state.update_data(job_type=job_type)
     
     type_name = "Quote Job" if job_type == JobType.QUOTE else "Preset Price Job"
-    
+    sup_lang = await get_recipient_lang(callback.from_user.id)
     await callback.message.edit_text(
         f"*Creating a New Job*\n\n"
         f"Type: {type_name}\n\n"
         "Step 3/5: Enter job description\n"
         "(or tap Skip to continue without):",
-        reply_markup=get_skip_keyboard("description"),
+        reply_markup=get_skip_keyboard("description", lang=sup_lang),
         parse_mode="Markdown"
     )
     await state.set_state(NewJobStates.waiting_for_description)
@@ -142,12 +143,13 @@ async def process_job_description(message: Message, state: FSMContext):
     await ask_for_address(message, state, edit=False)
 
 async def ask_for_address(message: Message, state: FSMContext, edit: bool = False):
+    sup_lang = await get_recipient_lang(message.from_user.id)
     text = (
         "*Creating a New Job*\n\n"
         "Step 4/5: Enter the job address/location\n"
         "(or tap Skip to continue without):"
     )
-    keyboard = get_skip_keyboard("address")
+    keyboard = get_skip_keyboard("address", lang=sup_lang)
     
     if edit:
         await message.edit_text(text, reply_markup=keyboard, parse_mode="Markdown")
@@ -619,10 +621,11 @@ async def show_my_jobs(message: Message):
         )
         return
     
+    sup_lang = await get_recipient_lang(message.from_user.id)
     await message.answer(
         "*My Jobs*\n\n"
         "Select a job to view details:",
-        reply_markup=get_job_list_keyboard(jobs, context="sup"),
+        reply_markup=get_job_list_keyboard(jobs, context="sup", lang=sup_lang),
         parse_mode="Markdown"
     )
 
@@ -637,10 +640,11 @@ async def show_filtered_jobs(message: Message, status_filter: list[JobStatus], t
         )
         return
     
+    sup_lang = await get_recipient_lang(message.from_user.id)
     await message.answer(
         f"*{title}*\n\n"
         f"Found {len(jobs)} job(s):",
-        reply_markup=get_job_list_keyboard(jobs, context="sup"),
+        reply_markup=get_job_list_keyboard(jobs, context="sup", lang=sup_lang),
         parse_mode="Markdown"
     )
 
@@ -686,7 +690,8 @@ async def view_job_details_supervisor(callback: CallbackQuery):
     
     details += f"\n*Created:* {job.created_at.strftime('%Y-%m-%d %H:%M')}"
     
-    keyboard = get_supervisor_job_actions_keyboard(job.id, job.status.value, job.job_type.value)
+    sup_lang = await get_recipient_lang(callback.from_user.id)
+    keyboard = get_supervisor_job_actions_keyboard(job.id, job.status.value, job.job_type.value, lang=sup_lang)
     
     await callback.message.edit_text(
         details,
@@ -705,11 +710,12 @@ async def view_quotes(callback: CallbackQuery):
         await callback.answer("No quotes submitted yet", show_alert=True)
         return
     
+    sup_lang = await get_recipient_lang(callback.from_user.id)
     await callback.message.edit_text(
         f"*Quotes for Job #{job_id}*\n\n"
         f"{len(quotes)} quote(s) received.\n"
         "Select a quote to view details:",
-        reply_markup=get_quotes_keyboard(quotes, job_id),
+        reply_markup=get_quotes_keyboard(quotes, job_id, lang=sup_lang),
         parse_mode="Markdown"
     )
     await callback.answer()
@@ -736,13 +742,14 @@ async def view_quote_detail(callback: CallbackQuery):
     quote, user = row
     name = user.first_name or user.username or f"User {user.telegram_id}"
     
+    sup_lang = await get_recipient_lang(callback.from_user.id)
     await callback.message.edit_text(
         f"*Quote Details*\n\n"
         f"*Subcontractor:* {name}\n"
         f"*Amount:* {quote.amount}\n"
         f"*Submitted:* {quote.submitted_at.strftime('%Y-%m-%d %H:%M')}\n"
         + (f"*Notes:* {quote.notes}\n" if quote.notes else ""),
-        reply_markup=get_quote_detail_keyboard(quote.id, quote.job_id),
+        reply_markup=get_quote_detail_keyboard(quote.id, quote.job_id, lang=sup_lang),
         parse_mode="Markdown"
     )
     await callback.answer()
@@ -947,10 +954,11 @@ async def supervisor_complete_job(callback: CallbackQuery, state: FSMContext):
 async def back_to_my_jobs(callback: CallbackQuery):
     jobs = await JobService.get_supervisor_jobs(callback.from_user.id)
     
+    sup_lang = await get_recipient_lang(callback.from_user.id)
     await callback.message.edit_text(
         "*My Jobs*\n\n"
         "Select a job to view details:",
-        reply_markup=get_job_list_keyboard(jobs, context="sup"),
+        reply_markup=get_job_list_keyboard(jobs, context="sup", lang=sup_lang),
         parse_mode="Markdown"
     )
     await callback.answer()
@@ -961,8 +969,9 @@ async def handle_supervisor_pagination(callback: CallbackQuery):
     
     jobs = await JobService.get_supervisor_jobs(callback.from_user.id)
     
+    sup_lang = await get_recipient_lang(callback.from_user.id)
     await callback.message.edit_reply_markup(
-        reply_markup=get_job_list_keyboard(jobs, page=page, context="sup")
+        reply_markup=get_job_list_keyboard(jobs, page=page, context="sup", lang=sup_lang)
     )
     await callback.answer()
 

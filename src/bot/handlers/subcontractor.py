@@ -177,7 +177,7 @@ async def btn_my_availability(message: Message):
             f"Wednesday ({wed_date})\n"
             f"Thursday ({thu_date})\n"
             f"Friday ({fri_date})",
-            reply_markup=get_weekly_availability_keyboard(availability.id, selected_days),
+            reply_markup=get_weekly_availability_keyboard(availability.id, selected_days, lang=await get_recipient_lang(message.from_user.id)),
             parse_mode="Markdown"
         )
 
@@ -229,7 +229,8 @@ async def show_available_jobs(message: Message):
         if job.address:
             job_text += f"*Address:* {job.address}\n"
         
-        keyboard = get_job_actions_keyboard(job.id, job.job_type.value, "sent")
+        sub_lang = await get_recipient_lang(message.from_user.id)
+        keyboard = get_job_actions_keyboard(job.id, job.job_type.value, "sent", lang=sub_lang)
         
         await message.answer(job_text, reply_markup=keyboard, parse_mode="Markdown")
 
@@ -263,7 +264,8 @@ async def show_active_jobs(message: Message):
         if job.address:
             job_text += f"*Address:* {job.address}\n"
         
-        keyboard = get_job_actions_keyboard(job.id, job.job_type.value, job.status.value)
+        sub_lang = await get_recipient_lang(message.from_user.id)
+        keyboard = get_job_actions_keyboard(job.id, job.job_type.value, job.status.value, lang=sub_lang)
         
         await message.answer(job_text, reply_markup=keyboard, parse_mode="Markdown")
 
@@ -432,7 +434,7 @@ async def btn_submit_job_menu(message: Message):
 
     await message.answer(
         i18n_msg("select_job_to_submit", lang=sub_lang),
-        reply_markup=get_job_list_keyboard(in_progress_jobs, context="submit"),
+        reply_markup=get_job_list_keyboard(in_progress_jobs, context="submit", lang=sub_lang),
         parse_mode="Markdown"
     )
 
@@ -716,7 +718,7 @@ async def start_job_callback(callback: CallbackQuery):
         sub_lang = await get_recipient_lang(callback.from_user.id)
         await callback.message.edit_text(
             i18n_msg("job_started_confirm", lang=sub_lang, job_id=job_id, title=job.title if job else ""),
-            reply_markup=get_job_actions_keyboard(job_id, "preset", "in_progress"),
+            reply_markup=get_job_actions_keyboard(job_id, "preset", "in_progress", lang=sub_lang),
             parse_mode="Markdown"
         )
         await callback.answer("✅")
@@ -772,11 +774,12 @@ async def decline_job_callback(callback: CallbackQuery):
         await callback.answer("Job not found", show_alert=True)
         return
     
+    sub_lang = await get_recipient_lang(callback.from_user.id)
     await callback.message.edit_text(
         f"*Decline Job #{job_id}*\n\n"
         f"*{job.title}*\n\n"
         "Please select a reason:",
-        reply_markup=get_decline_reason_keyboard(job_id),
+        reply_markup=get_decline_reason_keyboard(job_id, lang=sub_lang),
         parse_mode="Markdown"
     )
     await callback.answer()
@@ -855,11 +858,12 @@ async def btn_report_unavailability(message: Message, state: FSMContext):
     jobs = await JobService.get_subcontractor_active_jobs(message.from_user.id)
     active_jobs = [j for j in jobs if j.status in [JobStatus.ACCEPTED, JobStatus.IN_PROGRESS]]
     
+    sub_lang = await get_recipient_lang(message.from_user.id)
     await message.answer(
         " *Report Unavailability*\n\n"
         "Is this about a specific job, or general unavailability?\n\n"
         "Select a job or choose 'General Unavailability':",
-        reply_markup=get_unavailability_job_keyboard(active_jobs),
+        reply_markup=get_unavailability_job_keyboard(active_jobs, lang=sub_lang),
         parse_mode="Markdown"
     )
     await state.set_state(UnavailabilityStates.selecting_job)
@@ -1172,7 +1176,7 @@ async def handle_weekly_availability_response(callback: CallbackQuery, state: FS
                     f"Wednesday ({wed_date})\n"
                     f"Thursday ({thu_date})\n"
                     f"Friday ({fri_date})",
-                    reply_markup=get_weekly_availability_keyboard(avail_id, selected_days),
+                    reply_markup=get_weekly_availability_keyboard(avail_id, selected_days, lang=await get_recipient_lang(callback.from_user.id)),
                     parse_mode="Markdown"
                 )
             except TelegramBadRequest as exc:
