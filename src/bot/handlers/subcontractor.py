@@ -318,12 +318,10 @@ async def process_company_name_for_accept(message: Message, state: FSMContext):
             )
             user_obj = result.scalar_one_or_none()
             sub_name = user_obj.first_name or user_obj.username or "A subcontractor"
+            sub_lang = getattr(user_obj, "language", "en") or "en"
 
         await message.answer(
-            f"*Job Accepted!*\n\n"
-            f"Job #{job_id}: {job_title}\n"
-            f"Company: {company_name}\n\n"
-            "Use 'My Active Jobs' to start the job when ready.",
+            i18n_msg("job_accepted_confirm", lang=sub_lang, job_id=job_id, title=job_title, company=company_name),
             parse_mode="Markdown"
         )
         
@@ -379,13 +377,12 @@ async def mark_job_done_callback(callback: CallbackQuery):
     success, msg = await JobService.complete_job(job_id, callback.from_user.id)
     
     if success:
+        sub_lang = await get_recipient_lang(callback.from_user.id)
         await callback.message.edit_text(
-            f"*Job Marked as Done!*\n\n"
-            f"Job #{job_id}: {job.title}\n\n"
-            "The supervisor has been notified for investigation.",
+            i18n_msg("job_marked_done_confirm", lang=sub_lang, job_id=job_id, title=job.title),
             parse_mode="Markdown"
         )
-        await callback.answer("Job marked as done!")
+        await callback.answer("✅")
         
         # Notify Supervisor
         async with async_session() as session:
@@ -428,18 +425,13 @@ async def btn_submit_job_menu(message: Message):
     jobs = await JobService.get_subcontractor_active_jobs(message.from_user.id)
     in_progress_jobs = [j for j in jobs if j.status == JobStatus.IN_PROGRESS]
     
+    sub_lang = await get_recipient_lang(message.from_user.id)
     if not in_progress_jobs:
-        await message.answer(
-            "*Submit Job*\n\n"
-            "You have no jobs in progress to submit.\n\n"
-            "Start a job first from 'My Active Jobs'.",
-            parse_mode="Markdown"
-        )
+        await message.answer(i18n_msg("no_jobs_in_progress", lang=sub_lang), parse_mode="Markdown")
         return
-    
+
     await message.answer(
-        "*Submit Job*\n\n"
-        "Select a job to submit for supervisor review:",
+        i18n_msg("select_job_to_submit", lang=sub_lang),
         reply_markup=get_job_list_keyboard(in_progress_jobs, context="submit"),
         parse_mode="Markdown"
     )
@@ -462,11 +454,10 @@ async def start_job_submission(callback: CallbackQuery, state: FSMContext, job_i
         return
     
     await state.update_data(submitting_job_id=job_id, job_title=job.title)
+    sub_lang = await get_recipient_lang(callback.from_user.id)
+    header = f"*Submit Job #{job_id}*\n\n*{job.title}*\n\n"
     await callback.message.edit_text(
-        f"*Submit Job #{job_id}*\n\n"
-        f"*{job.title}*\n\n"
-        "Please provide any notes about the completed work\n"
-        "(or send /skip to continue without notes):",
+        header + i18n_msg("submission_notes_prompt", lang=sub_lang),
         parse_mode="Markdown"
     )
     await state.set_state(SubmissionStates.waiting_for_notes)
@@ -474,18 +465,17 @@ async def start_job_submission(callback: CallbackQuery, state: FSMContext, job_i
 
 @router.message(StateFilter(SubmissionStates.waiting_for_notes))
 async def process_submission_notes(message: Message, state: FSMContext):
+    sub_lang = await get_recipient_lang(message.from_user.id)
     if message.text.strip().lower() == "/cancel":
         await state.clear()
-        await message.answer("Job submission cancelled.")
+        await message.answer(i18n_msg("submission_cancelled", lang=sub_lang))
         return
     
     notes = None if message.text.strip().lower() == "/skip" else message.text.strip()
     await state.update_data(submission_notes=notes, submission_photos=[])
     
     await message.answer(
-        "*Submit Job*\n\n"
-        "Now please send photos as proof of completed work.\n"
-        "You can send multiple photos. When done, type /done to submit.",
+        i18n_msg("submission_photos_prompt", lang=sub_lang),
         parse_mode="Markdown"
     )
     await state.set_state(SubmissionStates.waiting_for_photo)
@@ -601,16 +591,14 @@ async def finish_photo_submission(message: Message, state: FSMContext):
 
 @router.message(StateFilter(SubmissionStates.waiting_for_photo))
 async def process_submission_photo(message: Message, state: FSMContext):
+    sub_lang = await get_recipient_lang(message.from_user.id)
     if message.text and message.text.strip().lower() == "/cancel":
         await state.clear()
-        await message.answer("Job submission cancelled.")
+        await message.answer(i18n_msg("submission_cancelled", lang=sub_lang))
         return
     
     if not message.photo:
-        await message.answer(
-            "Please send a photo as proof of completed work.\n"
-            "Type /done when finished or /cancel to cancel."
-        )
+        await message.answer(i18n_msg("photo_required_prompt", lang=sub_lang))
         return
     
     photo = message.photo[-1]
@@ -619,10 +607,8 @@ async def process_submission_photo(message: Message, state: FSMContext):
     photos.append(photo.file_id)
     await state.update_data(submission_photos=photos)
     
-    await message.answer(
-        f"Photo {len(photos)} added.\n\n"
-        f"Send more photos or type /done to submit the job."
-    )
+    sub_lang = await get_recipient_lang(message.from_user.id)
+    await message.answer(i18n_msg("photo_added_sub", lang=sub_lang, count=len(photos)))
 
 @router.callback_query(F.data.startswith("job_quote:"))
 async def quote_job_callback(callback: CallbackQuery, state: FSMContext):
@@ -647,16 +633,14 @@ async def quote_job_callback(callback: CallbackQuery, state: FSMContext):
 
 @router.message(StateFilter(QuoteStates.waiting_for_quote))
 async def process_quote_amount(message: Message, state: FSMContext):
+    sub_lang = await get_recipient_lang(message.from_user.id)
     if message.text.strip().lower() == "/cancel":
         await state.clear()
-        await message.answer("Quote submission cancelled.")
+        await message.answer(i18n_msg("quote_cancelled", lang=sub_lang))
         return
     
     await state.update_data(quote_amount=message.text.strip())
-    await message.answer(
-        "Would you like to add any notes to your quote?\n\n"
-        "Type your notes or send /skip to submit without notes:"
-    )
+    await message.answer(i18n_msg("quote_notes_prompt", lang=sub_lang))
     await state.set_state(QuoteStates.waiting_for_notes)
 
 @router.message(StateFilter(QuoteStates.waiting_for_notes))
@@ -667,14 +651,12 @@ async def process_quote_notes(message: Message, state: FSMContext):
     
     notes = None if message.text.strip().lower() == "/skip" else message.text.strip()
     
+    sub_lang = await get_recipient_lang(message.from_user.id)
     success, msg = await QuoteService.submit_quote(job_id, message.from_user.id, amount, notes)
     
     if success:
         await message.answer(
-            f"*Quote Submitted!*\n\n"
-            f"Job #{job_id}\n"
-            f"Your Quote: {amount}\n\n"
-            "The supervisor will review your quote and notify you if accepted.",
+            i18n_msg("quote_submitted_confirm", lang=sub_lang, job_id=job_id, amount=amount),
             parse_mode="Markdown"
         )
         
@@ -731,14 +713,13 @@ async def start_job_callback(callback: CallbackQuery):
     
     if success:
         job = await JobService.get_job_by_id(job_id)
+        sub_lang = await get_recipient_lang(callback.from_user.id)
         await callback.message.edit_text(
-            f"*Job Started!*\n\n"
-            f"Job #{job_id}: {job.title if job else 'Unknown'}\n\n"
-            "You can mark the job as complete when finished.",
+            i18n_msg("job_started_confirm", lang=sub_lang, job_id=job_id, title=job.title if job else ""),
             reply_markup=get_job_actions_keyboard(job_id, "preset", "in_progress"),
             parse_mode="Markdown"
         )
-        await callback.answer("Job started!")
+        await callback.answer("✅")
     else:
         await callback.answer(msg, show_alert=True)
 
@@ -771,10 +752,9 @@ async def process_completion_photo(message: Message, state: FSMContext):
     success, msg = await JobService.complete_job(job_id, message.from_user.id)
     
     if success:
+        sub_lang = await get_recipient_lang(message.from_user.id)
         await message.answer(
-            f"*Job Completed!*\n\n"
-            f"Job #{job_id} has been marked as complete with photo evidence.\n\n"
-            "Great work!",
+            i18n_msg("job_completed_confirm", lang=sub_lang, job_id=job_id),
             parse_mode="Markdown"
         )
     else:

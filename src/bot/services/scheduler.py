@@ -4,6 +4,7 @@ from sqlalchemy import select, and_
 from src.bot.database import async_session, Job, User, WeeklyAvailability
 from src.bot.database.models import JobStatus, UserRole
 from src.bot.config import config
+from src.bot.i18n import msg as i18n_msg, get_recipient_lang
 import logging
 
 logger = logging.getLogger(__name__)
@@ -57,12 +58,10 @@ class SchedulerService:
             
             for job, user in jobs_with_users:
                 try:
+                    sub_lang = await get_recipient_lang(user.telegram_id)
                     await cls.bot.send_message(
                         user.telegram_id,
-                        f"*Reminder: Pending Job*\n\n"
-                        f"You have a pending job that requires your response:\n\n"
-                        f"*Job #{job.id}:* {job.title}\n\n"
-                        f"Please accept or decline this job.",
+                        i18n_msg("pending_job_reminder", lang=sub_lang, job_id=job.id, title=job.title),
                         parse_mode="Markdown"
                     )
                     
@@ -99,12 +98,10 @@ class SchedulerService:
                     job.status = JobStatus.CANCELLED
                     job.cancelled_at = datetime.utcnow()
                     
+                    sup_lang = await get_recipient_lang(supervisor.telegram_id)
                     await cls.bot.send_message(
                         supervisor.telegram_id,
-                        f"*Job Auto-Cancelled*\n\n"
-                        f"Job #{job.id}: {job.title}\n\n"
-                        f"This job was automatically cancelled due to no response "
-                        f"after {config.JOB_AUTO_CLOSE_HOURS} hours.",
+                        i18n_msg("job_auto_cancelled", lang=sup_lang, job_id=job.id, title=job.title, hours=config.JOB_AUTO_CLOSE_HOURS),
                         parse_mode="Markdown"
                     )
                     

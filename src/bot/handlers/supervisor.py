@@ -89,7 +89,8 @@ async def start_new_job(message: Message, state: FSMContext):
 @router.message(StateFilter(NewJobStates.waiting_for_title))
 async def process_job_title(message: Message, state: FSMContext):
     if message.text.startswith("/"):
-        await message.answer("Job creation cancelled.")
+        lang = await get_recipient_lang(message.from_user.id)
+        await message.answer(i18n_msg("job_creation_cancelled", lang=lang))
         await state.clear()
         return
     
@@ -106,7 +107,8 @@ async def process_job_title(message: Message, state: FSMContext):
 @router.callback_query(F.data == "job_cancel")
 async def cancel_job_creation(callback: CallbackQuery, state: FSMContext):
     await state.clear()
-    await callback.message.edit_text("Job creation cancelled.")
+    lang = await get_recipient_lang(callback.from_user.id)
+    await callback.message.edit_text(i18n_msg("job_creation_cancelled", lang=lang))
     await callback.answer()
 
 @router.callback_query(F.data.startswith("job_type:"), StateFilter(NewJobStates.waiting_for_type))
@@ -172,7 +174,8 @@ async def process_job_address(message: Message, state: FSMContext):
         return
     
     if message.text.startswith("/"):
-        await message.answer("Job creation cancelled.")
+        lang = await get_recipient_lang(message.from_user.id)
+        await message.answer(i18n_msg("job_creation_cancelled", lang=lang))
         await state.clear()
         return
         
@@ -207,7 +210,8 @@ async def ask_for_price(message: Message, state: FSMContext, edit: bool = False)
 @router.message(StateFilter(NewJobStates.waiting_for_price))
 async def process_job_price(message: Message, state: FSMContext):
     if message.text.startswith("/"):
-        await message.answer("Job creation cancelled.")
+        lang = await get_recipient_lang(message.from_user.id)
+        await message.answer(i18n_msg("job_creation_cancelled", lang=lang))
         await state.clear()
         return
         
@@ -243,7 +247,8 @@ async def process_supervisor_photo(message: Message, state: FSMContext):
         return
     
     if message.text and message.text.startswith("/"):
-        await message.answer("Job creation cancelled.")
+        lang = await get_recipient_lang(message.from_user.id)
+        await message.answer(i18n_msg("job_creation_cancelled", lang=lang))
         await state.clear()
         return
     
@@ -290,7 +295,8 @@ async def skip_deadline(callback: CallbackQuery, state: FSMContext):
 @router.message(StateFilter(NewJobStates.waiting_for_deadline))
 async def process_job_deadline(message: Message, state: FSMContext):
     if message.text and message.text.startswith("/"):
-        await message.answer("Job creation cancelled.")
+        lang = await get_recipient_lang(message.from_user.id)
+        await message.answer(i18n_msg("job_creation_cancelled", lang=lang))
         await state.clear()
         return
     
@@ -371,11 +377,9 @@ async def process_team_send(callback: CallbackQuery, state: FSMContext):
         return
     
     if send_option == "draft":
+        lang = await get_recipient_lang(callback.from_user.id)
         await callback.message.edit_text(
-            f"*Job Saved as Draft!*\n\n"
-            f"Job #{job.id}: {job.title}\n"
-            f"Status: Created (not sent)\n\n"
-            "You can send it later from 'My Jobs'.",
+            i18n_msg("job_saved_draft", lang=lang, job_id=job.id, title=job.title),
             parse_mode="Markdown"
         )
     else:
@@ -555,7 +559,8 @@ async def confirm_save_pending(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("cancel:save_pending"))
 async def cancel_save_pending(callback: CallbackQuery, state: FSMContext):
     await state.clear()
-    await callback.message.edit_text("Job creation cancelled.")
+    lang = await get_recipient_lang(callback.from_user.id)
+    await callback.message.edit_text(i18n_msg("job_creation_cancelled", lang=lang))
     await callback.answer()
 
 @router.message(Command("myjobs"))

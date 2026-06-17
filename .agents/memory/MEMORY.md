@@ -1,0 +1,2 @@
+- [i18n coverage](i18n-coverage.md) — full audit of all cross-role and self-notification i18n gaps; all fixed as of latest session.
+- [translate_text utility](translate-text.md) — async wrapper around deep-translator GoogleTranslator; LRU-cached 256 entries, chunks >5000 chars; used for dynamic long texts (help, about).

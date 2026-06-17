@@ -9,7 +9,8 @@ from src.bot.database.models import UserRole
 from src.bot.services.access_codes import AccessCodeService
 from src.bot.utils.keyboards import get_main_menu_keyboard, get_self_delete_confirm_keyboard
 from src.bot.utils.roles import role_display_name
-from src.bot.i18n import variants as tv
+from src.bot.i18n import variants as tv, msg as i18n_msg, get_recipient_lang
+from src.bot.utils.translate import translate_text
 from src.bot.config import config
 import logging
 
@@ -52,9 +53,7 @@ async def cmd_start(message: Message, state: FSMContext):
             lang = getattr(user, "language", "en") or "en"
             keyboard = get_main_menu_keyboard(user.role, lang=lang)
             await message.answer(
-                f"Welcome back, {message.from_user.first_name or 'there'}!\n\n"
-                f"You are logged in as: *{role_name}*\n\n"
-                "Use the menu below to navigate:",
+                i18n_msg("welcome_back", lang=lang, name=message.from_user.first_name or "there", role=role_name),
                 reply_markup=keyboard,
                 parse_mode="Markdown"
             )
@@ -128,11 +127,9 @@ async def btn_delete_account(message: Message):
             await message.answer("You are not registered.")
             return
     
+    user_lang = getattr(user, "language", "en") or "en"
     await message.answer(
-        " *Delete Your Account*\n\n"
-        "Are you sure you want to delete your account?\n\n"
-        "*This action cannot be undone.*\n"
-        "You will need a new access code to register again.",
+        i18n_msg("account_delete_confirm", lang=user_lang),
         reply_markup=get_self_delete_confirm_keyboard(user.id),
         parse_mode="Markdown"
     )
@@ -160,22 +157,31 @@ async def handle_confirm_self_delete(callback: CallbackQuery):
             if access_code and access_code.current_uses > 0:
                 access_code.current_uses -= 1
         
+        user_lang = getattr(user, "language", "en") or "en"
         user.is_active = False
         await session.commit()
     
-    await callback.message.edit_text(
-        "Your account has been deleted.\n\n"
-        "Use /start with a new access code to register again."
-    )
+    await callback.message.edit_text(i18n_msg("account_deleted", lang=user_lang))
     await callback.answer()
 
 @router.callback_query(F.data == "cancel_self_delete")
 async def handle_cancel_self_delete(callback: CallbackQuery):
-    await callback.message.edit_text("Account deletion cancelled.")
+    user_lang = await get_recipient_lang(callback.from_user.id)
+    await callback.message.edit_text(i18n_msg("account_delete_cancelled", lang=user_lang))
     await callback.answer()
 
 @router.message(F.text.in_(tv("About")))
 async def btn_about(message: Message):
+    lang = "en"
+    if async_session:
+        async with async_session() as session:
+            result = await session.execute(
+                select(User).where(User.telegram_id == message.from_user.id)
+            )
+            u = result.scalar_one_or_none()
+            if u:
+                lang = getattr(u, "language", "en") or "en"
+
     about_text = (
         "*About TaskRelay Bot*\n\n"
         "TaskRelay is a Telegram workflow platform for Australian teams that manage field jobs from request to completion.\n\n"
@@ -197,6 +203,8 @@ async def btn_about(message: Message):
         "Subcontractors can submit Site Safety Checklists from the menu and choose the supervisor recipient. Managers and supervisors can review, filter, and export submissions.\n\n"
         "_TaskRelay - Operations first, chat-native workflow._"
     )
+    if lang != "en":
+        about_text = await translate_text(about_text, target_lang=lang, source_lang="en")
     await message.answer(about_text, parse_mode="Markdown")
 
 async def show_help(message: Message):
@@ -213,6 +221,8 @@ async def show_help(message: Message):
         if not user:
             await message.answer("Please use /start and register first.")
             return
+
+        lang = getattr(user, "language", "en") or "en"
 
         if user.role == UserRole.SUPER_ADMIN:
             help_text = (
@@ -285,6 +295,8 @@ async def show_help(message: Message):
                 "Fast approvals come from clear photos and short, accurate notes."
             )
 
+        if lang != "en":
+            help_text = await translate_text(help_text, target_lang=lang, source_lang="en")
         await message.answer(help_text, parse_mode="Markdown")
 
 

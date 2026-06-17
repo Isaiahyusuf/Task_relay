@@ -451,6 +451,279 @@ MESSAGES: dict[str, dict[str, str]] = {
         ),
     },
 
+    # ── Scheduler background alerts ──────────────────────────────────────────
+
+    "pending_job_reminder": {
+        "en": (
+            "🔔 *Reminder: Pending Job*\n\n"
+            "You have a job waiting for your response:\n\n"
+            "*Job #{job_id}:* {title}\n\n"
+            "Please accept or decline this job."
+        ),
+        "ps": (
+            "🔔 *یادونه: تمه لرونکی کار*\n\n"
+            "تاسو یو کار لرئ چې ستاسو ځواب ته انتظار لري:\n\n"
+            "*کار #{job_id}:* {title}\n\n"
+            "مهرباني وکړئ دا کار ومنئ یا رد کړئ."
+        ),
+        "my": (
+            "🔔 *သတိပေးချက်: အလုပ်စောင့်ဆိုင်းနေသည်*\n\n"
+            "သင်၏ဖြေကြားမှုကိုစောင့်နေသောအလုပ်ရှိသည်:\n\n"
+            "*အလုပ် #{job_id}:* {title}\n\n"
+            "ကျေးဇူးပြု၍ ဤအလုပ်ကိုလက်ခံ သို့မဟုတ် ငြင်းဆိုပါ။"
+        ),
+    },
+    "job_auto_cancelled": {
+        "en": (
+            "⚠️ *Job Auto-Cancelled*\n\n"
+            "Job #{job_id}: {title}\n\n"
+            "This job was automatically cancelled after {hours} hours with no response."
+        ),
+        "ps": (
+            "⚠️ *کار اتوماتیک لغوه شو*\n\n"
+            "کار #{job_id}: {title}\n\n"
+            "دا کار د {hours} ساعتونو وروسته بې ځوابه پاتې شو او اتوماتیک لغوه شو."
+        ),
+        "my": (
+            "⚠️ *အလုပ်အလိုအလျောက်ဖျက်သိမ်းပြီး*\n\n"
+            "အလုပ် #{job_id}: {title}\n\n"
+            "ဤအလုပ်သည် {hours} နာရီကြာ ဖြေကြားမှုမရ၍ အလိုအလျောက်ဖျက်သိမ်းလိုက်သည်။"
+        ),
+    },
+
+    # ── Auth / account messages ───────────────────────────────────────────────
+
+    "account_delete_confirm": {
+        "en": (
+            "🗑️ *Delete Your Account*\n\n"
+            "Are you sure you want to delete your account?\n\n"
+            "*This action cannot be undone.*\n"
+            "You will need a new access code to register again."
+        ),
+        "ps": (
+            "🗑️ *ستاسو حساب ړنګ کړئ*\n\n"
+            "ایا تاسو ډاډه یاست چې خپل حساب ړنګ کول غواړئ؟\n\n"
+            "*دا کار بیرته نه شي کیدای.*\n"
+            "تاسو به د بیا ثبتنام لپاره نوي د لاسرسي کوډ ته اړتیا ولرئ."
+        ),
+        "my": (
+            "🗑️ *သင်၏အကောင့်ဖျက်ရန်*\n\n"
+            "သင်၏အကောင့်ကိုဖျက်မည်မှာ သေချာပါသလား?\n\n"
+            "*ဤလုပ်ဆောင်မှုကိုပြန်မလုပ်နိုင်ပါ။*\n"
+            "ပြန်မှတ်ပုံတင်ရန် access code အသစ်လိုအပ်သည်။"
+        ),
+    },
+    "account_deleted": {
+        "en": "✅ Your account has been deleted.\n\nUse /start with a new access code to register again.",
+        "ps": "✅ ستاسو حساب ړنګ شو.\n\nد بیا ثبتنام لپاره د نوي د لاسرسي کوډ سره /start وکاروئ.",
+        "my": "✅ သင်၏အကောင့်ဖျက်ပြီးဖြစ်သည်။\n\nပြန်မှတ်ပုံတင်ရန် access code အသစ်ဖြင့် /start ကိုသုံးပါ။",
+    },
+    "account_delete_cancelled": {
+        "en": "Cancelled. Your account is safe.",
+        "ps": "لغوه شو. ستاسو حساب خوندي دی.",
+        "my": "မဖျက်ပါ။ သင်၏အကောင့်ဘေးကင်းသည်။",
+    },
+
+    # ── Subcontractor action confirmations ────────────────────────────────────
+
+    "job_accepted_confirm": {
+        "en": (
+            "✅ *Job Accepted!*\n\n"
+            "Job #{job_id}: {title}\n"
+            "Company: {company}\n\n"
+            "Use 'My Active Jobs' to start the job when ready."
+        ),
+        "ps": (
+            "✅ *کار ومنل شو!*\n\n"
+            "کار #{job_id}: {title}\n"
+            "شرکت: {company}\n\n"
+            "کله چې تیار یاست د کار د پیل کولو لپاره 'زما فعال کارونه' وکاروئ."
+        ),
+        "my": (
+            "✅ *အလုပ်လက်ခံပြီး!*\n\n"
+            "အလုပ် #{job_id}: {title}\n"
+            "ကုမ္ပဏီ: {company}\n\n"
+            "အသင့်ဖြစ်သောအခါ 'ကျွန်ုပ်လက်ရှိအလုပ်များ' ကိုသုံးပါ။"
+        ),
+    },
+    "job_marked_done_confirm": {
+        "en": (
+            "✅ *Job Marked as Done!*\n\n"
+            "Job #{job_id}: {title}\n\n"
+            "The supervisor has been notified and will review your work."
+        ),
+        "ps": (
+            "✅ *کار بشپړ نښه شو!*\n\n"
+            "کار #{job_id}: {title}\n\n"
+            "سرپرست ته خبر ورکړل شوی او ستاسو کار به بیاکتنه کوي."
+        ),
+        "my": (
+            "✅ *အလုပ်ပြီးစီးကြောင်းမှတ်သားပြီး!*\n\n"
+            "အလုပ် #{job_id}: {title}\n\n"
+            "ကြီးကြပ်သူကိုအကြောင်းကြားပြီး သင်၏အလုပ်ကိုသုံးသပ်မည်။"
+        ),
+    },
+    "job_started_confirm": {
+        "en": (
+            "🚀 *Job Started!*\n\n"
+            "Job #{job_id}: {title}\n\n"
+            "You can mark the job as complete when finished."
+        ),
+        "ps": (
+            "🚀 *کار پیل شو!*\n\n"
+            "کار #{job_id}: {title}\n\n"
+            "کله چې پای ته ورسیدئ کولی شئ کار بشپړ نښه کړئ."
+        ),
+        "my": (
+            "🚀 *အလုပ်စတင်ပြီး!*\n\n"
+            "အလုပ် #{job_id}: {title}\n\n"
+            "ပြီးဆုံးသောအခါ အလုပ်ပြီးစီးကြောင်းမှတ်သားနိုင်သည်။"
+        ),
+    },
+    "job_completed_confirm": {
+        "en": (
+            "🎉 *Job Completed!*\n\n"
+            "Job #{job_id} has been marked as complete with photo evidence.\n\n"
+            "Great work!"
+        ),
+        "ps": (
+            "🎉 *کار بشپړ شو!*\n\n"
+            "کار #{job_id} د عکس د شواهدو سره بشپړ نښه شوی.\n\n"
+            "ښه کار!"
+        ),
+        "my": (
+            "🎉 *အလုပ်ပြီးစီးပြီ!*\n\n"
+            "အလုပ် #{job_id} ဓာတ်ပုံသက်သေနှင့်တကွ ပြီးစီးကြောင်းမှတ်သားပြီး။\n\n"
+            "ကောင်းသောအလုပ်!"
+        ),
+    },
+    "no_jobs_in_progress": {
+        "en": (
+            "📋 *Submit Job*\n\n"
+            "You have no jobs in progress to submit.\n\n"
+            "Start a job first from 'My Active Jobs'."
+        ),
+        "ps": (
+            "📋 *کار سپارئ*\n\n"
+            "تاسو د سپارلو لپاره پرمخ ولاړ کارونه نلرئ.\n\n"
+            "لومړی 'زما فعال کارونه' نه کار پیل کړئ."
+        ),
+        "my": (
+            "📋 *အလုပ်တင်သွင်းရန်*\n\n"
+            "တင်သွင်းရန်ဆောင်ရွက်နေဆဲအလုပ်မရှိပါ။\n\n"
+            "အရင်ဆုံး 'ကျွန်ုပ်လက်ရှိအလုပ်များ' မှ အလုပ်စတင်ပါ။"
+        ),
+    },
+    "select_job_to_submit": {
+        "en": "📋 *Submit Job*\n\nSelect a job to submit for supervisor review:",
+        "ps": "📋 *کار سپارئ*\n\nد سرپرست بیاکتنې لپاره کار وټاکئ:",
+        "my": "📋 *အလုပ်တင်သွင်းရန်*\n\nကြီးကြပ်သူသုံးသပ်ရန် အလုပ်ရွေးချယ်ပါ:",
+    },
+    "submission_notes_prompt": {
+        "en": (
+            "*Submit Job*\n\n"
+            "Please provide any notes about the completed work\n"
+            "(or send /skip to continue without notes):"
+        ),
+        "ps": (
+            "*کار سپارئ*\n\n"
+            "مهرباني وکړئ د بشپړ شوي کار لپاره یادداشتونه ولیکئ\n"
+            "(یا بې یادداشتونو دوام لپاره /skip ولیکئ):"
+        ),
+        "my": (
+            "*အလုပ်တင်သွင်းရန်*\n\n"
+            "ပြီးစီးသောအလုပ်နှင့်ပတ်သက်သောမှတ်ချက်ထည့်ပါ\n"
+            "(သို့မဟုတ် မှတ်ချက်မပါ ဆက်လက်ရန် /skip ပို့ပါ):"
+        ),
+    },
+    "submission_photos_prompt": {
+        "en": (
+            "*Submit Job*\n\n"
+            "Now please send photos as proof of completed work.\n"
+            "You can send multiple photos. When done, type /done to submit."
+        ),
+        "ps": (
+            "*کار سپارئ*\n\n"
+            "اوس مهرباني وکړئ د بشپړ شوي کار د شواهدو لپاره عکسونه ولیږئ.\n"
+            "تاسو کولی شئ ګڼ شمیر عکسونه ولیږئ. کله چې پای ته ورسیدئ /done ولیکئ."
+        ),
+        "my": (
+            "*အလုပ်တင်သွင်းရန်*\n\n"
+            "ပြီးစီးသောအလုပ်၏သက်သေအဖြစ် ဓာတ်ပုံများပေးပို့ပါ။\n"
+            "ဓာတ်ပုံများစုစုပေးပို့နိုင်သည်။ ပြီးဆုံးသောအခါ /done ရိုက်ပါ။"
+        ),
+    },
+    "photo_added_sub": {
+        "en": "📷 Photo {count} added.\n\nSend more photos or type /done to submit.",
+        "ps": "📷 عکس {count} اضافه شو.\n\nنور عکسونه ولیږئ یا د سپارلو لپاره /done ولیکئ.",
+        "my": "📷 ဓာတ်ပုံ {count} ပေါင်းထည့်ပြီး။\n\nဓာတ်ပုံများပိုပို့ပါ သို့မဟုတ် တင်သွင်းရန် /done ရိုက်ပါ။",
+    },
+    "quote_notes_prompt": {
+        "en": "Would you like to add any notes to your quote?\n\nType your notes or /skip to submit without notes:",
+        "ps": "ایا غواړئ خپل نرخ نامې ته یادداشتونه اضافه کړئ؟\n\nخپل یادداشتونه ولیکئ یا بې یادداشتونو د سپارلو لپاره /skip ولیکئ:",
+        "my": "သင်၏ကိုးကားမှုတွင် မှတ်ချက်များထည့်လိုပါသလား?\n\nမှတ်ချက်ရိုက်ပါ သို့မဟုတ် မှတ်ချက်မပါ တင်သွင်းရန် /skip ရိုက်ပါ:",
+    },
+    "quote_submitted_confirm": {
+        "en": (
+            "✅ *Quote Submitted!*\n\n"
+            "Job #{job_id}\n"
+            "Your Quote: {amount}\n\n"
+            "The supervisor will review your quote and notify you if accepted."
+        ),
+        "ps": (
+            "✅ *نرخ نامه سپارل شوه!*\n\n"
+            "کار #{job_id}\n"
+            "ستاسو نرخ: {amount}\n\n"
+            "سرپرست به ستاسو نرخ نامه بیاکتنه وکړي او که قبول شي درته خبر درکوي."
+        ),
+        "my": (
+            "✅ *ကိုးကားမှုတင်သွင်းပြီး!*\n\n"
+            "အလုပ် #{job_id}\n"
+            "သင်၏ကိုးကား: {amount}\n\n"
+            "ကြီးကြပ်သူသင်၏ကိုးကားမှုကိုသုံးသပ်ပြီး လက်ခံပါကအကြောင်းကြားမည်။"
+        ),
+    },
+    "submission_cancelled": {
+        "en": "Job submission cancelled.",
+        "ps": "د کار سپارل لغوه شو.",
+        "my": "အလုပ်တင်သွင်းမှုပယ်ဖျက်ပြီး။",
+    },
+    "photo_required_prompt": {
+        "en": "📷 Please send a photo as proof of completed work.\nType /done when finished or /cancel to cancel.",
+        "ps": "📷 مهرباني وکړئ د بشپړ شوي کار د شواهدو لپاره عکس ولیږئ.\nکله چې پای ته ورسیدئ /done یا د لغوه کولو لپاره /cancel ولیکئ.",
+        "my": "📷 ပြီးစီးသောအလုပ်၏သက်သေအဖြစ် ဓာတ်ပုံပေးပို့ပါ။\nပြီးဆုံးသောအခါ /done ကိုရိုက်ပါ သို့မဟုတ် ပယ်ဖျက်ရန် /cancel ရိုက်ပါ။",
+    },
+    "quote_cancelled": {
+        "en": "Quote submission cancelled.",
+        "ps": "د نرخ نامې سپارل لغوه شو.",
+        "my": "ကိုးကားမှုတင်သွင်းမှုပယ်ဖျက်ပြီး။",
+    },
+
+    # ── Supervisor action confirmations ───────────────────────────────────────
+
+    "job_creation_cancelled": {
+        "en": "Job creation cancelled.",
+        "ps": "د کار جوړول لغوه شو.",
+        "my": "အလုပ်ဖန်တီးမှုပယ်ဖျက်ပြီး။",
+    },
+    "job_saved_draft": {
+        "en": (
+            "📝 *Job Saved as Draft!*\n\n"
+            "Job #{job_id}: {title}\n\n"
+            "You can send it later from 'My Jobs'."
+        ),
+        "ps": (
+            "📝 *کار د مسودې په توګه خوندي شو!*\n\n"
+            "کار #{job_id}: {title}\n\n"
+            "تاسو کولی شئ وروسته 'زما کارونه' نه یې ولیږئ."
+        ),
+        "my": (
+            "📝 *အလုပ်မူကြမ်းအဖြစ်သိမ်းဆည်းပြီး!*\n\n"
+            "အလုပ် #{job_id}: {title}\n\n"
+            "'ကျွန်ုပ်အလုပ်များ' မှ နောက်မှပေးပို့နိုင်သည်။"
+        ),
+    },
+
     # ── Deadline reminders ────────────────────────────────────────────────────
 
     "deadline_reminder": {
