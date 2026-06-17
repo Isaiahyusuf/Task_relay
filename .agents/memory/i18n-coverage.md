@@ -12,31 +12,35 @@ Every message sent to a user — whether background (scheduler) or interactive (
 - Background alerts (scheduler, broadcast): always `get_recipient_lang` on the recipient's telegram_id.
 - Interactive handler responses: use `get_recipient_lang(message.from_user.id)` or read `user.language` if the user object is already loaded.
 - Long static texts (help, about): use `translate_text(text, target_lang=lang)` dynamically rather than hardcoding Pashto/Burmese in MESSAGES.
+- FSM flows: store `lang` in state data at flow entry (`await state.update_data(lang=lang)`), then retrieve with `data.get("lang") or await get_recipient_lang(...)` in subsequent steps.
 
-## Fixed in latest session
+## Completed files
 
 ### scheduler.py
 - `check_reminders` → `i18n_msg("pending_job_reminder", ...)` to sub
 - `check_auto_close` → `i18n_msg("job_auto_cancelled", ...)` to supervisor
 
 ### auth.py
-- welcome_back already existed in MESSAGES — wired it up (was hardcoded f-string)
-- delete account flow: `account_delete_confirm`, `account_deleted`, `account_delete_cancelled`
-- `show_help`: added `translate_text` at the end if `lang != "en"`
-- `btn_about`: added DB lang lookup + `translate_text` if needed
+- welcome_back, delete account flow, show_help (translate_text), btn_about
 
-### subcontractor.py
-- `job_accepted_confirm`, `job_marked_done_confirm`, `job_started_confirm`, `job_completed_confirm`
-- `no_jobs_in_progress`, `select_job_to_submit`
-- `submission_notes_prompt`, `submission_photos_prompt`, `submission_cancelled`
-- `photo_required_prompt`, `photo_added_sub`
-- `quote_notes_prompt`, `quote_submitted_confirm`, `quote_cancelled`
+### subcontractor.py — fully i18n'd
 
-### supervisor.py
-- All 7 occurrences of "Job creation cancelled." → `i18n_msg("job_creation_cancelled", lang=lang)`
-- `job_saved_draft` → `i18n_msg("job_saved_draft", ...)`
+### supervisor.py — fully i18n'd
 
-## Remaining gaps (not yet fixed)
-- `admin.py` line 1519: admin deleting another user's account — hardcoded English (low priority, admin is typically English-speaking)
-- Various minor error strings ("Session expired", "Database not available", etc.) — not translated
-- Supervisor job creation flow prompts (step 2–7 text content) — only the cancel/save messages were i18n'd; the step body prompts still in English
+### admin.py — fully i18n'd (completed in latest session)
+- All code creation FSM steps (process_code_input, process_role_selection, create_code_with_team, finalize_code_creation, cancel handlers)
+- Switch role flow (btn_switch_role_super_admin, handle_super_admin_switch, handle_switch_team_selection, btn_return_to_super_admin)
+- User management (show_user_list, show_users_by_role, handle_manage_user, handle_delete_user_request, handle_confirm_delete, back_to_users)
+- Messaging flow (btn_send_message, process_message_target, proceed_to_compose, send_broadcast_message, cancel_message)
+- Availability flow (btn_request_availability, toggle_availability_request_selection, cancel_availability_request, send_availability_request)
+- Weekly availability view (btn_weekly_availability)
+- All db_unavailable, user_not_found_err, not_authorized, cannot_return_gm strings
+
+## i18n keys added in latest session (admin.py round)
+~50 keys added to MESSAGES in i18n.py covering code creation, switch role,
+user management, messaging, availability. See i18n.py starting around line 1232.
+
+## Known minor gaps (acceptable)
+- Supervisor job creation step body prompts (step 2–7 form questions) — English only
+- safety_checklist.py — English only (super_admin/admin-only feature)
+- Custom roles / regions / teams management pages in admin.py — English only (super_admin only, not multilingual users)

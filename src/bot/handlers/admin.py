@@ -66,7 +66,8 @@ async def btn_history(message: Message):
 
 async def check_admin(message: Message) -> bool:
     if not async_session:
-        await message.answer("Database not available.")
+        lang = await get_recipient_lang(message.from_user.id)
+        await message.answer(i18n_msg("db_unavailable", lang=lang))
         return False
     
     async with async_session() as session:
@@ -74,6 +75,7 @@ async def check_admin(message: Message) -> bool:
             select(User).where(User.telegram_id == message.from_user.id)
         )
         user = result.scalar_one_or_none()
+        lang = (getattr(user, "language", "en") or "en") if user else "en"
         is_effective_admin = bool(
             user and (
                 has_minimum_role(user.role, UserRole.ADMIN)
@@ -81,13 +83,14 @@ async def check_admin(message: Message) -> bool:
             )
         )
         if not is_effective_admin:
-            await message.answer("You don't have admin permissions.")
+            await message.answer(i18n_msg("admin_no_permission", lang=lang))
             return False
     return True
 
 async def check_super_admin(message: Message) -> bool:
     if not async_session:
-        await message.answer("Database not available.")
+        lang = await get_recipient_lang(message.from_user.id)
+        await message.answer(i18n_msg("db_unavailable", lang=lang))
         return False
     
     async with async_session() as session:
@@ -95,6 +98,7 @@ async def check_super_admin(message: Message) -> bool:
             select(User).where(User.telegram_id == message.from_user.id)
         )
         user = result.scalar_one_or_none()
+        lang = (getattr(user, "language", "en") or "en") if user else "en"
         # A user with valid super admin identity can regain super admin capabilities
         # even if currently switched to a lower role.
         is_effective_super_admin = bool(
@@ -104,7 +108,7 @@ async def check_super_admin(message: Message) -> bool:
             )
         )
         if not is_effective_super_admin:
-            await message.answer("You don't have general manager permissions.")
+            await message.answer(i18n_msg("sa_no_permission", lang=lang))
             return False
     return True
 
@@ -115,14 +119,11 @@ async def show_history(message: Message):
         )
         user = result.scalar_one_or_none()
     
+    lang = await get_recipient_lang(message.from_user.id)
     jobs = await JobService.get_job_history(team_id=user.team_id if user else None, limit=50)
     
     if not jobs:
-        await message.answer(
-            "*Job History*\n\n"
-            "No job records found.",
-            parse_mode="Markdown"
-        )
+        await message.answer(i18n_msg("job_history_empty", lang=lang), parse_mode="Markdown")
         return
     
     status_counts = {}
@@ -133,9 +134,7 @@ async def show_history(message: Message):
     summary = "\n".join([f"  {status.replace('_', ' ').title()}: {count}" for status, count in status_counts.items()])
     
     await message.answer(
-        f"*Job History*\n\n"
-        f"*Summary ({len(jobs)} jobs):*\n{summary}\n\n"
-        "Select a job to view details:",
+        i18n_msg("job_history_title", lang=lang, count=len(jobs), summary=summary),
         reply_markup=get_job_list_keyboard(jobs, context="history"),
         parse_mode="Markdown"
     )
@@ -152,22 +151,13 @@ async def btn_archive(message: Message):
     await archive_jobs(message)
 
 async def archive_jobs(message: Message):
+    lang = await get_recipient_lang(message.from_user.id)
     count = await ArchiveService.archive_old_jobs()
     
     if count > 0:
-        await message.answer(
-            f"*Archive Complete*\n\n"
-            f"Archived *{count}* old jobs.\n\n"
-            "Archived jobs can be viewed in 'View Archived'.",
-            parse_mode="Markdown"
-        )
+        await message.answer(i18n_msg("archive_complete", lang=lang, count=count), parse_mode="Markdown")
     else:
-        await message.answer(
-            "*Archive Jobs*\n\n"
-            "No jobs eligible for archiving at this time.\n\n"
-            "Jobs are automatically archived after 90 days.",
-            parse_mode="Markdown"
-        )
+        await message.answer(i18n_msg("archive_empty", lang=lang), parse_mode="Markdown")
 
 @router.message(Command("archived"))
 @require_role(UserRole.ADMIN)
@@ -187,19 +177,15 @@ async def show_archived(message: Message):
         )
         user = result.scalar_one_or_none()
     
+    lang = await get_recipient_lang(message.from_user.id)
     jobs = await ArchiveService.get_archived_jobs(team_id=user.team_id if user else None)
     
     if not jobs:
-        await message.answer(
-            "*Archived Jobs*\n\n"
-            "No archived jobs found.",
-            parse_mode="Markdown"
-        )
+        await message.answer(i18n_msg("archived_jobs_empty", lang=lang), parse_mode="Markdown")
         return
     
     await message.answer(
-        f"*Archived Jobs* ({len(jobs)} total)\n\n"
-        "Select a job to view details:",
+        i18n_msg("archived_jobs_title", lang=lang, count=len(jobs)),
         reply_markup=get_job_list_keyboard(jobs, context="archived"),
         parse_mode="Markdown"
     )
@@ -219,10 +205,9 @@ async def cmd_create_code(message: Message, state: FSMContext):
             "subcontractor": UserRole.SUBCONTRACTOR
         }
         
+        lang = await get_recipient_lang(message.from_user.id)
         if role_str not in role_map:
-            await message.answer(
-                "Invalid role. Use: admin, supervisor, or subcontractor"
-            )
+            await message.answer(i18n_msg("code_invalid_role", lang=lang))
             return
         
         async with async_session() as session:
@@ -232,7 +217,7 @@ async def cmd_create_code(message: Message, state: FSMContext):
             user = result.scalar_one_or_none()
 
         if not user:
-            await message.answer("User not found.")
+            await message.answer(i18n_msg("user_not_found_err", lang=lang))
             return
 
         creator_role = user.role
@@ -241,7 +226,7 @@ async def cmd_create_code(message: Message, state: FSMContext):
 
         target_role = role_map[role_str]
         if target_role not in creatable_roles(creator_role):
-            await message.answer("You don't have permission to create this role code.")
+            await message.answer(i18n_msg("code_no_permission", lang=lang))
             return
         
         success = await AccessCodeService.create_access_code(
@@ -253,14 +238,11 @@ async def cmd_create_code(message: Message, state: FSMContext):
         
         if success:
             await message.answer(
-                f"*Access Code Created*\n\n"
-                f"Code: `{code}`\n"
-                f"Role: {role_display_name(target_role)}\n\n"
-                "Share this code privately with the intended user.",
+                i18n_msg("code_created_simple", lang=lang, code=code, role=role_display_name(target_role)),
                 parse_mode="Markdown"
             )
         else:
-            await message.answer("Failed to create code. It may already exist.")
+            await message.answer(i18n_msg("code_create_failed", lang=lang))
         return
     
     await start_code_creation(message, state)
@@ -298,26 +280,26 @@ async def btn_create_subcontractor_code(message: Message, state: FSMContext):
     else:
         effective_role = user.role if user else None
     if not user or not can_manage_role(effective_role, UserRole.SUBCONTRACTOR):
-        await message.answer("You don't have permission to create subcontractor codes.")
+        lang = (getattr(user, "language", "en") or "en") if user else "en"
+        await message.answer(i18n_msg("no_permission_create_sub_code", lang=lang))
         return
     
     await start_role_specific_code_creation(message, state, UserRole.SUBCONTRACTOR, "Subcontractor")
 
 async def start_role_specific_code_creation(message: Message, state: FSMContext, role: UserRole, role_name: str):
-    await state.update_data(preset_role=role.value, preset_role_name=role_name)
+    lang = await get_recipient_lang(message.from_user.id)
+    await state.update_data(preset_role=role.value, preset_role_name=role_name, lang=lang)
     await message.answer(
-        f"*Create {role_name} Code*\n\n"
-        "Enter the access code\n"
-        "(letters and numbers only):",
+        i18n_msg("code_enter_role_step", lang=lang, role_name=role_name),
         parse_mode="Markdown"
     )
     await state.set_state(CreateCodeStates.waiting_for_code)
 
 async def start_code_creation(message: Message, state: FSMContext):
+    lang = await get_recipient_lang(message.from_user.id)
+    await state.update_data(lang=lang)
     await message.answer(
-        "*Create Access Code*\n\n"
-        "Step 1/2: Enter the access code\n"
-        "(letters and numbers only):",
+        i18n_msg("code_enter_step1", lang=lang),
         parse_mode="Markdown"
     )
     await state.set_state(CreateCodeStates.waiting_for_code)
@@ -328,15 +310,17 @@ MENU_BUTTON_TEXTS = all_menu_variants() | {"Back", "Cancel"}
 async def process_code_input(message: Message, state: FSMContext):
     code = message.text.strip()
     
+    data = await state.get_data()
+    lang = data.get("lang") or await get_recipient_lang(message.from_user.id)
+
     if not code.isalnum():
-        await message.answer("Code must contain only letters and numbers. Try again:")
+        await message.answer(i18n_msg("code_must_be_alnum", lang=lang))
         return
     
     if len(code) < 4:
-        await message.answer("Code must be at least 4 characters. Try again:")
+        await message.answer(i18n_msg("code_too_short", lang=lang))
         return
     
-    data = await state.get_data()
     forced_role = data.get("forced_role")
     preset_role = data.get("preset_role")
     preset_role_name = data.get("preset_role_name")
@@ -358,14 +342,12 @@ async def process_code_input(message: Message, state: FSMContext):
         
         if success:
             await message.answer(
-                f"*Access Code Created!*\n\n"
-                f"Code: `{code}`\n"
-                f"Role: {forced_role.value.title()}\n\n"
-                "Share this code privately with the intended subcontractor.",
+                i18n_msg("code_created_full", lang=lang, code=code, role=forced_role.value.title(),
+                         extra="Share this code privately with the intended subcontractor.\n"),
                 parse_mode="Markdown"
             )
         else:
-            await message.answer("Failed to create code. It may already exist.")
+            await message.answer(i18n_msg("code_create_failed_exists", lang=lang))
         
         await state.clear()
         return
@@ -382,10 +364,8 @@ async def process_code_input(message: Message, state: FSMContext):
         await state.update_data(code=code, role=role, role_str=preset_role)
         
         await message.answer(
-            f"*Create {preset_role_name} Code*\n\n"
-            f"Code: `{code}`\n\n"
-            "Select which team this user will belong to:",
-            reply_markup=get_team_selection_keyboard(for_code=True),
+            i18n_msg("code_select_team", lang=lang, role_name=preset_role_name, code=code),
+            reply_markup=get_team_selection_keyboard(for_code=True, lang=lang),
             parse_mode="Markdown"
         )
         await state.set_state(CreateCodeStates.waiting_for_team)
@@ -401,10 +381,8 @@ async def process_code_input(message: Message, state: FSMContext):
     
     await state.update_data(code=code, creator_role=creator_role)
     await message.answer(
-        "*Create Access Code*\n\n"
-        f"Code: `{code}`\n\n"
-        "Step 2/2: Select the role for this code:",
-        reply_markup=get_role_selection_keyboard(creator_role=creator_role),
+        i18n_msg("code_select_role", lang=lang, code=code),
+        reply_markup=get_role_selection_keyboard(creator_role=creator_role, lang=lang),
         parse_mode="Markdown"
     )
     await state.set_state(CreateCodeStates.waiting_for_role)
@@ -412,6 +390,7 @@ async def process_code_input(message: Message, state: FSMContext):
 @router.callback_query(F.data.startswith("role:"), StateFilter(CreateCodeStates.waiting_for_role))
 async def process_role_selection(callback: CallbackQuery, state: FSMContext):
     role_str = callback.data.split(":")[1]
+    data = await state.get_data()
     
     role_map = {
         "super_admin": UserRole.SUPER_ADMIN,
@@ -432,7 +411,8 @@ async def process_role_selection(callback: CallbackQuery, state: FSMContext):
         creator = result.scalar_one_or_none()
 
     if not creator:
-        await callback.answer("User not found", show_alert=True)
+        lang = data.get("lang") or await get_recipient_lang(callback.from_user.id)
+        await callback.answer(i18n_msg("user_not_found_err", lang=lang), show_alert=True)
         return
 
     creator_role = creator.role
@@ -440,7 +420,8 @@ async def process_role_selection(callback: CallbackQuery, state: FSMContext):
         creator_role = UserRole.SUPER_ADMIN
 
     if selected_role not in creatable_roles(creator_role):
-        await callback.answer("You cannot create that role", show_alert=True)
+        lang = data.get("lang") or await get_recipient_lang(callback.from_user.id)
+        await callback.answer(i18n_msg("code_no_permission", lang=lang), show_alert=True)
         return
 
     await state.update_data(role=selected_role, role_str=role_str)
@@ -449,10 +430,10 @@ async def process_role_selection(callback: CallbackQuery, state: FSMContext):
     if role_str in ["admin", "supervisor", "subcontractor"]:
         from src.bot.utils.keyboards import get_team_selection_keyboard
         role_label = role_str.title()
+        lang = data.get("lang") or await get_recipient_lang(callback.from_user.id)
         await callback.message.edit_text(
-            f"*Select Team*\n\n"
-            f"Which team should this {role_label} be assigned to?",
-            reply_markup=get_team_selection_keyboard(for_code=True),
+            i18n_msg("select_team_for_role", lang=lang, role_label=role_label),
+            reply_markup=get_team_selection_keyboard(for_code=True, lang=lang),
             parse_mode="Markdown"
         )
         await state.set_state(CreateCodeStates.waiting_for_team)
@@ -500,6 +481,7 @@ async def create_code_with_team(callback: CallbackQuery, state: FSMContext, team
         regions = list(region_result.scalars().all())
     
     if regions:
+        lang = data.get("lang") or await get_recipient_lang(callback.from_user.id)
         # Show region selection
         keyboard = InlineKeyboardBuilder()
         for region in regions:
@@ -508,14 +490,10 @@ async def create_code_with_team(callback: CallbackQuery, state: FSMContext, team
                 callback_data=f"code_region:{region.id}"
             ))
         keyboard.row(InlineKeyboardButton(text=" Skip (No Region)", callback_data="code_region:skip"))
-        keyboard.row(InlineKeyboardButton(text=" Cancel", callback_data="cancel_code"))
+        keyboard.row(InlineKeyboardButton(text=i18n_msg("btn_cancel", lang=lang), callback_data="cancel_code"))
         
         await callback.message.edit_text(
-            f"*Select Region (Optional)*\n\n"
-            f"Code: `{code}`\n"
-            f"Role: {role_str.title()}\n"
-            f"Team: {team_name or 'None'}\n\n"
-            "Select a region for this access code:",
+            i18n_msg("code_select_region", lang=lang, code=code, role=role_str.title(), team=team_name or "None"),
             reply_markup=keyboard.as_markup(),
             parse_mode="Markdown"
         )
@@ -574,36 +552,32 @@ async def finalize_code_creation(callback: CallbackQuery, state: FSMContext, reg
         created_by_id=creator_user_id
     )
     
+    lang = data.get("lang") or await get_recipient_lang(callback.from_user.id)
     if success:
         team_info = f"Team: {team_name}\n" if team_name else ""
         region_info = f"Region: {region_name}\n" if region_name else ""
+        extra = f"{team_info}{region_info}"
         await callback.message.edit_text(
-            f"*Access Code Created!*\n\n"
-            f"Code: `{code}`\n"
-            f"Role: {role_str.title()}\n"
-            f"{team_info}{region_info}\n"
-            "Share this code privately with the intended user.\n"
-            "They can use it with /start to register.",
+            i18n_msg("code_created_full", lang=lang, code=code, role=role_str.title(), extra=extra),
             parse_mode="Markdown"
         )
     else:
-        await callback.message.edit_text(
-            f"Failed to create code.\n\n"
-            "The code may already exist."
-        )
+        await callback.message.edit_text(i18n_msg("code_create_failed_exists", lang=lang))
     
     await state.clear()
 
 @router.callback_query(F.data == "cancel_code")
 async def cancel_code_from_team(callback: CallbackQuery, state: FSMContext):
+    lang = await get_recipient_lang(callback.from_user.id)
     await state.clear()
-    await callback.message.edit_text("Access code creation cancelled.")
+    await callback.message.edit_text(i18n_msg("code_cancelled", lang=lang))
     await callback.answer()
 
 @router.callback_query(F.data == "code_cancel")
 async def cancel_code_creation(callback: CallbackQuery, state: FSMContext):
+    lang = await get_recipient_lang(callback.from_user.id)
     await state.clear()
-    await callback.message.edit_text("Access code creation cancelled.")
+    await callback.message.edit_text(i18n_msg("code_cancelled", lang=lang))
     await callback.answer()
 
 @router.callback_query(F.data.startswith("page:history:"))
@@ -704,16 +678,15 @@ async def show_job_details(callback: CallbackQuery, job_id: int, context: str):
 @router.callback_query(F.data.startswith("admin_delete_job:"))
 async def handle_admin_delete_job(callback: CallbackQuery):
     job_id = int(callback.data.split(":")[1])
+    lang = await get_recipient_lang(callback.from_user.id)
     
     if not await check_admin(callback.message):
         await callback.answer("Not authorized", show_alert=True)
         return
 
     await callback.message.edit_text(
-        f" *Delete Job #{job_id}*\n\n"
-        "Are you sure you want to delete this job record completely?\n"
-        "*This action cannot be undone.*",
-        reply_markup=get_confirm_job_delete_keyboard(job_id),
+        i18n_msg("delete_job_confirm_msg", lang=lang, job_id=job_id),
+        reply_markup=get_confirm_job_delete_keyboard(job_id, lang=lang),
         parse_mode="Markdown"
     )
     await callback.answer()
@@ -744,9 +717,10 @@ async def handle_confirm_job_delete(callback: CallbackQuery):
         )
         await session.commit()
 
+    lang = await get_recipient_lang(callback.from_user.id)
     await callback.message.edit_text(
-        f" Job #{job_id} and all associated quotes have been deleted.",
-        reply_markup=get_back_keyboard("back:history")
+        i18n_msg("job_deleted_msg", lang=lang, job_id=job_id),
+        reply_markup=get_back_keyboard("back:history", lang=lang)
     )
     await callback.answer()
 
@@ -758,6 +732,7 @@ async def back_to_history(callback: CallbackQuery):
         )
         user = result.scalar_one_or_none()
     
+    lang = await get_recipient_lang(callback.from_user.id)
     jobs = await JobService.get_job_history(team_id=user.team_id if user else None, limit=50)
     
     status_counts = {}
@@ -768,9 +743,7 @@ async def back_to_history(callback: CallbackQuery):
     summary = "\n".join([f"  {status.replace('_', ' ').title()}: {count}" for status, count in status_counts.items()])
     
     await callback.message.edit_text(
-        f"*Job History*\n\n"
-        f"*Summary ({len(jobs)} jobs):*\n{summary}\n\n"
-        "Select a job to view details:",
+        i18n_msg("job_history_title", lang=lang, count=len(jobs), summary=summary),
         reply_markup=get_job_list_keyboard(jobs, context="history"),
         parse_mode="Markdown"
     )
@@ -784,11 +757,11 @@ async def back_to_archived(callback: CallbackQuery):
         )
         user = result.scalar_one_or_none()
     
+    lang = await get_recipient_lang(callback.from_user.id)
     jobs = await ArchiveService.get_archived_jobs(team_id=user.team_id if user else None)
     
     await callback.message.edit_text(
-        f"*Archived Jobs* ({len(jobs)} total)\n\n"
-        "Select a job to view details:",
+        i18n_msg("archived_jobs_title", lang=lang, count=len(jobs)),
         reply_markup=get_job_list_keyboard(jobs, context="archived"),
         parse_mode="Markdown"
     )
@@ -1100,20 +1073,19 @@ async def show_users_by_role(message: Message, role: UserRole, role_name: str):
         )
         users = list(result.scalars().all())
     
+    lang = await get_recipient_lang(message.from_user.id)
     if not users:
         await message.answer(
-            f"*{role_name}*\n\n"
-            f"No {role_name.lower()} found.",
+            i18n_msg("users_by_role_none", lang=lang, role_name=role_name, role_name_lower=role_name.lower()),
             parse_mode="Markdown"
         )
         return
     
     if role == UserRole.SUBCONTRACTOR:
-        text = f"*{role_name}* ({len(users)} total)\n\n"
+        text = i18n_msg("users_by_role_title", lang=lang, role_name=role_name, count=len(users)) + "\n"
         for u in users:
             name = u.first_name or "Unknown"
             text += f" {name}\n"
-        text += "\nSelect a user to manage:"
         await message.answer(
             text,
             reply_markup=get_user_list_keyboard(users, is_super_admin=True),
@@ -1121,8 +1093,7 @@ async def show_users_by_role(message: Message, role: UserRole, role_name: str):
         )
     else:
         await message.answer(
-            f"*{role_name}* ({len(users)} total)\n\n"
-            "Select a user to manage:",
+            i18n_msg("users_by_role_title", lang=lang, role_name=role_name, count=len(users)),
             reply_markup=get_user_list_keyboard(users, is_super_admin=True),
             parse_mode="Markdown"
         )
@@ -1138,40 +1109,37 @@ async def btn_switch_role_super_admin(message: Message, state: FSMContext):
         user = result.scalar_one_or_none()
     
     if not user:
-        await message.answer("User not found.")
+        lang = "en"
+        await message.answer(i18n_msg("user_not_found_err", lang=lang))
         return
     
+    lang = await get_recipient_lang(message.from_user.id)
     # Check if super admin or has super admin code
     if user.role == UserRole.SUPER_ADMIN:
         from src.bot.utils.keyboards import get_super_admin_switch_role_keyboard
         await message.answer(
-            "*Switch Role*\n\n"
-            "As General Manager, you can temporarily switch to any role.\n"
-            "You can always switch back using the general manager code.\n\n"
-            "Select a role:",
-            reply_markup=get_super_admin_switch_role_keyboard(),
+            i18n_msg("switch_role_sa_prompt", lang=lang),
+            reply_markup=get_super_admin_switch_role_keyboard(lang=lang),
             parse_mode="Markdown"
         )
     elif user.super_admin_code and user.super_admin_code == config.SUPER_ADMIN_CODE:
         # User was a super admin, show return option
         await message.answer(
-            "*Switch Role*\n\n"
-            "You can return to General Manager using the button below.",
+            i18n_msg("switch_role_return_prompt", lang=lang),
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text=" Return to General Manager", callback_data="sa_switch:super_admin")],
-                [InlineKeyboardButton(text=" Cancel", callback_data="back:main")]
+                [InlineKeyboardButton(text=i18n_msg("btn_return_to_gm", lang=lang), callback_data="sa_switch:super_admin")],
+                [InlineKeyboardButton(text=i18n_msg("btn_cancel", lang=lang), callback_data="back:main")]
             ]),
             parse_mode="Markdown"
         )
     elif user.role == UserRole.ADMIN:
         await message.answer(
-            "*Switch Role*\n\n"
-            "Select a role to switch to:",
-            reply_markup=get_switch_role_keyboard(),
+            i18n_msg("switch_role_admin_prompt", lang=lang),
+            reply_markup=get_switch_role_keyboard(lang=lang),
             parse_mode="Markdown"
         )
     else:
-        await message.answer("You don't have permission to switch roles.")
+        await message.answer(i18n_msg("switch_role_no_permission", lang=lang))
 
 @router.callback_query(F.data.startswith("sa_switch:"))
 async def handle_super_admin_switch(callback: CallbackQuery):
@@ -1189,6 +1157,7 @@ async def handle_super_admin_switch(callback: CallbackQuery):
         
         from src.bot.config import config
         
+        lang = await get_recipient_lang(callback.from_user.id)
         if role_str == "super_admin":
             # Return to super admin
             if user.super_admin_code and user.super_admin_code == config.SUPER_ADMIN_CODE:
@@ -1196,21 +1165,20 @@ async def handle_super_admin_switch(callback: CallbackQuery):
                 await session.commit()
                 
                 await callback.message.edit_text(
-                    " *Welcome back, General Manager!*\n\n"
-                    "You have returned to General Manager role.",
+                    i18n_msg("welcome_back_gm", lang=lang),
                     parse_mode="Markdown"
                 )
                 keyboard = get_main_menu_keyboard(UserRole.SUPER_ADMIN)
                 await callback.message.answer(
-                    "Use the menu below:",
+                    i18n_msg("use_menu_below", lang=lang),
                     reply_markup=keyboard
                 )
             else:
-                await callback.answer("Cannot return to General Manager - code has changed", show_alert=True)
+                await callback.answer(i18n_msg("cannot_return_gm", lang=lang), show_alert=True)
         else:
             # Switch to another role
             if user.role != UserRole.SUPER_ADMIN and not user.super_admin_code:
-                await callback.answer("Not authorized", show_alert=True)
+                await callback.answer(i18n_msg("not_authorized", lang=lang), show_alert=True)
                 return
             
             role_map = {
@@ -1229,13 +1197,12 @@ async def handle_super_admin_switch(callback: CallbackQuery):
                 
                 # Store the pending role change and ask for team
                 kb = InlineKeyboardBuilder()
-                kb.button(text="North/West subcontractors", callback_data="switch_team:northwest")
-                kb.button(text="South/East subcontractors", callback_data="switch_team:southeast")
+                kb.button(text=i18n_msg("btn_team_northwest", lang=lang), callback_data="switch_team:northwest")
+                kb.button(text=i18n_msg("btn_team_southeast", lang=lang), callback_data="switch_team:southeast")
                 kb.adjust(1)
                 
                 await callback.message.edit_text(
-                    "*Select Team*\n\n"
-                    "Which team would you like to join as a subcontractor?",
+                    i18n_msg("select_team_sub_prompt", lang=lang),
                     reply_markup=kb.as_markup(),
                     parse_mode="Markdown"
                 )
@@ -1246,14 +1213,12 @@ async def handle_super_admin_switch(callback: CallbackQuery):
             await session.commit()
             
             await callback.message.edit_text(
-                f" *Role Changed*\n\n"
-                f"You are now a *{role_str.title()}*.\n\n"
-                f"You can return to General Manager anytime by using 'Switch Role' or entering the general manager code.",
+                i18n_msg("role_changed_msg", lang=lang, role=role_str.title()),
                 parse_mode="Markdown"
             )
             keyboard = get_main_menu_keyboard(new_role)
             await callback.message.answer(
-                "Use the menu below:",
+                i18n_msg("use_menu_below", lang=lang),
                 reply_markup=keyboard
             )
     
@@ -1294,15 +1259,14 @@ async def handle_switch_team_selection(callback: CallbackQuery):
         user.team_id = team.id
         await session.commit()
         
+        lang = await get_recipient_lang(callback.from_user.id)
         await callback.message.edit_text(
-            f" *Role Changed*\n\n"
-            f"You are now a *Subcontractor* in the *{team.name}* team.\n\n"
-            f"You can return to General Manager anytime by using 'Switch Role' or entering the general manager code.",
+            i18n_msg("role_changed_with_team_msg", lang=lang, team=team.name),
             parse_mode="Markdown"
         )
         keyboard = get_main_menu_keyboard(UserRole.SUBCONTRACTOR)
         await callback.message.answer(
-            "Use the menu below:",
+            i18n_msg("use_menu_below", lang=lang),
             reply_markup=keyboard
         )
     
@@ -1325,19 +1289,19 @@ async def btn_return_to_super_admin(message: Message, state: FSMContext):
         
         from src.bot.config import config
         
+        lang = await get_recipient_lang(message.from_user.id)
         if user.super_admin_code and user.super_admin_code == config.SUPER_ADMIN_CODE:
             user.role = UserRole.SUPER_ADMIN
             await session.commit()
             
             keyboard = get_main_menu_keyboard(UserRole.SUPER_ADMIN)
             await message.answer(
-                " *Welcome back, General Manager!*\n\n"
-                "You have returned to General Manager role.",
+                i18n_msg("welcome_back_gm", lang=lang),
                 reply_markup=keyboard,
                 parse_mode="Markdown"
             )
         else:
-            await message.answer("Cannot return to General Manager - code has changed or you were never a general manager.")
+            await message.answer(i18n_msg("return_gm_failed", lang=lang))
 
 async def show_user_list(message: Message, is_super_admin: bool = False):
     async with async_session() as session:
@@ -1351,14 +1315,14 @@ async def show_user_list(message: Message, is_super_admin: bool = False):
         )
         users = list(result.scalars().all())
     
+    lang = await get_recipient_lang(message.from_user.id)
     if not users:
-        await message.answer("No users found.")
+        await message.answer(i18n_msg("no_users_found", lang=lang))
         return
     
-    title = "Manage All Users (General Manager)" if is_super_admin else "Manage Users"
+    title_key = "manage_users_sa_title" if is_super_admin else "manage_users_admin_title"
     await message.answer(
-        f"*{title}* ({len(users)} total)\n\n"
-        "Select a user to manage:",
+        i18n_msg(title_key, lang=lang, count=len(users)),
         reply_markup=get_user_list_keyboard(users, is_super_admin=is_super_admin),
         parse_mode="Markdown"
     )
@@ -1411,16 +1375,14 @@ async def handle_manage_user(callback: CallbackQuery):
     # Handle username display - don't show @ for N/A
     username_display = f"@{username}" if username and username != 'N/A' else "Not set"
     
+    lang = await get_recipient_lang(callback.from_user.id)
+    status_str = i18n_msg("user_status_active", lang=lang) if is_active else i18n_msg("user_status_inactive", lang=lang)
+    self_note = i18n_msg("user_self_note", lang=lang) if is_self else ""
     await callback.message.edit_text(
-        f"*User Details*\n\n"
-        f"*Name:* {name}\n"
-        f"*Username:* {username_display}\n"
-        f"*Role:* {role_text}\n"
-        f"*Status:* {'Active' if is_active else 'Inactive'}\n"
-        f"*Joined:* {created_date}\n\n"
-        f"{safety_text}"
-        f"{'This is your own account.' if is_self else ''}",
-        reply_markup=get_user_actions_keyboard(user_id, is_self),
+        i18n_msg("user_details_text", lang=lang,
+                 name=name, username=username_display, role=role_text,
+                 status=status_str, joined=created_date, safety=safety_text, self_note=self_note),
+        reply_markup=get_user_actions_keyboard(user_id, is_self, lang=lang),
         parse_mode="Markdown"
     )
     await callback.answer()
@@ -1455,23 +1417,15 @@ async def handle_delete_user_request(callback: CallbackQuery):
     
     name = user.first_name or user.username or f"User {user.telegram_id}"
     
+    lang = await get_recipient_lang(callback.from_user.id)
     if delete_type == "self":
-        warning = (
-            f" *Delete Your Account*\n\n"
-            f"Are you sure you want to delete your own admin account?\n\n"
-            f"*This action cannot be undone.*\n"
-            f"You will be logged out and need a new access code to return."
-        )
+        warning = i18n_msg("delete_user_self_confirm", lang=lang)
     else:
-        warning = (
-            f" *Delete User*\n\n"
-            f"Are you sure you want to delete *{name}*?\n\n"
-            f"*This action cannot be undone.*"
-        )
+        warning = i18n_msg("delete_user_other_confirm", lang=lang, name=name)
     
     await callback.message.edit_text(
         warning,
-        reply_markup=get_confirm_delete_keyboard(user_id, delete_type),
+        reply_markup=get_confirm_delete_keyboard(user_id, delete_type, lang=lang),
         parse_mode="Markdown"
     )
     await callback.answer()
@@ -1514,15 +1468,12 @@ async def handle_confirm_delete(callback: CallbackQuery):
         user.is_active = False
         await session.commit()
     
+    lang = await get_recipient_lang(callback.from_user.id)
     if is_self:
-        await callback.message.edit_text(
-            "Your account has been deleted.\n\n"
-            "Use /start with a new access code to register again."
-        )
+        await callback.message.edit_text(i18n_msg("account_deleted_self", lang=lang))
     else:
         await callback.message.edit_text(
-            f"*User Deleted*\n\n"
-            f"{name} has been removed from the system.",
+            i18n_msg("user_deleted_other", lang=lang, name=name),
             parse_mode="Markdown"
         )
     
@@ -1536,9 +1487,9 @@ async def back_to_users(callback: CallbackQuery):
         )
         users = list(result.scalars().all())
     
+    lang = await get_recipient_lang(callback.from_user.id)
     await callback.message.edit_text(
-        f"*Manage Users* ({len(users)} total)\n\n"
-        "Select a user to manage:",
+        i18n_msg("back_to_users_title", lang=lang, count=len(users)),
         reply_markup=get_user_list_keyboard(users),
         parse_mode="Markdown"
     )
@@ -1682,7 +1633,8 @@ async def handle_switch_role(callback: CallbackQuery):
 async def btn_admin_new_job(message: Message, state: FSMContext):
     """Allow admins to create jobs (shared with supervisor flow)"""
     if not async_session:
-        await message.answer("Database not available.")
+        lang = await get_recipient_lang(message.from_user.id)
+        await message.answer(i18n_msg("db_unavailable", lang=lang))
         return
     
     async with async_session() as session:
@@ -1691,7 +1643,8 @@ async def btn_admin_new_job(message: Message, state: FSMContext):
         )
         user = result.scalar_one_or_none()
         if not user or user.role not in [UserRole.ADMIN, UserRole.SUPERVISOR]:
-            await message.answer("You don't have permission to create jobs.")
+            lang = (getattr(user, "language", "en") or "en") if user else "en"
+            await message.answer(i18n_msg("no_permission_create_job", lang=lang))
             return
     
     # Import and use supervisor's job creation flow
@@ -1709,26 +1662,29 @@ async def btn_send_message(message: Message, state: FSMContext):
         )
         user = result.scalar_one_or_none()
         if not user or user.role not in [UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.SUPERVISOR]:
-            await message.answer("You don't have permission to send messages.")
+            lang = (getattr(user, "language", "en") or "en") if user else "en"
+            await message.answer(i18n_msg("no_permission_send_msg", lang=lang))
             return
     
+    lang = await get_recipient_lang(message.from_user.id)
     await message.answer(
-        "*Send Message*\n\n"
-        "Choose who you want to send a message to:",
-        reply_markup=get_message_target_keyboard(user.role if user else None),
+        i18n_msg("send_message_prompt", lang=lang),
+        reply_markup=get_message_target_keyboard(user.role if user else None, lang=lang),
         parse_mode="Markdown"
     )
     await state.set_state(MessageStates.selecting_target)
 
 @router.callback_query(F.data == "msg_cancel")
 async def cancel_message(callback: CallbackQuery, state: FSMContext):
+    lang = await get_recipient_lang(callback.from_user.id)
     await state.clear()
-    await callback.message.edit_text("Message cancelled.")
+    await callback.message.edit_text(i18n_msg("message_cancelled_msg", lang=lang))
     await callback.answer()
 
 @router.callback_query(F.data.startswith("msg_target:"), StateFilter(MessageStates.selecting_target))
 async def process_message_target(callback: CallbackQuery, state: FSMContext):
     target = callback.data.split(":")[1]
+    lang = await get_recipient_lang(callback.from_user.id)
 
     if target == "all_users":
         async with async_session() as session:
@@ -1737,7 +1693,7 @@ async def process_message_target(callback: CallbackQuery, state: FSMContext):
             )
             sender = result.scalar_one_or_none()
         if not sender or sender.role != UserRole.SUPER_ADMIN:
-            await callback.answer("Only a General Manager can message everyone.", show_alert=True)
+            await callback.answer(i18n_msg("only_sa_message_all", lang=lang), show_alert=True)
             return
     
     if target == "select":
@@ -1749,16 +1705,15 @@ async def process_message_target(callback: CallbackQuery, state: FSMContext):
             subcontractors = list(result.scalars().all())
         
         if not subcontractors:
-            await callback.message.edit_text("No subcontractors found.")
+            await callback.message.edit_text(i18n_msg("no_subs_found", lang=lang))
             await state.clear()
             await callback.answer()
             return
         
         await state.update_data(target_type="select", selected_ids=[])
         await callback.message.edit_text(
-            "*Select Subcontractors*\n\n"
-            "Tap names to select/deselect:",
-            reply_markup=get_subcontractor_select_keyboard(subcontractors, []),
+            i18n_msg("select_subs_prompt", lang=lang),
+            reply_markup=get_subcontractor_select_keyboard(subcontractors, [], lang=lang),
             parse_mode="Markdown"
         )
         await state.set_state(MessageStates.selecting_users)
@@ -1766,8 +1721,7 @@ async def process_message_target(callback: CallbackQuery, state: FSMContext):
         # Direct target (all_users, all_subs, northwest, southeast)
         await state.update_data(target_type=target)
         await callback.message.edit_text(
-            "*Compose Message*\n\n"
-            "Type your message to send:",
+            i18n_msg("compose_message_prompt", lang=lang),
             parse_mode="Markdown"
         )
         await state.set_state(MessageStates.composing_message)
@@ -1807,10 +1761,9 @@ async def proceed_to_compose(callback: CallbackQuery, state: FSMContext):
         await callback.answer("Please select at least one subcontractor", show_alert=True)
         return
     
+    lang = await get_recipient_lang(callback.from_user.id)
     await callback.message.edit_text(
-        f"*Compose Message*\n\n"
-        f"Selected: {len(selected_ids)} user(s)\n\n"
-        "Type your message to send:",
+        i18n_msg("compose_message_selected", lang=lang, count=len(selected_ids)),
         parse_mode="Markdown"
     )
     await state.set_state(MessageStates.composing_message)
@@ -1818,8 +1771,9 @@ async def proceed_to_compose(callback: CallbackQuery, state: FSMContext):
 
 @router.message(StateFilter(MessageStates.composing_message))
 async def send_broadcast_message(message: Message, state: FSMContext):
+    lang = await get_recipient_lang(message.from_user.id)
     if message.text.startswith("/"):
-        await message.answer("Message cancelled.")
+        await message.answer(i18n_msg("message_cancelled_msg", lang=lang))
         await state.clear()
         return
     
@@ -1914,9 +1868,7 @@ async def send_broadcast_message(message: Message, state: FSMContext):
         await session.commit()
     
     await message.answer(
-        f"*Message Sent!*\n\n"
-        f"Delivered to {sent_count} recipient(s).\n"
-        f"You'll be notified when they acknowledge or reply.",
+        i18n_msg("message_sent_confirm", lang=lang, count=sent_count),
         parse_mode="Markdown"
     )
     await state.clear()
@@ -1926,7 +1878,8 @@ async def send_broadcast_message(message: Message, state: FSMContext):
 async def btn_request_availability(message: Message, state: FSMContext):
     """Manager-only flow to request weekly availability from selected subcontractors."""
     if not async_session:
-        await message.answer("Database not available.")
+        lang = await get_recipient_lang(message.from_user.id)
+        await message.answer(i18n_msg("db_unavailable", lang=lang))
         return
 
     async with async_session() as session:
@@ -1936,7 +1889,8 @@ async def btn_request_availability(message: Message, state: FSMContext):
         user = result.scalar_one_or_none()
 
         if not user or user.role != UserRole.ADMIN:
-            await message.answer("Only managers can request availability.")
+            lang = (getattr(user, "language", "en") or "en") if user else "en"
+            await message.answer(i18n_msg("only_managers_request_avail", lang=lang))
             return
 
         subs_result = await session.execute(
@@ -1944,15 +1898,15 @@ async def btn_request_availability(message: Message, state: FSMContext):
         )
         subcontractors = list(subs_result.scalars().all())
 
+    lang = await get_recipient_lang(message.from_user.id)
     if not subcontractors:
-        await message.answer("No active subcontractors found.")
+        await message.answer(i18n_msg("no_subs_found", lang=lang))
         return
 
     await state.update_data(selected_ids=[])
     await message.answer(
-        "*Request Availability*\n\n"
-        "Select subcontractors to request availability from:",
-        reply_markup=get_availability_request_select_keyboard(subcontractors, []),
+        i18n_msg("request_avail_prompt", lang=lang),
+        reply_markup=get_availability_request_select_keyboard(subcontractors, [], lang=lang),
         parse_mode="Markdown"
     )
     await state.set_state(AvailabilityRequestStates.selecting_users)
@@ -1961,7 +1915,8 @@ async def btn_request_availability(message: Message, state: FSMContext):
 @router.callback_query(F.data.startswith("avail_req_select:"), StateFilter(AvailabilityRequestStates.selecting_users))
 async def toggle_availability_request_selection(callback: CallbackQuery, state: FSMContext):
     if not async_session:
-        await callback.answer("Database not available.", show_alert=True)
+        lang = await get_recipient_lang(callback.from_user.id)
+        await callback.answer(i18n_msg("db_unavailable", lang=lang), show_alert=True)
         return
 
     user_id = int(callback.data.split(":")[1])
@@ -1981,29 +1936,33 @@ async def toggle_availability_request_selection(callback: CallbackQuery, state: 
         )
         subcontractors = list(result.scalars().all())
 
+    lang = await get_recipient_lang(callback.from_user.id)
     await callback.message.edit_reply_markup(
-        reply_markup=get_availability_request_select_keyboard(subcontractors, selected_ids)
+        reply_markup=get_availability_request_select_keyboard(subcontractors, selected_ids, lang=lang)
     )
     await callback.answer()
 
 
 @router.callback_query(F.data == "avail_req_cancel", StateFilter(AvailabilityRequestStates.selecting_users))
 async def cancel_availability_request(callback: CallbackQuery, state: FSMContext):
+    lang = await get_recipient_lang(callback.from_user.id)
     await state.clear()
-    await callback.message.edit_text("Availability request cancelled.")
+    await callback.message.edit_text(i18n_msg("avail_req_cancelled", lang=lang))
     await callback.answer()
 
 
 @router.callback_query(F.data == "avail_req_send", StateFilter(AvailabilityRequestStates.selecting_users))
 async def send_availability_request(callback: CallbackQuery, state: FSMContext):
     if not async_session:
-        await callback.answer("Database not available.", show_alert=True)
+        lang = await get_recipient_lang(callback.from_user.id)
+        await callback.answer(i18n_msg("db_unavailable", lang=lang), show_alert=True)
         return
 
     data = await state.get_data()
     selected_ids = data.get("selected_ids", [])
     if not selected_ids:
-        await callback.answer("Select at least one subcontractor.", show_alert=True)
+        lang = await get_recipient_lang(callback.from_user.id)
+        await callback.answer(i18n_msg("select_at_least_one", lang=lang), show_alert=True)
         return
 
     from datetime import datetime, timedelta
@@ -2022,7 +1981,8 @@ async def send_availability_request(callback: CallbackQuery, state: FSMContext):
         )
         requester = requester_result.scalar_one_or_none()
         if not requester or requester.role != UserRole.ADMIN:
-            await callback.answer("Only managers can request availability.", show_alert=True)
+            lang = await get_recipient_lang(callback.from_user.id)
+            await callback.answer(i18n_msg("only_managers_request_avail", lang=lang), show_alert=True)
             return
 
         result = await session.execute(
@@ -2088,11 +2048,9 @@ async def send_availability_request(callback: CallbackQuery, state: FSMContext):
 
         await session.commit()
 
+    lang = await get_recipient_lang(callback.from_user.id)
     await callback.message.edit_text(
-        "*Availability Requests Sent*\n\n"
-        f"Requested: {len(selected_ids)}\n"
-        f"Delivered: {sent_count}\n"
-        f"Failed: {failed_count}",
+        i18n_msg("avail_requests_sent", lang=lang, requested=len(selected_ids), sent=sent_count, failed=failed_count),
         parse_mode="Markdown",
     )
     await state.clear()
@@ -2104,7 +2062,8 @@ async def send_availability_request(callback: CallbackQuery, state: FSMContext):
 async def btn_weekly_availability(message: Message):
     """View weekly availability responses for all subcontractors"""
     if not async_session:
-        await message.answer("Database not available.")
+        lang = await get_recipient_lang(message.from_user.id)
+        await message.answer(i18n_msg("db_unavailable", lang=lang))
         return
 
     async with async_session() as session:
@@ -2113,8 +2072,9 @@ async def btn_weekly_availability(message: Message):
         )
         user = result.scalar_one_or_none()
 
+    lang = await get_recipient_lang(message.from_user.id)
     if not user or user.role != UserRole.ADMIN:
-        await message.answer("Only managers can view weekly availability.")
+        await message.answer(i18n_msg("only_managers_view_avail", lang=lang))
         return
     
     from datetime import datetime, timedelta
@@ -2134,16 +2094,10 @@ async def btn_weekly_availability(message: Message):
         responses = list(result.all())
         
         if not responses:
-            await message.answer(
-                " *Weekly Availability*\n\n"
-                "No availability data for this week yet.\n\n"
-                "Use `Request Availability` to ask selected subcontractors to submit.",
-                parse_mode="Markdown"
-            )
+            await message.answer(i18n_msg("weekly_avail_empty", lang=lang), parse_mode="Markdown")
             return
         
-        text = f" *Subcontractor Availability*\n"
-        text += f"Week of {current_monday.strftime('%d/%m/%Y')}\n\n"
+        text = i18n_msg("weekly_avail_view_title", lang=lang, week=current_monday.strftime('%d/%m/%Y'))
         
         responded = []
         pending = []
@@ -2178,7 +2132,7 @@ async def btn_weekly_availability(message: Message):
             text += "\n".join(responded) + "\n\n"
         
         if pending:
-            text += f" *Pending Response:*\n{', '.join(pending)}"
+            text += i18n_msg("avail_pending_label", lang=lang, names=', '.join(pending))
         
         await message.answer(text, parse_mode="Markdown")
 

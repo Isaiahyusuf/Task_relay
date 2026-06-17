@@ -1054,6 +1054,496 @@ MESSAGES: dict[str, dict[str, str]] = {
             "အကြွင်းထံ အကြောင်းကြားပြီးဖြစ်သည်။"
         ),
     },
+    "btn_confirm": {
+        "en": "✅ Confirm",
+        "ps": "✅ تایید",
+        "my": "✅ အတည်ပြုသည်",
+    },
+    "role_manager": {
+        "en": " Manager",
+        "ps": " مدیر",
+        "my": " မန်နေဂျာ",
+    },
+    "role_supervisor": {
+        "en": " Supervisor",
+        "ps": " ناظر",
+        "my": " ကြီးကြပ်သူ",
+    },
+    "role_subcontractor": {
+        "en": " Subcontractor",
+        "ps": " Subcontractor",
+        "my": " Subcontractor",
+    },
+    "btn_delete_my_account": {
+        "en": "🗑 Delete My Account",
+        "ps": "🗑 زما حساب ړنګ کول",
+        "my": "🗑 ကျွန်ုပ်အကောင့်ဖျက်မည်",
+    },
+    "btn_delete_user": {
+        "en": "🗑 Delete User",
+        "ps": "🗑 کارونکی ړنګول",
+        "my": "🗑 အသုံးပြုသူဖျက်မည်",
+    },
+    "btn_back_to_users": {
+        "en": "⬅️ Back to Users",
+        "ps": "⬅️ کارونکو ته شاته",
+        "my": "⬅️ အသုံးပြုသူများသို့ပြန်မည်",
+    },
+    "btn_become_supervisor": {
+        "en": "Become Supervisor",
+        "ps": "ناظر شئ",
+        "my": "ကြီးကြပ်သူဖြစ်မည်",
+    },
+    "btn_become_subcontractor": {
+        "en": "Become Subcontractor",
+        "ps": "Subcontractor شئ",
+        "my": "Subcontractor ဖြစ်မည်",
+    },
+    "btn_yes_delete": {
+        "en": "✅ Yes, Delete",
+        "ps": "✅ هو، ړنګ کړئ",
+        "my": "✅ ဟုတ်သည်၊ ဖျက်မည်",
+    },
+    "btn_yes_delete_job": {
+        "en": "✅ Yes, Delete Job",
+        "ps": "✅ هو، کار ړنګ کړئ",
+        "my": "✅ ဟုတ်သည်၊ အလုပ်ဖျက်မည်",
+    },
+    "btn_team_northwest": {
+        "en": "North/West subcontractors",
+        "ps": "شمال/لویدیز subcontractors",
+        "my": "မြောက်/အနောက် subcontractors",
+    },
+    "btn_team_southeast": {
+        "en": "South/East subcontractors",
+        "ps": "جنوب/ختیز subcontractors",
+        "my": "တောင်/အရှေ့ subcontractors",
+    },
+    "btn_send_all_teams": {
+        "en": "Send Bot-Wide (All Teams)",
+        "ps": "ټول بوټ ته ولیږئ (ټول ټیمونه)",
+        "my": "Bot တစ်ခုလုံးပေးပို့ (အဖွဲ့အားလုံး)",
+    },
+    "btn_save_draft": {
+        "en": "📌 Save as Draft",
+        "ps": "📌 مسوده خوندي کول",
+        "my": "📌 မူကြမ်းသိမ်းဆည်းမည်",
+    },
+    "btn_send_all_available": {
+        "en": "Send to All Available ✅",
+        "ps": "ټولو شتون لرونکو ته ولیږئ ✅",
+        "my": "ရနိုင်သည့်အားလုံးထံပေးပို့ ✅",
+    },
+    "btn_save_without_sending": {
+        "en": "Save without sending 📌",
+        "ps": "د لیږلو پرته خوندي کول 📌",
+        "my": "မပေးပို့ဘဲသိမ်းဆည်းမည် 📌",
+    },
+    "btn_msg_everyone": {
+        "en": "Everyone on Bot 🌐",
+        "ps": "د بوټ ټول کسان 🌐",
+        "my": "Bot ရှိသူအားလုံး 🌐",
+    },
+    "btn_msg_all_subs": {
+        "en": "All Subcontractors 👷",
+        "ps": "ټول Subcontractors 👷",
+        "my": "Subcontractors အားလုံး 👷",
+    },
+    "btn_msg_northwest": {
+        "en": "North/West Team 🧭",
+        "ps": "شمال/لویدیز ټیم 🧭",
+        "my": "မြောက်/အနောက်အဖွဲ့ 🧭",
+    },
+    "btn_msg_southeast": {
+        "en": "South/East Team 🗺",
+        "ps": "جنوب/ختیز ټیم 🗺",
+        "my": "တောင်/အရှေ့အဖွဲ့ 🗺",
+    },
+    "btn_msg_select": {
+        "en": "Select Specific Users ☑",
+        "ps": "ځانګړي کارونکي وټاکئ ☑",
+        "my": "သတ်မှတ်ထားသောအသုံးပြုသူများရွေးချယ်ပါ ☑",
+    },
+    "btn_send_msg": {
+        "en": "Send Message ✅",
+        "ps": "پیغام ولیږئ ✅",
+        "my": "မက်ဆေ့ပေးပို့ ✅",
+    },
+    "btn_request_avail": {
+        "en": "Request Availability ✅",
+        "ps": "شتون وغواړئ ✅",
+        "my": "ရနိုင်မှုတောင်းခံ ✅",
+    },
+    "btn_return_to_gm": {
+        "en": "Return to General Manager",
+        "ps": "عمومي مدیر ته بیرته ستنیدل",
+        "my": "General Manager ထံပြန်မည်",
+    },
+    "admin_no_permission": {
+        "en": "You don't have admin permissions.",
+        "ps": "تاسو د ادمین اجازه نلرئ.",
+        "my": "သင့်တွင် admin ခွင့်ပြုချက်မရှိပါ။",
+    },
+    "sa_no_permission": {
+        "en": "You don't have general manager permissions.",
+        "ps": "تاسو د عمومي مدیر اجازه نلرئ.",
+        "my": "သင့်တွင် general manager ခွင့်ပြုချက်မရှိပါ။",
+    },
+    "db_unavailable": {
+        "en": "Database not available.",
+        "ps": "ډیټابیس شتون نلري.",
+        "my": "ဒေတာဘေ့စ်မရနိုင်ပါ။",
+    },
+    "user_not_found_err": {
+        "en": "User not found.",
+        "ps": "کارونکی ونه موندل شو.",
+        "my": "အသုံးပြုသူမတွေ့ပါ။",
+    },
+    "job_history_empty": {
+        "en": "*Job History*\n\nNo job records found.",
+        "ps": "*د کار تاریخچه*\n\nهیڅ د کار ریکارډ ونه موندل شو.",
+        "my": "*အလုပ်မှတ်တမ်း*\n\nအလုပ်မှတ်တမ်းမတွေ့ပါ။",
+    },
+    "job_history_title": {
+        "en": "*Job History*\n\n*Summary ({count} jobs):*\n{summary}\n\nSelect a job to view details:",
+        "ps": "*د کار تاریخچه*\n\n*لنډیز ({count} کارونه):*\n{summary}\n\nد توضیحاتو لیدو لپاره کار وټاکئ:",
+        "my": "*အလုပ်မှတ်တမ်း*\n\n*အကျဉ်းချုပ် ({count} အလုပ်):*\n{summary}\n\nအသေးစိတ်ကြည့်ရန်အလုပ်ရွေးပါ:",
+    },
+    "archive_complete": {
+        "en": "*Archive Complete*\n\nArchived *{count}* old jobs.\n\nArchived jobs can be viewed in 'View Archived'.",
+        "ps": "*آرشیف بشپړ شو*\n\n*{count}* زوړ کارونه آرشیف شول.\n\nآرشیف شوي کارونه د 'View Archived' کې لیدل کیدی شي.",
+        "my": "*သိမ်းဆည်းပြီးပြီ*\n\n*{count}* ဟောင်းသောအလုပ်များသိမ်းဆည်းပြီး။\n\nသိမ်းဆည်းထားသောအလုပ်များကို 'View Archived' တွင်ကြည့်နိုင်သည်။",
+    },
+    "archive_empty": {
+        "en": "*Archive Jobs*\n\nNo jobs eligible for archiving at this time.\n\nJobs are automatically archived after 90 days.",
+        "ps": "*د کارونو آرشیف*\n\nاوس مهال هیڅ کار د آرشیف وړ نه دی.\n\nکارونه د ۹۰ ورځو وروسته اتوماتیک آرشیف کیږي.",
+        "my": "*အလုပ်သိမ်းဆည်းရန်*\n\nယခုအချိန်တွင်သိမ်းဆည်းရန်ကိုက်ညီသောအလုပ်မရှိပါ။\n\nအလုပ်များကိုရက် ၉၀ ကြာပြီးနောက်အလိုအလျောက်သိမ်းဆည်းသည်။",
+    },
+    "archived_jobs_empty": {
+        "en": "*Archived Jobs*\n\nNo archived jobs found.",
+        "ps": "*آرشیف شوي کارونه*\n\nهیڅ آرشیف شوي کار ونه موندل شو.",
+        "my": "*သိမ်းဆည်းထားသောအလုပ်များ*\n\nသိမ်းဆည်းထားသောအလုပ်မတွေ့ပါ။",
+    },
+    "archived_jobs_title": {
+        "en": "*Archived Jobs* ({count} total)\n\nSelect a job to view details:",
+        "ps": "*آرشیف شوي کارونه* ({count} ټول)\n\nد توضیحاتو لیدو لپاره کار وټاکئ:",
+        "my": "*သိမ်းဆည်းထားသောအလုပ်များ* ({count} စုစုပေါင်း)\n\nအသေးစိတ်ကြည့်ရန်အလုပ်ရွေးပါ:",
+    },
+    "code_invalid_role": {
+        "en": "Invalid role. Use: admin, supervisor, or subcontractor",
+        "ps": "ناسم رول. استعمال کړئ: admin, supervisor, یا subcontractor",
+        "my": "မမှန်ကန်သော role ။ အသုံးပြုပါ: admin, supervisor, သို့မဟုတ် subcontractor",
+    },
+    "code_no_permission": {
+        "en": "You don't have permission to create this role code.",
+        "ps": "تاسو د دې رول کوډ جوړولو اجازه نلرئ.",
+        "my": "ဤ role code ဖန်တီးရန်ခွင့်ပြုချက်မရှိပါ။",
+    },
+    "code_created_simple": {
+        "en": "*Access Code Created*\n\nCode: `{code}`\nRole: {role}\n\nShare this code privately with the intended user.",
+        "ps": "*د لاسرسي کوډ جوړ شو*\n\nکوډ: `{code}`\nرول: {role}\n\nدا کوډ د موخه شوي کارونکي سره شخصي شکل کې شریک کړئ.",
+        "my": "*ဝင်ရောက်ခွင့်ကုဒ်ဖန်တီးပြီး*\n\nကုဒ်: `{code}`\nRole: {role}\n\nဤကုဒ်ကိုသတ်မှတ်ထားသောအသုံးပြုသူနှင့်ကိုယ်ရေးကိုယ်တာမျှဝေပါ။",
+    },
+    "code_create_failed": {
+        "en": "Failed to create code. It may already exist.",
+        "ps": "کوډ جوړول ناکام شو. ممکن دا مخکې موجود وي.",
+        "my": "ကုဒ်ဖန်တီးမရပါ။ ၎င်းသည်ရှိပြီးသားဖြစ်နိုင်သည်။",
+    },
+    "code_enter_step1": {
+        "en": "*Create Access Code*\n\nStep 1/2: Enter the access code\n(letters and numbers only):",
+        "ps": "*د لاسرسي کوډ جوړول*\n\nمرحله ۱/۲: د لاسرسي کوډ دننه کړئ\n(یوازې توري او شمیرې):",
+        "my": "*ဝင်ရောက်ခွင့်ကုဒ်ဖန်တီးရန်*\n\nအဆင့် ၁/၂: ဝင်ရောက်ခွင့်ကုဒ်ထည့်ပါ\n(စာလုံးနှင့်ဂဏန်းများသာ):",
+    },
+    "code_enter_role_step": {
+        "en": "*Create {role_name} Code*\n\nEnter the access code\n(letters and numbers only):",
+        "ps": "*د {role_name} کوډ جوړول*\n\nد لاسرسي کوډ دننه کړئ\n(یوازې توري او شمیرې):",
+        "my": "*{role_name} ကုဒ်ဖန်တီးရန်*\n\nဝင်ရောက်ခွင့်ကုဒ်ထည့်ပါ\n(စာလုံးနှင့်ဂဏန်းများသာ):",
+    },
+    "code_must_be_alnum": {
+        "en": "Code must contain only letters and numbers. Try again:",
+        "ps": "کوډ باید یوازې توري او شمیرې ولري. بیا هڅه وکړئ:",
+        "my": "ကုဒ်တွင်စာလုံးနှင့်ဂဏန်းများသာပါဝင်ရမည်။ ထပ်ကြိုးစားပါ:",
+    },
+    "code_too_short": {
+        "en": "Code must be at least 4 characters. Try again:",
+        "ps": "کوډ باید لږترلږه ۴ حروف ولري. بیا هڅه وکړئ:",
+        "my": "ကုဒ်တွင်အနည်းဆုံးဇဿ ၄ လုံးပါဝင်ရမည်။ ထပ်ကြိုးစားပါ:",
+    },
+    "code_select_role": {
+        "en": "*Create Access Code*\n\nCode: `{code}`\n\nStep 2/2: Select the role for this code:",
+        "ps": "*د لاسرسي کوډ جوړول*\n\nکوډ: `{code}`\n\nمرحله ۲/۲: د دې کوډ لپاره رول وټاکئ:",
+        "my": "*ဝင်ရောက်ခွင့်ကုဒ်ဖန်တီးရန်*\n\nကုဒ်: `{code}`\n\nအဆင့် ၂/၂: ဤကုဒ်အတွက် role ရွေးချယ်ပါ:",
+    },
+    "code_select_team": {
+        "en": "*Create {role_name} Code*\n\nCode: `{code}`\n\nSelect which team this user will belong to:",
+        "ps": "*د {role_name} کوډ جوړول*\n\nکوډ: `{code}`\n\nوټاکئ چې دا کارونکی به کوم ټیم کې وي:",
+        "my": "*{role_name} ကုဒ်ဖန်တီးရန်*\n\nကုဒ်: `{code}`\n\nဤအသုံးပြုသူပါဝင်မည့်အဖွဲ့ကိုရွေးချယ်ပါ:",
+    },
+    "code_select_region": {
+        "en": "*Select Region (Optional)*\n\nCode: `{code}`\nRole: {role}\nTeam: {team}\n\nSelect a region for this access code:",
+        "ps": "*سیمه وټاکئ (اختیاري)*\n\nکوډ: `{code}`\nرول: {role}\nټیم: {team}\n\nد دې لاسرسي کوډ لپاره سیمه وټاکئ:",
+        "my": "*ဒေသရွေးချယ်ရန် (ချိန်ညှိနိုင်သည်)*\n\nကုဒ်: `{code}`\nRole: {role}\nအဖွဲ့: {team}\n\nဤဝင်ရောက်ခွင့်ကုဒ်အတွက်ဒေသကိုရွေးချယ်ပါ:",
+    },
+    "code_created_full": {
+        "en": "*Access Code Created!*\n\nCode: `{code}`\nRole: {role}\n{extra}\nShare this code privately with the intended user.\nThey can use it with /start to register.",
+        "ps": "*د لاسرسي کوډ جوړ شو!*\n\nکوډ: `{code}`\nرول: {role}\n{extra}\nدا کوډ د موخه شوي کارونکي سره شخصي شکل کې شریک کړئ.\nهغوی کولی شي د ثبت نام لپاره /start سره وکاروي.",
+        "my": "*ဝင်ရောက်ခွင့်ကုဒ်ဖန်တီးပြီး!*\n\nကုဒ်: `{code}`\nRole: {role}\n{extra}\nဤကုဒ်ကိုသတ်မှတ်ထားသောအသုံးပြုသူနှင့်ကိုယ်ရေးကိုယ်တာမျှဝေပါ။\n/start ဖြင့်မှတ်ပုံတင်ရန်အသုံးပြုနိုင်သည်။",
+    },
+    "code_create_failed_exists": {
+        "en": "Failed to create code.\n\nThe code may already exist.",
+        "ps": "کوډ جوړول ناکام شو.\n\nممکن دا کوډ مخکې موجود وي.",
+        "my": "ကုဒ်ဖန်တီးမရပါ။\n\n၎င်းကုဒ်သည်ရှိပြီးသားဖြစ်နိုင်သည်။",
+    },
+    "code_cancelled": {
+        "en": "Access code creation cancelled.",
+        "ps": "د لاسرسي کوډ جوړول لغوه شول.",
+        "my": "ဝင်ရောက်ခွင့်ကုဒ်ဖန်တီးမှုဖျက်သိမ်းပြီး။",
+    },
+    "delete_job_confirm_msg": {
+        "en": " *Delete Job #{job_id}*\n\nAre you sure you want to delete this job record completely?\n*This action cannot be undone.*",
+        "ps": " *د کار #{job_id} ړنګول*\n\nایا تاسو ډاډه یاست چې دا د کار ریکارډ بشپړ حذف کول غواړئ؟\n*دا کار بیرته نه شي اخیستل کیدی.*",
+        "my": " *အလုပ် #{job_id} ဖျက်ရန်*\n\nဤအလုပ်မှတ်တမ်းကိုအပြည့်အဝဖျက်မည်ကိုသေချာပါသလား?\n*ဤလုပ်ဆောင်ချက်ကိုပြောင်းလဲ၍မရပါ။*",
+    },
+    "job_deleted_msg": {
+        "en": " Job #{job_id} and all associated quotes have been deleted.",
+        "ps": " کار #{job_id} او ټول تړلي وړاندیزونه حذف شول.",
+        "my": " အလုပ် #{job_id} နှင့်ဆက်စပ်ကိုးကားစာအားလုံးဖျက်သိမ်းပြီး။",
+    },
+    "switch_role_sa_prompt": {
+        "en": "*Switch Role*\n\nAs General Manager, you can temporarily switch to any role.\nYou can always switch back using the general manager code.\n\nSelect a role:",
+        "ps": "*رول بدلول*\n\nد عمومي مدیر په توګه، تاسو کولی شئ لنډمهاله هر رول ته بدل شئ.\nتاسو تل د عمومي مدیر کوډ سره بیرته بدلیدلی شئ.\n\nیو رول وټاکئ:",
+        "my": "*Role ပြောင်းရန်*\n\nGeneral Manager အနေဖြင့်၊ ယာယီ role မည်သည့်အနေဖြင့်မဆိုပြောင်းနိုင်သည်။\nGeneral Manager ကုဒ်ကိုအသုံးပြု၍အမြဲပြန်ပြောင်းနိုင်သည်။\n\nRole တစ်ခုရွေးချယ်ပါ:",
+    },
+    "switch_role_return_prompt": {
+        "en": "*Switch Role*\n\nYou can return to General Manager using the button below.",
+        "ps": "*رول بدلول*\n\nتاسو کولی شئ د لاندې تڼۍ سره عمومي مدیر ته بیرته راشئ.",
+        "my": "*Role ပြောင်းရန်*\n\nအောက်ပါခလုတ်ဖြင့် General Manager ထံပြန်နိုင်သည်။",
+    },
+    "switch_role_admin_prompt": {
+        "en": "*Switch Role*\n\nSelect a role to switch to:",
+        "ps": "*رول بدلول*\n\nبدلولو لپاره رول وټاکئ:",
+        "my": "*Role ပြောင်းရန်*\n\nပြောင်းရန် role ရွေးချယ်ပါ:",
+    },
+    "switch_role_no_permission": {
+        "en": "You don't have permission to switch roles.",
+        "ps": "تاسو د رولونو بدلولو اجازه نلرئ.",
+        "my": "Role ပြောင်းရန်ခွင့်ပြုချက်မရှိပါ။",
+    },
+    "welcome_back_gm": {
+        "en": " *Welcome back, General Manager!*\n\nYou have returned to General Manager role.",
+        "ps": " *ښه راغلاست، عمومي مدیر!*\n\nتاسو د عمومي مدیر رول ته بیرته راغلئ.",
+        "my": " *ကြိုဆိုပါသည်၊ General Manager!*\n\nသင် General Manager role ထံပြန်ရောက်ရှိပြီး။",
+    },
+    "use_menu_below": {
+        "en": "Use the menu below:",
+        "ps": "لاندې مینو وکاروئ:",
+        "my": "အောက်ပါမီနူးကိုအသုံးပြုပါ:",
+    },
+    "role_changed_msg": {
+        "en": " *Role Changed*\n\nYou are now a *{role}*.\n\nYou can return to General Manager anytime by using 'Switch Role' or entering the general manager code.",
+        "ps": " *رول بدل شو*\n\nتاسو اوس *{role}* یاست.\n\nتاسو کولی شئ د 'رول بدلول' کارولو یا د عمومي مدیر کوډ دننه کولو سره هر وخت عمومي مدیر ته راشئ.",
+        "my": " *Role ပြောင်းလဲပြီး*\n\nသင်ယခု *{role}* ဖြစ်သည်။\n\n'Role ပြောင်းရန်'ကိုအသုံးပြုခြင်း သို့မဟုတ် general manager ကုဒ်ထည့်ခြင်းဖြင့်မည်သည့်အချိန်မဆို General Manager ထံပြန်နိုင်သည်။",
+    },
+    "role_changed_with_team_msg": {
+        "en": " *Role Changed*\n\nYou are now a *Subcontractor* in the *{team}* team.\n\nYou can return to General Manager anytime by using 'Switch Role' or entering the general manager code.",
+        "ps": " *رول بدل شو*\n\nتاسو اوس د *{team}* ټیم کې *Subcontractor* یاست.\n\nتاسو کولی شئ د 'رول بدلول' کارولو یا د عمومي مدیر کوډ دننه کولو سره هر وخت عمومي مدیر ته راشئ.",
+        "my": " *Role ပြောင်းလဲပြီး*\n\nသင်ယခု *{team}* အဖွဲ့တွင် *Subcontractor* ဖြစ်သည်။\n\n'Role ပြောင်းရန်'ကိုအသုံးပြုခြင်း သို့မဟုတ် general manager ကုဒ်ထည့်ခြင်းဖြင့်မည်သည့်အချိန်မဆို General Manager ထံပြန်နိုင်သည်။",
+    },
+    "select_team_sub_prompt": {
+        "en": "*Select Team*\n\nWhich team would you like to join as a subcontractor?",
+        "ps": "*ټیم وټاکئ*\n\nتاسو غواړئ د کوم ټیم سره د subcontractor په توګه یوځای شئ؟",
+        "my": "*အဖွဲ့ရွေးချယ်ရန်*\n\nsubcontractor အနေဖြင့်မည်သည့်အဖွဲ့တွင်ပါဝင်လိုသနည်း?",
+    },
+    "select_team_for_role": {
+        "en": "*Select Team*\n\nWhich team should this {role_label} be assigned to?",
+        "ps": "*ټیم وټاکئ*\n\nدا {role_label} باید کوم ټیم ته وټاکل شي؟",
+        "my": "*အဖွဲ့ရွေးချယ်ရန်*\n\nဤ {role_label} ကိုမည်သည့်အဖွဲ့သတ်မှတ်ရမည်နည်း?",
+    },
+    "return_gm_failed": {
+        "en": "Cannot return to General Manager - code has changed or you were never a general manager.",
+        "ps": "عمومي مدیر ته بیرته نه شئ راتلی - کوډ بدل شوی دی یا تاسو هیڅکله عمومي مدیر نه وئ.",
+        "my": "General Manager ထံပြန်မရပါ - ကုဒ်ပြောင်းလဲသွားသည် သို့မဟုတ် သင်ဘယ်တော့မှ general manager မဖြစ်ခဲ့ပါ။",
+    },
+    "send_message_prompt": {
+        "en": "*Send Message*\n\nChoose who you want to send a message to:",
+        "ps": "*پیغام لیږل*\n\nوټاکئ چې تاسو چاته پیغام لیږل غواړئ:",
+        "my": "*မက်ဆေ့ပို့ရန်*\n\nမည်သူ့ထံမက်ဆေ့ပို့မည်ကိုရွေးချယ်ပါ:",
+    },
+    "message_cancelled_msg": {
+        "en": "Message cancelled.",
+        "ps": "پیغام لغوه شو.",
+        "my": "မက်ဆေ့ဖျက်သိမ်းပြီး။",
+    },
+    "select_subs_prompt": {
+        "en": "*Select Subcontractors*\n\nTap names to select/deselect:",
+        "ps": "*Subcontractors وټاکئ*\n\nد غوره کولو/غوره نه کولو لپاره نومونو باندې کلیک وکړئ:",
+        "my": "*Subcontractors ရွေးချယ်ရန်*\n\nရွေးချယ်/မရွေးချယ်ရန်နာမည်များကိုနှိပ်ပါ:",
+    },
+    "compose_message_prompt": {
+        "en": "*Compose Message*\n\nType your message to send:",
+        "ps": "*پیغام ولیکئ*\n\nخپل پیغام ولیکئ:",
+        "my": "*မက်ဆေ့ရေးရန်*\n\nပို့ရန်မက်ဆေ့ရေးပါ:",
+    },
+    "compose_message_selected": {
+        "en": "*Compose Message*\n\nSelected: {count} user(s)\n\nType your message to send:",
+        "ps": "*پیغام ولیکئ*\n\nغوره شوي: {count} کارونکی(ان)\n\nخپل پیغام ولیکئ:",
+        "my": "*မက်ဆေ့ရေးရန်*\n\nရွေးချယ်ထားသည်: {count} ဦး\n\nပို့ရန်မက်ဆေ့ရေးပါ:",
+    },
+    "message_sent_confirm": {
+        "en": "*Message Sent!*\n\nDelivered to {count} recipient(s).\nYou'll be notified when they acknowledge or reply.",
+        "ps": "*پیغام واستول شو!*\n\nد {count} ترلاسه کونکو ته وسپارل شو.\nکله چې هغوی تایید یا ځواب ورکړي تاسو خبر شئ.",
+        "my": "*မက်ဆေ့ပေးပို့ပြီး!*\n\n{count} ဦးထံပေးပို့ပြီး။\nသူတို့အတည်ပြု သို့မဟုတ်ဖြေဆိုသောအခါသင့်ကိုအကြောင်းကြားမည်။",
+    },
+    "no_subs_found": {
+        "en": "No subcontractors found.",
+        "ps": "هیڅ subcontractor ونه موندل شو.",
+        "my": "Subcontractor မတွေ့ပါ။",
+    },
+    "request_avail_prompt": {
+        "en": "*Request Availability*\n\nSelect subcontractors to request availability from:",
+        "ps": "*شتون وغواړئ*\n\nsubcontractors وټاکئ چې د هغوی شتون وغواړئ:",
+        "my": "*ရနိုင်မှုတောင်းခံရန်*\n\nရနိုင်မှုတောင်းခံမည့် subcontractors ရွေးချယ်ပါ:",
+    },
+    "avail_req_cancelled": {
+        "en": "Availability request cancelled.",
+        "ps": "د شتون غوښتنه لغوه شوه.",
+        "my": "ရနိုင်မှုတောင်းခံမှုဖျက်သိမ်းပြီး။",
+    },
+    "avail_requests_sent": {
+        "en": "*Availability Requests Sent*\n\nRequested: {requested}\nDelivered: {delivered}\nFailed: {failed}",
+        "ps": "*د شتون غوښتنې واستول شوې*\n\nغوښتل شوي: {requested}\nلیږل شوي: {delivered}\nناکام: {failed}",
+        "my": "*ရနိုင်မှုတောင်းခံမှုများပေးပို့ပြီး*\n\nတောင်းဆိုထားသည်: {requested}\nပေးပို့ပြီး: {delivered}\nမအောင်မြင်: {failed}",
+    },
+    "weekly_avail_empty": {
+        "en": " *Weekly Availability*\n\nNo availability data for this week yet.\n\nUse 'Request Availability' to ask selected subcontractors to submit.",
+        "ps": " *د اونۍ شتون*\n\nدا اونۍ لپاره لا د شتون معلومات نشته.\n\nد ټاکل شوو subcontractors د سپارلو لپاره غوښتنه کولو لپاره 'Request Availability' وکاروئ.",
+        "my": " *အပတ်စဉ်ရနိုင်မှု*\n\nဤအပတ်အတွက်ရနိုင်မှုဒေတာမရှိသေးပါ။\n\nရွေးချယ်ထားသော subcontractors တင်ပြရန်တောင်းဆိုရန် 'Request Availability' ကိုအသုံးပြုပါ။",
+    },
+    "no_permission_create_job": {
+        "en": "You don't have permission to create jobs.",
+        "ps": "تاسو د کارونو جوړولو اجازه نلرئ.",
+        "my": "အလုပ်ဖန်တီးရန်ခွင့်ပြုချက်မရှိပါ။",
+    },
+    "no_permission_send_msg": {
+        "en": "You don't have permission to send messages.",
+        "ps": "تاسو د پیغامونو لیږلو اجازه نلرئ.",
+        "my": "မက်ဆေ့ပေးပို့ရန်ခွင့်ပြုချက်မရှိပါ။",
+    },
+    "only_managers_request_avail": {
+        "en": "Only managers can request availability.",
+        "ps": "یوازې مدیران کولی شي شتون وغواړي.",
+        "my": "မန်နေဂျာများသာရနိုင်မှုတောင်းခံနိုင်သည်။",
+    },
+    "only_managers_view_avail": {
+        "en": "Only managers can view weekly availability.",
+        "ps": "یوازې مدیران کولی شي د اونۍ شتون وګوري.",
+        "my": "မန်နေဂျာများသာအပတ်စဉ်ရနိုင်မှုကြည့်ရှုနိုင်သည်။",
+    },
+    "only_sa_message_all": {
+        "en": "Only a General Manager can message everyone.",
+        "ps": "یوازې عمومي مدیر کولی شي ټولو ته پیغام لیږي.",
+        "my": "General Manager ကသာ အားလုံးထံမက်ဆေ့ပေးပို့နိုင်သည်။",
+    },
+    "no_permission_create_sub_code": {
+        "en": "You don't have permission to create subcontractor codes.",
+        "ps": "تاسو د subcontractor کوډونو جوړولو اجازه نلرئ.",
+        "my": "Subcontractor ကုဒ်ဖန်တီးရန်ခွင့်ပြုချက်မရှိပါ။",
+    },
+    "user_details_text": {
+        "en": "*User Details*\n\n*Name:* {name}\n*Username:* {username}\n*Role:* {role}\n*Status:* {status}\n*Joined:* {joined}\n\n{safety}{self_note}",
+        "ps": "*د کارونکي توضیحات*\n\n*نوم:* {name}\n*کارونکي نوم:* {username}\n*رول:* {role}\n*حالت:* {status}\n*شامل شو:* {joined}\n\n{safety}{self_note}",
+        "my": "*အသုံးပြုသူအသေးစိတ်*\n\n*နာမည်:* {name}\n*Username:* {username}\n*Role:* {role}\n*အခြေအနေ:* {status}\n*ဝင်ရောက်သည်:* {joined}\n\n{safety}{self_note}",
+    },
+    "user_status_active": {
+        "en": "Active",
+        "ps": "فعال",
+        "my": "အသက်ရှင်နေသည်",
+    },
+    "user_status_inactive": {
+        "en": "Inactive",
+        "ps": "غیر فعال",
+        "my": "မသုံးဆောင်ဆဲ",
+    },
+    "user_self_note": {
+        "en": "This is your own account.",
+        "ps": "دا ستاسو خپل حساب دی.",
+        "my": "ဤသည်သင်၏ကိုယ်ပိုင်အကောင့်ဖြစ်သည်။",
+    },
+    "delete_user_self_confirm": {
+        "en": " *Delete Your Account*\n\nAre you sure you want to delete your own admin account?\n\n*This action cannot be undone.*\nYou will be logged out and need a new access code to return.",
+        "ps": " *ستاسو حساب ړنګول*\n\nایا تاسو ډاډه یاست چې غواړئ خپل مدیر حساب ړنګ کړئ؟\n\n*دا کار بیرته نه کیدی شي.*\nتاسو به وتلی شئ او د بیرته راستنیدو لپاره نوي اجازه کوډ ته اړتیا لرئ.",
+        "my": " *သင့်အကောင့်ဖျက်ပါ*\n\nသင့်မိမိ admin အကောင့်ကိုဖျက်ချင်သလားသေချာလား?\n\n*ဤလုပ်ဆောင်ချက်ပြောင်းလဲ၍မရပါ။*\nသင်ထွက်သွားမည်ဖြစ်ပြီးပြန်ဝင်ရောက်ရန်ကုဒ်အသစ်လိုအပ်သည်။",
+    },
+    "delete_user_other_confirm": {
+        "en": " *Delete User*\n\nAre you sure you want to delete *{name}*?\n\n*This action cannot be undone.*",
+        "ps": " *کارونکی ړنګول*\n\nایا تاسو ډاډه یاست چې غواړئ *{name}* ړنګ کړئ؟\n\n*دا کار بیرته نه کیدی شي.*",
+        "my": " *အသုံးပြုသူဖျက်ပါ*\n\n*{name}* ကိုဖျက်ချင်သည်မှာသေချာသလား?\n\n*ဤလုပ်ဆောင်ချက်ပြောင်းလဲ၍မရပါ။*",
+    },
+    "account_deleted_self": {
+        "en": "Your account has been deleted.\n\nUse /start with a new access code to register again.",
+        "ps": "ستاسو حساب ړنګ شو.\n\n/start د نوي اجازه کوډ سره د بیا ثبت نام لپاره وکاروئ.",
+        "my": "သင့်အကောင့်ဖျက်ထားသည်။\n\nပြန်ထည့်ရန် /start ကို access code အသစ်ဖြင့်အသုံးပြုပါ။",
+    },
+    "user_deleted_other": {
+        "en": "*User Deleted*\n\n{name} has been removed from the system.",
+        "ps": "*کارونکی ړنګ شو*\n\n{name} له سیستم څخه لرې شو.",
+        "my": "*အသုံးပြုသူဖျက်ပြီး*\n\n{name} ကိုစနစ်မှဖယ်ရှားလိုက်သည်။",
+    },
+    "back_to_users_title": {
+        "en": "*Manage Users* ({count} total)\n\nSelect a user to manage:",
+        "ps": "*د کارونکو اداره* ({count} ټول)\n\nد اداره کولو لپاره کارونکی وټاکئ:",
+        "my": "*အသုံးပြုသူများစီမံပါ* ({count} ဦး)\n\nစီမံရန်အသုံးပြုသူရွေးချယ်ပါ:",
+    },
+    "manage_users_sa_title": {
+        "en": "*Manage All Users (General Manager)* ({count} total)\n\nSelect a user to manage:",
+        "ps": "*ټول کارونکي اداره کړئ (عمومي مدیر)* ({count} ټول)\n\nد اداره کولو لپاره کارونکی وټاکئ:",
+        "my": "*အသုံးပြုသူအားလုံးစီမံပါ (General Manager)* ({count} ဦး)\n\nစီမံရန်အသုံးပြုသူရွေးချယ်ပါ:",
+    },
+    "manage_users_admin_title": {
+        "en": "*Manage Users* ({count} total)\n\nSelect a user to manage:",
+        "ps": "*د کارونکو اداره* ({count} ټول)\n\nد اداره کولو لپاره کارونکی وټاکئ:",
+        "my": "*အသုံးပြုသူများစီမံပါ* ({count} ဦး)\n\nစီမံရန်အသုံးပြုသူရွေးချယ်ပါ:",
+    },
+    "users_by_role_none": {
+        "en": "*{role_name}*\n\nNo {role_name_lower} found.",
+        "ps": "*{role_name}*\n\n{role_name_lower} ونه موندل شو.",
+        "my": "*{role_name}*\n\n{role_name_lower} မတွေ့ရပါ။",
+    },
+    "users_by_role_title": {
+        "en": "*{role_name}* ({count} total)\n\nSelect a user to manage:",
+        "ps": "*{role_name}* ({count} ټول)\n\nد اداره کولو لپاره کارونکی وټاکئ:",
+        "my": "*{role_name}* ({count} ဦး)\n\nစီမံရန်အသုံးပြုသူရွေးချယ်ပါ:",
+    },
+    "no_users_found": {
+        "en": "No users found.",
+        "ps": "هیڅ کارونکي ونه موندل شو.",
+        "my": "အသုံးပြုသူမတွေ့ရပါ။",
+    },
+    "weekly_avail_view_title": {
+        "en": " *Subcontractor Availability*\nWeek of {week}\n\n",
+        "ps": " *د subcontractor شتون*\nد اونۍ {week}\n\n",
+        "my": " *Subcontractor ရနိုင်မှု*\nအပတ် {week}\n\n",
+    },
+    "avail_pending_label": {
+        "en": " *Pending Response:*\n{names}",
+        "ps": " *د ځوابولو تمه:*\n{names}",
+        "my": " *ဖြေကြားရန်စောင့်ဆိုင်း:*\n{names}",
+    },
+    "select_at_least_one": {
+        "en": "Please select at least one subcontractor.",
+        "ps": "مهرباني وکړئ لږترلږه یو subcontractor وټاکئ.",
+        "my": "Subcontractor အနည်းဆုံးတစ်ဦးရွေးချယ်ပါ။",
+    },
+    "cannot_return_gm": {
+        "en": "Cannot return to General Manager — code has changed.",
+        "ps": "د عمومي مدیر ته نه شي راستنیدلی — کوډ بدل شوی.",
+        "my": "General Manager ထံပြန်မသွားနိုင်ပါ — ကုဒ်ပြောင်းသွားသည်။",
+    },
+    "not_authorized": {
+        "en": "Not authorized.",
+        "ps": "اجازه نلرئ.",
+        "my": "ခွင့်ပြုချက်မရှိပါ။",
+    },
 }
 
 

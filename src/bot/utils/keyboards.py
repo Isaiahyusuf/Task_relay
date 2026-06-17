@@ -85,35 +85,40 @@ def get_skip_keyboard(field: str, lang: str = "en") -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text=i18n_msg("btn_cancel", lang=lang), callback_data="job_cancel")]
     ])
 
-def get_confirmation_keyboard(action: str, item_id: int = 0) -> InlineKeyboardMarkup:
+def get_confirmation_keyboard(action: str, item_id: int = 0, lang: str = "en") -> InlineKeyboardMarkup:
+    from src.bot.i18n import msg as i18n_msg
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="Confirm", callback_data=f"confirm:{action}:{item_id}"),
-            InlineKeyboardButton(text="Cancel", callback_data=f"cancel:{action}:{item_id}")
+            InlineKeyboardButton(text=i18n_msg("btn_confirm", lang=lang), callback_data=f"confirm:{action}:{item_id}"),
+            InlineKeyboardButton(text=i18n_msg("btn_cancel", lang=lang), callback_data=f"cancel:{action}:{item_id}")
         ]
     ])
 
-def get_team_selection_keyboard(for_code: bool = False) -> InlineKeyboardMarkup:
+def get_team_selection_keyboard(for_code: bool = False, lang: str = "en") -> InlineKeyboardMarkup:
+    from src.bot.i18n import msg as i18n_msg
     prefix = "code_team" if for_code else "job_team"
+    cancel_cb = "cancel_code" if for_code else "job_cancel"
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="North/West subcontractors", callback_data=f"{prefix}:northwest")],
-        [InlineKeyboardButton(text="South/East subcontractors", callback_data=f"{prefix}:southeast")],
-        [InlineKeyboardButton(text="Cancel", callback_data="cancel_code" if for_code else "job_cancel")]
+        [InlineKeyboardButton(text=i18n_msg("btn_team_northwest", lang=lang), callback_data=f"{prefix}:northwest")],
+        [InlineKeyboardButton(text=i18n_msg("btn_team_southeast", lang=lang), callback_data=f"{prefix}:southeast")],
+        [InlineKeyboardButton(text=i18n_msg("btn_cancel", lang=lang), callback_data=cancel_cb)]
     ])
 
-def get_job_team_selection_keyboard() -> InlineKeyboardMarkup:
+def get_job_team_selection_keyboard(lang: str = "en") -> InlineKeyboardMarkup:
+    from src.bot.i18n import msg as i18n_msg
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Send Bot-Wide (All Teams)", callback_data="job_send:all")],
-        [InlineKeyboardButton(text="North/West Only", callback_data="job_send:northwest")],
-        [InlineKeyboardButton(text="South/East Only", callback_data="job_send:southeast")],
-        [InlineKeyboardButton(text="Save as Draft", callback_data="job_send:draft")],
-        [InlineKeyboardButton(text="Cancel", callback_data="job_cancel")]
+        [InlineKeyboardButton(text=i18n_msg("btn_send_all_teams", lang=lang), callback_data="job_send:all")],
+        [InlineKeyboardButton(text=i18n_msg("btn_team_northwest", lang=lang), callback_data="job_send:northwest")],
+        [InlineKeyboardButton(text=i18n_msg("btn_team_southeast", lang=lang), callback_data="job_send:southeast")],
+        [InlineKeyboardButton(text=i18n_msg("btn_save_draft", lang=lang), callback_data="job_send:draft")],
+        [InlineKeyboardButton(text=i18n_msg("btn_cancel", lang=lang), callback_data="job_cancel")]
     ])
 
-def get_subcontractor_selection_keyboard(subcontractors: list, include_skip: bool = True) -> InlineKeyboardMarkup:
+def get_subcontractor_selection_keyboard(subcontractors: list, include_skip: bool = True, lang: str = "en") -> InlineKeyboardMarkup:
+    from src.bot.i18n import msg as i18n_msg
     buttons = []
     if subcontractors:
-        buttons.append([InlineKeyboardButton(text="Send to All Available ✅", callback_data="assign:all")])
+        buttons.append([InlineKeyboardButton(text=i18n_msg("btn_send_all_available", lang=lang), callback_data="assign:all")])
     for sub in subcontractors:
         name = sub.first_name or sub.username or f"User {sub.telegram_id}"
         if sub.availability_status == AvailabilityStatus.AVAILABLE:
@@ -124,8 +129,8 @@ def get_subcontractor_selection_keyboard(subcontractors: list, include_skip: boo
             avail = "[AWAY]"
         buttons.append([InlineKeyboardButton(text=f"{avail} {name}", callback_data=f"assign:{sub.id}")])
     if include_skip:
-        buttons.append([InlineKeyboardButton(text="Save without sending 📌", callback_data="assign:none")])
-    buttons.append([InlineKeyboardButton(text="Cancel ✖", callback_data="job_cancel")])
+        buttons.append([InlineKeyboardButton(text=i18n_msg("btn_save_without_sending", lang=lang), callback_data="assign:none")])
+    buttons.append([InlineKeyboardButton(text=i18n_msg("btn_cancel", lang=lang), callback_data="job_cancel")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def get_job_actions_keyboard(job_id: int, job_type: str = "preset", job_status: str = "sent", lang: str = "en") -> InlineKeyboardMarkup:
@@ -215,7 +220,8 @@ def get_job_list_keyboard(jobs: list, page: int = 0, page_size: int = 5, context
         buttons.append(nav_buttons)
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-def get_role_selection_keyboard(creator_role: str = "super_admin") -> InlineKeyboardMarkup:
+def get_role_selection_keyboard(creator_role: str = "super_admin", lang: str = "en") -> InlineKeyboardMarkup:
+    from src.bot.i18n import msg as i18n_msg
     buttons = []
     role_map = {
         "super_admin": UserRole.SUPER_ADMIN,
@@ -225,21 +231,23 @@ def get_role_selection_keyboard(creator_role: str = "super_admin") -> InlineKeyb
     }
     role_options = creatable_roles(role_map.get(creator_role))
     labels = {
-        UserRole.ADMIN: " Manager",
-        UserRole.SUPERVISOR: " Supervisor",
-        UserRole.SUBCONTRACTOR: " Subcontractor",
+        UserRole.ADMIN: i18n_msg("role_manager", lang=lang),
+        UserRole.SUPERVISOR: i18n_msg("role_supervisor", lang=lang),
+        UserRole.SUBCONTRACTOR: i18n_msg("role_subcontractor", lang=lang),
     }
     for role in role_options:
         buttons.append([InlineKeyboardButton(text=labels[role], callback_data=f"role:{role.value}")])
-    buttons.append([InlineKeyboardButton(text="Cancel", callback_data="code_cancel")])
+    buttons.append([InlineKeyboardButton(text=i18n_msg("btn_cancel", lang=lang), callback_data="code_cancel")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-def get_back_keyboard(callback_data: str = "back:main") -> InlineKeyboardMarkup:
+def get_back_keyboard(callback_data: str = "back:main", lang: str = "en") -> InlineKeyboardMarkup:
+    from src.bot.i18n import msg as i18n_msg
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Back", callback_data=callback_data)]
+        [InlineKeyboardButton(text=i18n_msg("btn_back", lang=lang), callback_data=callback_data)]
     ])
 
-def get_user_list_keyboard(users: list, page: int = 0, page_size: int = 5, include_self: bool = True, is_super_admin: bool = False) -> InlineKeyboardMarkup:
+def get_user_list_keyboard(users: list, page: int = 0, page_size: int = 5, include_self: bool = True, is_super_admin: bool = False, lang: str = "en") -> InlineKeyboardMarkup:
+    from src.bot.i18n import msg as i18n_msg
     start = page * page_size
     end = start + page_size
     page_users = users[start:end]
@@ -253,44 +261,48 @@ def get_user_list_keyboard(users: list, page: int = 0, page_size: int = 5, inclu
         )])
     nav_buttons = []
     if page > 0:
-        nav_buttons.append(InlineKeyboardButton(text="Previous", callback_data=f"page:users:{page-1}"))
+        nav_buttons.append(InlineKeyboardButton(text=i18n_msg("btn_previous", lang=lang), callback_data=f"page:users:{page-1}"))
     if end < len(users):
-        nav_buttons.append(InlineKeyboardButton(text="Next", callback_data=f"page:users:{page+1}"))
+        nav_buttons.append(InlineKeyboardButton(text=i18n_msg("btn_next", lang=lang), callback_data=f"page:users:{page+1}"))
     if nav_buttons:
         buttons.append(nav_buttons)
-    buttons.append([InlineKeyboardButton(text="Back", callback_data="back:admin_menu")])
+    buttons.append([InlineKeyboardButton(text=i18n_msg("btn_back", lang=lang), callback_data="back:admin_menu")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-def get_user_actions_keyboard(user_id: int, is_self: bool = False) -> InlineKeyboardMarkup:
+def get_user_actions_keyboard(user_id: int, is_self: bool = False, lang: str = "en") -> InlineKeyboardMarkup:
+    from src.bot.i18n import msg as i18n_msg
     buttons = []
     if is_self:
-        buttons.append([InlineKeyboardButton(text="Delete My Account", callback_data=f"delete_user:{user_id}:self")])
+        buttons.append([InlineKeyboardButton(text=i18n_msg("btn_delete_my_account", lang=lang), callback_data=f"delete_user:{user_id}:self")])
     else:
-        buttons.append([InlineKeyboardButton(text="Delete User", callback_data=f"delete_user:{user_id}:other")])
-    buttons.append([InlineKeyboardButton(text="Back to Users", callback_data="back:users")])
+        buttons.append([InlineKeyboardButton(text=i18n_msg("btn_delete_user", lang=lang), callback_data=f"delete_user:{user_id}:other")])
+    buttons.append([InlineKeyboardButton(text=i18n_msg("btn_back_to_users", lang=lang), callback_data="back:users")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-def get_switch_role_keyboard() -> InlineKeyboardMarkup:
+def get_switch_role_keyboard(lang: str = "en") -> InlineKeyboardMarkup:
+    from src.bot.i18n import msg as i18n_msg
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Become Supervisor", callback_data="switch_role:supervisor")],
-        [InlineKeyboardButton(text="Become Subcontractor", callback_data="switch_role:subcontractor")],
-        [InlineKeyboardButton(text="Cancel", callback_data="back:admin_menu")]
+        [InlineKeyboardButton(text=i18n_msg("btn_become_supervisor", lang=lang), callback_data="switch_role:supervisor")],
+        [InlineKeyboardButton(text=i18n_msg("btn_become_subcontractor", lang=lang), callback_data="switch_role:subcontractor")],
+        [InlineKeyboardButton(text=i18n_msg("btn_cancel", lang=lang), callback_data="back:admin_menu")]
     ])
 
-def get_super_admin_switch_role_keyboard() -> InlineKeyboardMarkup:
+def get_super_admin_switch_role_keyboard(lang: str = "en") -> InlineKeyboardMarkup:
+    from src.bot.i18n import msg as i18n_msg
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Manager", callback_data="sa_switch:admin")],
-        [InlineKeyboardButton(text="Supervisor", callback_data="sa_switch:supervisor")],
-        [InlineKeyboardButton(text="Subcontractor", callback_data="sa_switch:subcontractor")],
-        [InlineKeyboardButton(text="Cancel", callback_data="back:sa_menu")]
+        [InlineKeyboardButton(text=i18n_msg("role_manager", lang=lang), callback_data="sa_switch:admin")],
+        [InlineKeyboardButton(text=i18n_msg("role_supervisor", lang=lang), callback_data="sa_switch:supervisor")],
+        [InlineKeyboardButton(text=i18n_msg("role_subcontractor", lang=lang), callback_data="sa_switch:subcontractor")],
+        [InlineKeyboardButton(text=i18n_msg("btn_cancel", lang=lang), callback_data="back:sa_menu")]
     ])
 
-def get_confirm_delete_keyboard(user_id: int, delete_type: str) -> InlineKeyboardMarkup:
+def get_confirm_delete_keyboard(user_id: int, delete_type: str, lang: str = "en") -> InlineKeyboardMarkup:
+    from src.bot.i18n import msg as i18n_msg
     cancel_callback = "back:users" if delete_type == "other" else "cancel_self_delete"
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="Yes, Delete", callback_data=f"confirm_delete:{user_id}:{delete_type}"),
-            InlineKeyboardButton(text="No, Cancel", callback_data=cancel_callback)
+            InlineKeyboardButton(text=i18n_msg("btn_yes_delete", lang=lang), callback_data=f"confirm_delete:{user_id}:{delete_type}"),
+            InlineKeyboardButton(text=i18n_msg("btn_no_cancel", lang=lang), callback_data=cancel_callback)
         ]
     ])
 
@@ -303,11 +315,12 @@ def get_self_delete_confirm_keyboard(user_id: int, lang: str = "en") -> InlineKe
         ]
     ])
 
-def get_confirm_job_delete_keyboard(job_id: int) -> InlineKeyboardMarkup:
+def get_confirm_job_delete_keyboard(job_id: int, lang: str = "en") -> InlineKeyboardMarkup:
+    from src.bot.i18n import msg as i18n_msg
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="Yes, Delete Job", callback_data=f"confirm_job_delete:{job_id}"),
-            InlineKeyboardButton(text="No, Cancel", callback_data=f"view_job:history:{job_id}")
+            InlineKeyboardButton(text=i18n_msg("btn_yes_delete_job", lang=lang), callback_data=f"confirm_job_delete:{job_id}"),
+            InlineKeyboardButton(text=i18n_msg("btn_no_cancel", lang=lang), callback_data=f"view_job:history:{job_id}")
         ]
     ])
 
@@ -356,20 +369,22 @@ def get_supervisor_availability_keyboard() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="Back", callback_data="back_main")]
     ])
 
-def get_message_target_keyboard(sender_role: UserRole | None = None) -> InlineKeyboardMarkup:
+def get_message_target_keyboard(sender_role: UserRole | None = None, lang: str = "en") -> InlineKeyboardMarkup:
+    from src.bot.i18n import msg as i18n_msg
     rows = []
     if sender_role == UserRole.SUPER_ADMIN:
-        rows.append([InlineKeyboardButton(text="Everyone on Bot 🌐", callback_data="msg_target:all_users")])
+        rows.append([InlineKeyboardButton(text=i18n_msg("btn_msg_everyone", lang=lang), callback_data="msg_target:all_users")])
     rows.extend([
-        [InlineKeyboardButton(text="All Subcontractors 👷", callback_data="msg_target:all_subs")],
-        [InlineKeyboardButton(text="North/West Team 🧭", callback_data="msg_target:northwest")],
-        [InlineKeyboardButton(text="South/East Team 🗺", callback_data="msg_target:southeast")],
-        [InlineKeyboardButton(text="Select Specific Users ☑", callback_data="msg_target:select")],
-        [InlineKeyboardButton(text="Cancel ✖", callback_data="msg_cancel")]
+        [InlineKeyboardButton(text=i18n_msg("btn_msg_all_subs", lang=lang), callback_data="msg_target:all_subs")],
+        [InlineKeyboardButton(text=i18n_msg("btn_msg_northwest", lang=lang), callback_data="msg_target:northwest")],
+        [InlineKeyboardButton(text=i18n_msg("btn_msg_southeast", lang=lang), callback_data="msg_target:southeast")],
+        [InlineKeyboardButton(text=i18n_msg("btn_msg_select", lang=lang), callback_data="msg_target:select")],
+        [InlineKeyboardButton(text=i18n_msg("btn_cancel", lang=lang), callback_data="msg_cancel")]
     ])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
-def get_subcontractor_select_keyboard(subcontractors: list, selected_ids: list = None) -> InlineKeyboardMarkup:
+def get_subcontractor_select_keyboard(subcontractors: list, selected_ids: list = None, lang: str = "en") -> InlineKeyboardMarkup:
+    from src.bot.i18n import msg as i18n_msg
     selected_ids = selected_ids or []
     buttons = []
     for sub in subcontractors:
@@ -379,11 +394,12 @@ def get_subcontractor_select_keyboard(subcontractors: list, selected_ids: list =
             text=f"{check} {name}",
             callback_data=f"msg_select:{sub.id}"
         )])
-    buttons.append([InlineKeyboardButton(text="Send Message ✅", callback_data="msg_send")])
-    buttons.append([InlineKeyboardButton(text="Cancel ✖", callback_data="msg_cancel")])
+    buttons.append([InlineKeyboardButton(text=i18n_msg("btn_send_msg", lang=lang), callback_data="msg_send")])
+    buttons.append([InlineKeyboardButton(text=i18n_msg("btn_cancel", lang=lang), callback_data="msg_cancel")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-def get_availability_request_select_keyboard(subcontractors: list, selected_ids: list = None) -> InlineKeyboardMarkup:
+def get_availability_request_select_keyboard(subcontractors: list, selected_ids: list = None, lang: str = "en") -> InlineKeyboardMarkup:
+    from src.bot.i18n import msg as i18n_msg
     selected_ids = selected_ids or []
     buttons = []
     for sub in subcontractors:
@@ -393,8 +409,8 @@ def get_availability_request_select_keyboard(subcontractors: list, selected_ids:
             text=f"{check} {name}",
             callback_data=f"avail_req_select:{sub.id}"
         )])
-    buttons.append([InlineKeyboardButton(text="Request Availability ✅", callback_data="avail_req_send")])
-    buttons.append([InlineKeyboardButton(text="Cancel ✖", callback_data="avail_req_cancel")])
+    buttons.append([InlineKeyboardButton(text=i18n_msg("btn_request_avail", lang=lang), callback_data="avail_req_send")])
+    buttons.append([InlineKeyboardButton(text=i18n_msg("btn_cancel", lang=lang), callback_data="avail_req_cancel")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def get_unavailability_job_keyboard(jobs: list, lang: str = "en") -> InlineKeyboardMarkup:
