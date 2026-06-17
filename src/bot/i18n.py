@@ -417,6 +417,51 @@ MESSAGES: dict[str, dict[str, str]] = {
         "ps": "💬 *ځواب راغی*\n\n*{responder}* ستاسو پیغام ته ځواب ورکړ:\n\n*اصلي:*\n_{preview}_\n\n*ځواب:*\n{reply}",
         "my": "💬 *အဖြေရောက်ရှိပြီး*\n\n*{responder}* သင်၏မက်ဆေ့ကိုဖြေသည်:\n\n*မူရင်း:*\n_{preview}_\n\n*အဖြေ:*\n{reply}",
     },
+    "btn_acknowledge": {
+        "en": "✅ Acknowledge",
+        "ps": "✅ تایید",
+        "my": "✅ အတည်ပြုသည်",
+    },
+    "btn_reply": {
+        "en": "💬 Reply",
+        "ps": "💬 ځواب ورکول",
+        "my": "💬 ဖြေကြားမည်",
+    },
+    "btn_send_feedback": {
+        "en": "💬 Send Feedback",
+        "ps": "💬 نظر ولیږئ",
+        "my": "💬 တုံ့ပြန်ချက်ပို့မည်",
+    },
+    "btn_acknowledged_done": {
+        "en": "✅ Acknowledged",
+        "ps": "✅ تایید شو",
+        "my": "✅ အတည်ပြုပြီး",
+    },
+    "msg_already_responded": {
+        "en": "You've already responded to this message.",
+        "ps": "تاسو دمخه دې پیغام ته ځواب ورکړی دی.",
+        "my": "သင်ဤမက်ဆေ့ကိုဖြေပြီးသားဖြစ်သည်။",
+    },
+    "msg_acknowledged_suffix": {
+        "en": "\n\n✅ _You acknowledged this message_",
+        "ps": "\n\n✅ _تاسو دا پیغام تایید کړ_",
+        "my": "\n\n✅ _သင်ဤမက်ဆေ့ကိုအတည်ပြုပြီး_",
+    },
+    "msg_reply_prompt": {
+        "en": "💬 *Reply to Message*\n\nType your reply:",
+        "ps": "💬 *د پیغام ځواب*\n\nخپل ځواب ولیکئ:",
+        "my": "💬 *မက်ဆေ့ကိုဖြေကြားမည်*\n\nသင်၏အဖြေရိုက်ထည့်ပါ:",
+    },
+    "msg_reply_cancelled": {
+        "en": "Reply cancelled.",
+        "ps": "ځواب لغوه شو.",
+        "my": "ဖြေကြားမှုဖျက်သိမ်းပြီး။",
+    },
+    "msg_reply_sent": {
+        "en": "✅ *Reply Sent*\n\nYour reply has been sent to the sender.",
+        "ps": "✅ *ځواب ولیږل شو*\n\nستاسو ځواب لیږونکي ته ولیږل شو.",
+        "my": "✅ *အဖြေပေးပို့ပြီး*\n\nသင်၏အဖြေပေးပို့သူထံပေးပို့ပြီးပြီ။",
+    },
     "revision_requested": {
         "en": "🔄 *Revision Requested*\n\nJob #{job_id}: {title}\n\n*Supervisor Feedback:*\n{reason}\n\nPlease address the issues and resubmit your work.",
         "ps": "🔄 *د بیاکتنې غوښتنه*\n\nکار #{job_id}: {title}\n\n*د سرپرست نظر:*\n{reason}\n\nمهرباني وکړئ ستونزې حل کړئ او بیا یې وسپارئ.",

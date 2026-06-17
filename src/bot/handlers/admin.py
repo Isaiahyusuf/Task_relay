@@ -1904,7 +1904,7 @@ async def send_broadcast_message(message: Message, state: FSMContext):
                 await bot.send_message(
                     recipient.telegram_id,
                     header + body,
-                    reply_markup=get_message_reaction_keyboard(broadcast.id),
+                    reply_markup=get_message_reaction_keyboard(broadcast.id, lang=r_lang),
                     parse_mode="Markdown"
                 )
                 sent_count += 1

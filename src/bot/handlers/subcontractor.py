@@ -1000,7 +1000,7 @@ async def process_unavailability_dates(message: Message, state: FSMContext):
                                 sub_name=sub_name, job_id=job.id,
                                 title=job.title, reason=t_reason, dates=dates_text
                             ),
-                            reply_markup=get_unavailability_response_keyboard(notice.id, sub.id),
+                            reply_markup=get_unavailability_response_keyboard(notice.id, sub.id, lang=sup_lang),
                             parse_mode="Markdown"
                         )
                         notified_users.append(supervisor.id)
@@ -1033,7 +1033,7 @@ async def process_unavailability_dates(message: Message, state: FSMContext):
                                 sub_name=sub_name, scope=scope,
                                 job_info="", reason=t_reason, dates=dates_text
                             ),
-                            reply_markup=get_unavailability_response_keyboard(notice.id, sub.id),
+                            reply_markup=get_unavailability_response_keyboard(notice.id, sub.id, lang=sup_lang),
                             parse_mode="Markdown"
                         )
                         notified_users.append(supervisor.id)
@@ -1072,7 +1072,7 @@ async def process_unavailability_dates(message: Message, state: FSMContext):
                             job_info=job_info,
                             reason=t_reason, dates=dates_text
                         ),
-                        reply_markup=get_unavailability_response_keyboard(notice.id, sub.id),
+                        reply_markup=get_unavailability_response_keyboard(notice.id, sub.id, lang=u_lang),
                         parse_mode="Markdown"
                     )
                     notified_users.append(user.id)
@@ -1308,7 +1308,8 @@ async def handle_message_acknowledge(callback: CallbackQuery):
             )
         )
         if existing.scalar_one_or_none():
-            await callback.answer("You've already responded to this message.")
+            sub_lang = await get_recipient_lang(callback.from_user.id)
+            await callback.answer(i18n_msg("msg_already_responded", lang=sub_lang))
             return
         
         # Get the broadcast message
@@ -1355,21 +1356,22 @@ async def handle_message_acknowledge(callback: CallbackQuery):
                 logger.error(f"Failed to notify sender about acknowledgement: {e}")
     
     # Update the message to show acknowledged
+    sub_lang = await get_recipient_lang(callback.from_user.id)
     await callback.message.edit_text(
-        callback.message.text + "\n\n_ You acknowledged this message_",
+        callback.message.text + i18n_msg("msg_acknowledged_suffix", lang=sub_lang),
         parse_mode="Markdown"
     )
-    await callback.answer("Acknowledged!")
+    await callback.answer(i18n_msg("btn_acknowledged_done", lang=sub_lang))
 
 @router.callback_query(F.data.startswith("msg_reply:"))
 async def handle_message_reply_start(callback: CallbackQuery, state: FSMContext):
     """Start the reply flow for a message"""
     broadcast_id = int(callback.data.split(":")[1])
     
-    await state.update_data(broadcast_id=broadcast_id)
+    sub_lang = await get_recipient_lang(callback.from_user.id)
+    await state.update_data(broadcast_id=broadcast_id, sub_lang=sub_lang)
     await callback.message.answer(
-        " *Reply to Message*\n\n"
-        "Type your reply:",
+        i18n_msg("msg_reply_prompt", lang=sub_lang),
         parse_mode="Markdown"
     )
     await state.set_state(MessageReplyStates.waiting_for_reply)
@@ -1378,12 +1380,13 @@ async def handle_message_reply_start(callback: CallbackQuery, state: FSMContext)
 @router.message(StateFilter(MessageReplyStates.waiting_for_reply))
 async def process_message_reply(message: Message, state: FSMContext):
     """Process the reply to a broadcast message"""
+    data = await state.get_data()
+    sub_lang = data.get("sub_lang") or await get_recipient_lang(message.from_user.id)
     if message.text and message.text.startswith("/"):
-        await message.answer("Reply cancelled.")
+        await message.answer(i18n_msg("msg_reply_cancelled", lang=sub_lang))
         await state.clear()
         return
     
-    data = await state.get_data()
     broadcast_id = data.get("broadcast_id")
     bot = message.bot
     
@@ -1449,8 +1452,7 @@ async def process_message_reply(message: Message, state: FSMContext):
                 logger.error(f"Failed to notify sender about reply: {e}")
     
     await message.answer(
-        " *Reply Sent*\n\n"
-        "Your reply has been sent to the sender.",
+        i18n_msg("msg_reply_sent", lang=sub_lang),
         parse_mode="Markdown"
     )
     await state.clear()

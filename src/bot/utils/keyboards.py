@@ -460,16 +460,18 @@ def get_skip_deadline_keyboard() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="Cancel", callback_data="job_cancel")]
     ])
 
-def get_unavailability_response_keyboard(notice_id: int, subcontractor_id: int) -> InlineKeyboardMarkup:
+def get_unavailability_response_keyboard(notice_id: int, subcontractor_id: int, lang: str = "en") -> InlineKeyboardMarkup:
+    from src.bot.i18n import msg as i18n_msg
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Send Feedback", callback_data=f"unavail_feedback:{notice_id}:{subcontractor_id}")],
-        [InlineKeyboardButton(text="Acknowledged", callback_data=f"unavail_ack:{notice_id}")]
+        [InlineKeyboardButton(text=i18n_msg("btn_send_feedback", lang=lang), callback_data=f"unavail_feedback:{notice_id}:{subcontractor_id}")],
+        [InlineKeyboardButton(text=i18n_msg("btn_acknowledged_done", lang=lang), callback_data=f"unavail_ack:{notice_id}")]
     ])
 
-def get_message_reaction_keyboard(broadcast_id: int) -> InlineKeyboardMarkup:
+def get_message_reaction_keyboard(broadcast_id: int, lang: str = "en") -> InlineKeyboardMarkup:
+    from src.bot.i18n import msg as i18n_msg
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Acknowledge", callback_data=f"msg_ack:{broadcast_id}")],
-        [InlineKeyboardButton(text="Reply", callback_data=f"msg_reply:{broadcast_id}")]
+        [InlineKeyboardButton(text=i18n_msg("btn_acknowledge", lang=lang), callback_data=f"msg_ack:{broadcast_id}")],
+        [InlineKeyboardButton(text=i18n_msg("btn_reply", lang=lang), callback_data=f"msg_reply:{broadcast_id}")]
     ])
 
 
