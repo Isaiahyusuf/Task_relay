@@ -181,6 +181,15 @@ async def run_migration():
             print("Added deadline_reminder_sent column to jobs table")
         except Exception as e:
             print(f"deadline_reminder_sent column may already exist: {e}")
+
+        # Add deadline_overdue_sent column to jobs table
+        try:
+            await conn.execute(text(
+                "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS deadline_overdue_sent BOOLEAN DEFAULT FALSE"
+            ))
+            print("Added deadline_overdue_sent column to jobs table")
+        except Exception as e:
+            print(f"deadline_overdue_sent column may already exist: {e}")
         
         # Create weekly_availability table
         try:

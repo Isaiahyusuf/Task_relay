@@ -116,46 +116,122 @@ class SchedulerService:
     
     @classmethod
     async def check_deadline_reminders(cls):
-        """Send reminders for jobs approaching their deadline (within 24 hours)"""
+        """
+        Two-stage deadline alerting:
+          1. 24-hour warning  → sub only, when deadline is within the next 24 h
+          2. Overdue alert    → sub + supervisor, once deadline has passed and
+                                job is still ACCEPTED or IN_PROGRESS
+        All messages are sent in the recipient's own language.
+        """
         if not async_session or not cls.bot:
             return
-        
-        reminder_window = datetime.utcnow() + timedelta(hours=24)
-        
+
+        from src.bot.i18n import msg as i18n_msg, get_recipient_lang
+        from src.bot.utils.translate import translate_text
+
+        now = datetime.utcnow()
+        active_statuses = [JobStatus.ACCEPTED, JobStatus.IN_PROGRESS]
+
         async with async_session() as session:
-            # Find jobs with deadlines within the next 24 hours that haven't had a reminder
-            result = await session.execute(
-                select(Job, User).join(
-                    User, Job.subcontractor_id == User.id
-                ).where(
+
+            # ── 1. 24-hour warning to sub ─────────────────────────────────────
+            upcoming_cutoff = now + timedelta(hours=24)
+            upcoming_result = await session.execute(
+                select(Job, User).join(User, Job.subcontractor_id == User.id).where(
                     and_(
-                        Job.status.in_([JobStatus.ACCEPTED, JobStatus.IN_PROGRESS]),
+                        Job.status.in_(active_statuses),
                         Job.deadline != None,
-                        Job.deadline <= reminder_window,
-                        Job.deadline > datetime.utcnow(),
-                        Job.deadline_reminder_sent == False
+                        Job.deadline > now,
+                        Job.deadline <= upcoming_cutoff,
+                        Job.deadline_reminder_sent == False,
                     )
                 )
             )
-            jobs_with_users = result.all()
-            
-            for job, user in jobs_with_users:
+            for job, sub in upcoming_result.all():
                 try:
-                    deadline_str = job.deadline.strftime("%d/%m/%Y") if job.deadline else "Unknown"
+                    deadline_str = job.deadline.strftime("%d/%m/%Y")
+                    sub_lang = await get_recipient_lang(sub.telegram_id)
+                    translated_title = await translate_text(job.title, target_lang=sub_lang)
                     await cls.bot.send_message(
-                        user.telegram_id,
-                        f" *Deadline Reminder*\n\n"
-                        f"Job #{job.id}: {job.title}\n"
-                        f"Deadline: *{deadline_str}*\n\n"
-                        f"This job is due soon. Please complete it on time.",
-                        parse_mode="Markdown"
+                        sub.telegram_id,
+                        i18n_msg(
+                            "deadline_reminder", lang=sub_lang,
+                            job_id=job.id, title=translated_title, deadline=deadline_str,
+                        ),
+                        parse_mode="Markdown",
                     )
-                    
                     job.deadline_reminder_sent = True
-                    logger.info(f"Sent deadline reminder for job {job.id} to user {user.telegram_id}")
+                    logger.info(f"Sent 24h deadline reminder for job {job.id} to sub {sub.telegram_id}")
                 except Exception as e:
-                    logger.error(f"Failed to send deadline reminder for job {job.id}: {e}")
-            
+                    logger.error(f"Failed to send 24h deadline reminder for job {job.id}: {e}")
+
+            # ── 2. Overdue alert to sub + supervisor ──────────────────────────
+            overdue_result = await session.execute(
+                select(Job).where(
+                    and_(
+                        Job.status.in_(active_statuses),
+                        Job.deadline != None,
+                        Job.deadline < now,
+                        Job.deadline_overdue_sent == False,
+                        Job.subcontractor_id != None,
+                    )
+                )
+            )
+            overdue_jobs = overdue_result.scalars().all()
+
+            for job in overdue_jobs:
+                deadline_str = job.deadline.strftime("%d/%m/%Y")
+
+                # Fetch sub and supervisor
+                sub_result = await session.execute(
+                    select(User).where(User.id == job.subcontractor_id)
+                )
+                sub = sub_result.scalar_one_or_none()
+
+                sup_result = await session.execute(
+                    select(User).where(User.id == job.supervisor_id)
+                )
+                supervisor = sup_result.scalar_one_or_none()
+
+                # Notify sub
+                if sub:
+                    try:
+                        sub_lang = await get_recipient_lang(sub.telegram_id)
+                        translated_title = await translate_text(job.title, target_lang=sub_lang)
+                        await cls.bot.send_message(
+                            sub.telegram_id,
+                            i18n_msg(
+                                "deadline_overdue_sub", lang=sub_lang,
+                                job_id=job.id, title=translated_title, deadline=deadline_str,
+                            ),
+                            parse_mode="Markdown",
+                        )
+                        logger.info(f"Sent overdue alert for job {job.id} to sub {sub.telegram_id}")
+                    except Exception as e:
+                        logger.error(f"Failed to send overdue alert to sub for job {job.id}: {e}")
+
+                # Notify supervisor
+                if supervisor:
+                    try:
+                        sub_name = (sub.first_name or sub.username or f"Sub #{job.subcontractor_id}") if sub else "Unknown"
+                        sup_lang = await get_recipient_lang(supervisor.telegram_id)
+                        translated_title = await translate_text(job.title, target_lang=sup_lang)
+                        translated_sub_name = await translate_text(sub_name, target_lang=sup_lang)
+                        await cls.bot.send_message(
+                            supervisor.telegram_id,
+                            i18n_msg(
+                                "deadline_overdue_supervisor", lang=sup_lang,
+                                job_id=job.id, title=translated_title,
+                                sub_name=translated_sub_name, deadline=deadline_str,
+                            ),
+                            parse_mode="Markdown",
+                        )
+                        logger.info(f"Sent overdue alert for job {job.id} to supervisor {supervisor.telegram_id}")
+                    except Exception as e:
+                        logger.error(f"Failed to send overdue alert to supervisor for job {job.id}: {e}")
+
+                job.deadline_overdue_sent = True
+
             await session.commit()
     
     @classmethod

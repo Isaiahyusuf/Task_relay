@@ -112,7 +112,8 @@ class Job(Base):
     company_name = Column(String(200), nullable=True)
     
     deadline = Column(DateTime, nullable=True)  # Job deadline
-    deadline_reminder_sent = Column(Boolean, default=False)  # If deadline reminder was sent
+    deadline_reminder_sent = Column(Boolean, default=False)  # 24h warning sent to sub
+    deadline_overdue_sent = Column(Boolean, default=False)   # Overdue alert sent to sub + supervisor
     
     rating = Column(Integer, nullable=True)
     rating_comment = Column(Text, nullable=True)

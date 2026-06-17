@@ -450,6 +450,80 @@ MESSAGES: dict[str, dict[str, str]] = {
             "ဆက်လက်ရန်ဘေးကင်း: {safe}"
         ),
     },
+
+    # ── Deadline reminders ────────────────────────────────────────────────────
+
+    "deadline_reminder": {
+        "en": (
+            "⏰ *Deadline Reminder*\n\n"
+            "Job #{job_id}: {title}\n"
+            "Deadline: *{deadline}*\n\n"
+            "This job is due within 24 hours. Please make sure it is completed on time."
+        ),
+        "ps": (
+            "⏰ *د ددلاین یادونه*\n\n"
+            "کار #{job_id}: {title}\n"
+            "ددلاین: *{deadline}*\n\n"
+            "دا کار د ۲۴ ساعتونو دننه پای ته رسیږي. مهرباني وکړئ یې وخت کې بشپړ کړئ."
+        ),
+        "my": (
+            "⏰ *နောက်ဆုံးရက်သတိပေးချက်*\n\n"
+            "အလုပ် #{job_id}: {title}\n"
+            "နောက်ဆုံးရက်: *{deadline}*\n\n"
+            "ဤအလုပ်သည် ၂၄ နာရီအတွင်း ကုန်ဆုံးမည်ဖြစ်သည်။ အချိန်မီပြီးစေရန် သေချာပါစေ။"
+        ),
+    },
+
+    "deadline_overdue_sub": {
+        "en": (
+            "🚨 *Job Overdue*\n\n"
+            "Job #{job_id}: {title}\n"
+            "Deadline was: *{deadline}*\n\n"
+            "This job has passed its deadline and is not yet completed. "
+            "Please submit it as soon as possible or contact your supervisor."
+        ),
+        "ps": (
+            "🚨 *کار ناوخته*\n\n"
+            "کار #{job_id}: {title}\n"
+            "ددلاین و: *{deadline}*\n\n"
+            "دا کار خپل ددلاین تیر کړی او لا هم بشپړ شوی نه دی. "
+            "مهرباني وکړئ هر ژر یې وسپارئ یا خپل سرپرست سره اړیکه ونیسئ."
+        ),
+        "my": (
+            "🚨 *အလုပ်နောက်ကျနေသည်*\n\n"
+            "အလုပ် #{job_id}: {title}\n"
+            "နောက်ဆုံးရက်ကား: *{deadline}*\n\n"
+            "ဤအလုပ်သည် နောက်ဆုံးရက်လွန်ပြီး မပြီးသေးပါ။ "
+            "တတ်နိုင်သမျှ အမြန်တင်သွင်းပါ သို့မဟုတ် သင်၏အကြီးအကဲနှင့် ဆက်သွယ်ပါ။"
+        ),
+    },
+
+    "deadline_overdue_supervisor": {
+        "en": (
+            "🚨 *Overdue Job Alert*\n\n"
+            "Job #{job_id}: {title}\n"
+            "Assigned to: *{sub_name}*\n"
+            "Deadline was: *{deadline}*\n\n"
+            "This job has passed its deadline and has not been submitted yet. "
+            "The subcontractor has been notified."
+        ),
+        "ps": (
+            "🚨 *د ناوخته کار خبرداری*\n\n"
+            "کار #{job_id}: {title}\n"
+            "چا ته ورکول شو: *{sub_name}*\n"
+            "ددلاین و: *{deadline}*\n\n"
+            "دا کار خپل ددلاین تیر کړی او لا سپارل شوی نه دی. "
+            "مقاول ته خبر ورکړل شوی دی."
+        ),
+        "my": (
+            "🚨 *နောက်ကျသောအလုပ်သတိပေးချက်*\n\n"
+            "အလုပ် #{job_id}: {title}\n"
+            "တာဝန်ပေးထားသူ: *{sub_name}*\n"
+            "နောက်ဆုံးရက်ကား: *{deadline}*\n\n"
+            "ဤအလုပ်သည် နောက်ဆုံးရက်လွန်ပြီး မတင်သွင်းရသေးပါ။ "
+            "အကြွင်းထံ အကြောင်းကြားပြီးဖြစ်သည်။"
+        ),
+    },
 }
 
 
