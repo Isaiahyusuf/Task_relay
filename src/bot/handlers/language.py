@@ -3,7 +3,7 @@ from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKe
 from sqlalchemy import select
 from src.bot.database import async_session, User
 from src.bot.i18n import LANGUAGES, variants, msg
-from src.bot.utils.keyboards import get_main_menu_keyboard
+from src.bot.utils.keyboards import get_main_menu_keyboard, get_language_selection_keyboard
 import logging
 
 logger = logging.getLogger(__name__)
@@ -28,24 +28,9 @@ async def btn_language(message: Message):
 
     lang = getattr(user, "language", "en") or "en"
 
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(
-            text=("✅ " if lang == "en" else "") + LANGUAGES["en"],
-            callback_data="set_lang:en"
-        )],
-        [InlineKeyboardButton(
-            text=("✅ " if lang == "ps" else "") + LANGUAGES["ps"],
-            callback_data="set_lang:ps"
-        )],
-        [InlineKeyboardButton(
-            text=("✅ " if lang == "my" else "") + LANGUAGES["my"],
-            callback_data="set_lang:my"
-        )],
-    ])
-
     await message.answer(
         msg("language_prompt", lang),
-        reply_markup=keyboard,
+        reply_markup=get_language_selection_keyboard(current_lang=lang),
         parse_mode="Markdown"
     )
 
@@ -76,25 +61,10 @@ async def set_language_callback(callback: CallbackQuery):
         await session.commit()
         role = user.role
 
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(
-            text=("✅ " if lang_code == "en" else "") + LANGUAGES["en"],
-            callback_data="set_lang:en"
-        )],
-        [InlineKeyboardButton(
-            text=("✅ " if lang_code == "ps" else "") + LANGUAGES["ps"],
-            callback_data="set_lang:ps"
-        )],
-        [InlineKeyboardButton(
-            text=("✅ " if lang_code == "my" else "") + LANGUAGES["my"],
-            callback_data="set_lang:my"
-        )],
-    ])
-
     lang_set_key = f"language_set_{lang_code}"
     confirm = msg(lang_set_key, lang_code)
 
-    await callback.message.edit_reply_markup(reply_markup=keyboard)
+    await callback.message.edit_reply_markup(reply_markup=get_language_selection_keyboard(current_lang=lang_code))
 
     new_menu = get_main_menu_keyboard(role, lang=lang_code)
     await callback.message.answer(confirm, reply_markup=new_menu)

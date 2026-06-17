@@ -430,6 +430,14 @@ def get_unavailability_response_keyboard(notice_id: int, subcontractor_id: int, 
         [InlineKeyboardButton(text=i18n_msg("btn_acknowledged_done", lang=lang), callback_data=f"unavail_ack:{notice_id}")]
     ])
 
+def get_language_selection_keyboard(current_lang: str = None) -> InlineKeyboardMarkup:
+    from src.bot.i18n import LANGUAGES
+    rows = []
+    for code, label in LANGUAGES.items():
+        check = "✅ " if code == current_lang else ""
+        rows.append([InlineKeyboardButton(text=f"{check}{label}", callback_data=f"set_lang:{code}")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
 def get_message_reaction_keyboard(broadcast_id: int, lang: str = "en") -> InlineKeyboardMarkup:
     from src.bot.i18n import msg as i18n_msg
     return InlineKeyboardMarkup(inline_keyboard=[

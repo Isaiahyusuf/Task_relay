@@ -140,6 +140,23 @@ MESSAGES: dict[str, dict[str, str]] = {
         "ps": "*🌐 د ژبې ترتیبات*\n\nخپله غوره ژبه وټاکئ:",
         "my": "*🌐 ဘာသာစကားဆက်တင်*\n\nသင်နှစ်သက်သောဘာသာစကားရွေးချယ်ပါ:",
     },
+    "lang_first_time_prompt": {
+        "en": (
+            "🌐 *Please choose your language:*\n"
+            "خپله ژبه غوره کړئ:\n"
+            "သင်၏ဘာသာစကားကိုရွေးချယ်ပါ:"
+        ),
+        "ps": (
+            "🌐 *Please choose your language:*\n"
+            "خپله ژبه غوره کړئ:\n"
+            "သင်၏ဘာသာစကားကိုရွေးချယ်ပါ:"
+        ),
+        "my": (
+            "🌐 *Please choose your language:*\n"
+            "خپله ژبه غوره کړئ:\n"
+            "သင်၏ဘာသာစကားကိုရွေးချယ်ပါ:"
+        ),
+    },
     "language_set_en": {
         "en": "✅ Language set to English.",
         "ps": "✅ Language set to English.",

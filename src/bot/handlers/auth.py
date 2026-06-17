@@ -7,7 +7,7 @@ from sqlalchemy import select
 from src.bot.database import async_session, User
 from src.bot.database.models import UserRole
 from src.bot.services.access_codes import AccessCodeService
-from src.bot.utils.keyboards import get_main_menu_keyboard, get_self_delete_confirm_keyboard
+from src.bot.utils.keyboards import get_main_menu_keyboard, get_self_delete_confirm_keyboard, get_language_selection_keyboard
 from src.bot.utils.roles import role_display_name
 from src.bot.i18n import variants as tv, msg as i18n_msg, get_recipient_lang
 from src.bot.utils.translate import translate_text
@@ -85,14 +85,13 @@ async def process_access_code(message: Message, state: FSMContext):
                 select(User).where(User.telegram_id == message.from_user.id)
             )
             user = result.scalar_one_or_none()
-        
+
         if user:
-            lang = getattr(user, "language", "en") or "en"
-            keyboard = get_main_menu_keyboard(user.role, lang=lang)
+            await message.answer(response)
             await message.answer(
-                f"{response}\n\n"
-                "Use the menu below to get started:",
-                reply_markup=keyboard
+                i18n_msg("lang_first_time_prompt", lang="en"),
+                reply_markup=get_language_selection_keyboard(),
+                parse_mode="Markdown"
             )
         else:
             await message.answer(response)
